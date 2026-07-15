@@ -13,7 +13,12 @@
   <div id="root"><div id="loading">Chargement de Podcast Facile…</div></div>
   <div id="error"><strong>Podcast Facile ne peut pas démarrer.</strong><p>Utilise une version récente de Chrome, Edge, Firefox ou Safari, puis recharge la page.</p></div>
   <script type="module">
-    const parts = ["js-00.txt", "js-01.txt", "js-02.txt", "js-03.txt", "js-04.txt", "js-05.txt", "js-06.txt"];
+    const parts = [
+      "js-00.txt", "js-01.txt", "js-02.txt", "js-03.txt",
+      "js-04-00.txt", "js-04-01-02.txt", "js-04-03-04.txt",
+      "js-05-00-01.txt", "js-05-02.txt", "js-05-03.txt", "js-05-04.txt",
+      "js-06-00.txt", "js-06-01.txt", "js-06-02.txt", "js-06-03.txt"
+    ];
     const decode = async (text) => {
       if (!('DecompressionStream' in window)) throw new Error('DecompressionStream indisponible');
       const bytes = Uint8Array.from(atob(text), c => c.charCodeAt(0));
