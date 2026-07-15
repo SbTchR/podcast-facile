@@ -1,0 +1,78 @@
+name: Build and publish Podcast Facile V3
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - release/podcast-facile-v3-source.zip
+      - .github/workflows/build-v3.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-v3
+  cancel-in-progress: true
+
+jobs:
+  build-and-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Extract V3 source
+        run: |
+          rm -rf .v3-build
+          mkdir .v3-build
+          unzip -q release/podcast-facile-v3-source.zip -d .v3-build
+
+      - name: Install and build
+        working-directory: .v3-build
+        run: |
+          npm ci
+          npm run check
+          npm run build
+
+      - name: Install static site
+        run: |
+          rm -rf site
+          mkdir site
+          cp -R .v3-build/dist/. site/
+          touch site/.nojekyll
+          cp .v3-build/README.md README.md
+          cp .v3-build/AUDIO_CREDITS.md AUDIO_CREDITS.md
+          cat > index.html <<'HTML'
+          <!doctype html>
+          <html lang="fr">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width,initial-scale=1">
+            <meta http-equiv="refresh" content="0;url=./site/?v=20260715-v3-1">
+            <title>Podcast Facile V3</title>
+            <script>location.replace('./site/?v=20260715-v3-1')</script>
+          </head>
+          <body><a href="./site/?v=20260715-v3-1">Ouvrir Podcast Facile V3</a></body>
+          </html>
+          HTML
+          rm -rf .v3-build
+
+      - name: Commit generated site
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A site index.html README.md AUDIO_CREDITS.md
+          if git diff --cached --quiet; then
+            echo "No generated changes to commit."
+          else
+            git commit -m "Publier le build V3"
+            git push
+          fi
