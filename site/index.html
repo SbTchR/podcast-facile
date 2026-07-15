@@ -23,12 +23,12 @@
     <button type="button" onclick="location.reload()">Recharger</button>
   </div>
   <script type="module">
-    const VERSION = '2026-07-15-safari-1';
+    const VERSION = '2026-07-15-safari-2';
     const cssParts = ['css-00.txt','css-01.txt'];
     const jsParts = [
       'js-00-00.txt','js-00-01.txt','js-00-02.txt','js-00-03.txt','js-00-04.txt',
-      'js-01-00.txt','js-01-01.txt','js-01-02.txt','js-01-03.txt','js-01-04.txt',
-      'js-02-00.txt','js-02-01.txt','js-02-02.txt','js-02-03.txt','js-02-04.txt',
+      'js-01-00.txt','fix/js-01-01-1.txt','fix/js-01-01-2.txt','fix/js-01-01-3.txt','js-01-02.txt','js-01-03.txt','js-01-04.txt',
+      'js-02-00.txt','js-02-01.txt','js-02-02.txt','fix/js-02-03-1.txt','fix/js-02-03-2.txt','fix/js-02-03-3.txt','js-02-04.txt',
       'js-03-00.txt','js-03-01.txt','js-03-02.txt','js-03-03.txt','js-03-04.txt'
     ];
 
@@ -67,9 +67,6 @@
       document.head.appendChild(style);
 
       const code = await decode(jsChunks.join(''));
-
-      // Le bundle Vite est autonome. L’exécuter directement évite l’import
-      // d’un module via une URL blob:, peu fiable sur certaines versions de Safari iOS.
       const runApplication = new Function(`${code}\n//# sourceURL=podcast-facile-v2.js`);
       runApplication();
     } catch (error) {
