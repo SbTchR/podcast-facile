@@ -1,55 +1,43 @@
-# Podcast Facile — version 2
+# Podcast Facile — version 3
 
 Webapp pédagogique de montage de podcasts pour les élèves de 12 à 15 ans. Le montage se fait avec des cartes successives, sans pistes audio visibles.
 
 ## Fonctions principales
 
 - création à partir de six modèles pédagogiques ;
-- sections repliables et réorganisables ;
-- blocs voix, musique, bruitage, pause, jingle et transition ;
-- enregistrement au microphone avec compte à rebours, pause et reprise ;
-- import WAV, MP3, M4A, OGG et WebM selon le navigateur, limité à 50 Mo ;
-- découpage simple par début et fin ;
-- volumes et fondus exprimés avec des mots simples ;
-- effets voix téléphone, écho, grave et aiguë ;
-- musique de fond avec ducking automatique ;
-- jingles guidés ;
-- lecture d’un bloc ou du podcast complet ;
-- sauvegarde automatique dans IndexedDB ;
-- export/import d’un projet `.podfacile` ;
-- export du mixage final en WAV avec limiteur de crête ;
-- interface responsive et commandes alternatives au glisser-déposer.
+- enregistrement de la voix dans le navigateur ;
+- import de fichiers audio ;
+- sections et blocs réorganisables ;
+- réglage du volume, des fondus et du découpage ;
+- musiques sous la voix et construction guidée de jingles ;
+- sauvegarde locale et export des projets `.podfacile` ;
+- export du mixage final en WAV ;
+- interface responsive pour ordinateur, tablette et téléphone.
 
-## Bibliothèques audio intégrées
+## Bibliothèque audio réelle
 
-La version 2 ajoute 96 sons générés localement :
+La version 3 remplace les sons synthétiques par 45 fichiers audio réels :
 
-- 20 musiques de fond et de jingle ;
-- 76 bruitages ;
-- recherche par mots-clés ;
-- filtres par catégories ;
-- écoute avant ajout ;
-- utilisation dans les blocs musique et bruitage, sous une voix et dans les jingles.
+- 13 musiques courtes de Jason Shaw / Audionautix sous licence CC BY 3.0 ;
+- 32 bruitages et ambiances provenant principalement de PDSounds.org, ainsi que d’autres contributeurs de Wikimedia Commons ;
+- catégories adaptées à l’histoire, la géographie, la navigation, l’industrie, la ville, l’école, la météo et les récits ;
+- source, auteur et licence affichés pour chaque fichier dans l’application.
 
-Les catégories sont pensées pour les podcasts scolaires : histoire militaire et sociale, navigation, industrialisation, XXe siècle, paysages, météo, risques naturels, villes, mobilités, école, objets, récits et transitions radio. Aucun fichier sonore externe n’est inclus : les sons sont synthétisés dans le navigateur à la demande.
+Les fichiers ne sont pas incorporés au dépôt : ils sont chargés depuis Wikimedia Commons lors du premier aperçu ou ajout, puis le Blob est conservé dans le projet local. Le détail complet figure dans [`AUDIO_CREDITS.md`](AUDIO_CREDITS.md).
 
 ## Développement local
 
 ```bash
 npm install
 npm run dev
-```
-
-## Vérification et compilation
-
-```bash
 npm run check
 npm run build
 ```
 
-## Limites assumées de la V2
+## Limites
 
-- export WAV uniquement ; l’export MP3 n’est pas inclus pour éviter une dépendance d’encodage lourde et fragile ;
-- les sons procéduraux privilégient la clarté et la légèreté ; ils ne prétendent pas remplacer une banque de sons professionnelle ;
-- la compatibilité réelle des formats importés dépend du navigateur et du système ;
-- les projets très longs ou contenant de nombreux gros fichiers peuvent dépasser la mémoire disponible, surtout sur smartphone.
+- une connexion internet est nécessaire lors de la première utilisation d’un son de la bibliothèque ;
+- la qualité et le niveau sonore varient selon les enregistrements d’origine ;
+- l’export MP3 n’est pas inclus ;
+- la compatibilité des fichiers personnels importés dépend du navigateur ;
+- les projets très longs peuvent dépasser la mémoire disponible sur smartphone.

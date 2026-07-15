@@ -1,76 +1,47 @@
 <!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
-  <meta name="theme-color" content="#2457d6">
-  <meta name="description" content="Podcast Facile : crée un podcast en assemblant simplement ta voix, des musiques et des bruitages.">
-  <title>Podcast Facile</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#2457d6" />
+  <meta name="description" content="Podcast Facile V3 : crée un podcast avec de vrais bruitages et musiques libres." />
+  <title>Podcast Facile V3</title>
+  <link rel="stylesheet" href="./assets/index-PEI1vKfS.css?v=20260715-v3-1" />
   <style>
-    html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f7f9fc}
-    #loading{min-height:100vh;display:grid;place-items:center;color:#17325c;font-weight:700;padding:24px;text-align:center}
-    #error{display:none;max-width:680px;margin:12vh auto;padding:24px;border:1px solid #e7b8b8;border-radius:16px;background:#fff;color:#7a1f1f;box-shadow:0 12px 40px rgba(40,20,20,.08)}
-    #error code{display:block;margin-top:12px;padding:12px;border-radius:10px;background:#fff4f4;color:#5f1717;overflow-wrap:anywhere;font-size:12px}
-    #error button{margin-top:14px;padding:10px 16px;border:0;border-radius:10px;background:#2457d6;color:#fff;font:inherit;font-weight:700}
+    #v3-loading{min-height:100vh;display:grid;place-items:center;padding:24px;text-align:center;color:#17325c;font:700 16px system-ui,-apple-system,sans-serif;background:#f7f9fc}
+    #v3-error{display:none;max-width:680px;margin:12vh auto;padding:24px;border:1px solid #e7b8b8;border-radius:16px;background:#fff;color:#7a1f1f;font-family:system-ui,-apple-system,sans-serif}
+    #v3-error code{display:block;margin-top:12px;padding:12px;border-radius:10px;background:#fff4f4;overflow-wrap:anywhere;font-size:12px}
   </style>
 </head>
 <body>
-  <div id="root"><div id="loading">Chargement de Podcast Facile V2…</div></div>
-  <div id="error">
-    <strong>Podcast Facile n’a pas pu démarrer.</strong>
-    <p id="error-help">Recharge la page. Si le problème persiste, transmets le détail technique affiché ci-dessous.</p>
-    <code id="error-detail"></code>
-    <button type="button" onclick="location.reload()">Recharger</button>
+  <div id="root"><div id="v3-loading">Chargement de Podcast Facile V3…</div></div>
+  <div id="v3-error">
+    <strong>Podcast Facile V3 n’a pas pu démarrer.</strong>
+    <p>Recharge la page. Si le problème persiste, transmets le détail ci-dessous.</p>
+    <code id="v3-error-detail"></code>
   </div>
   <script type="module">
-    const VERSION = '2026-07-15-safari-2';
-    const cssParts = ['css-00.txt','css-01.txt'];
-    const jsParts = [
-      'js-00-00.txt','js-00-01.txt','js-00-02.txt','js-00-03.txt','js-00-04.txt',
-      'js-01-00.txt','fix/js-01-01-1.txt','fix/js-01-01-2.txt','fix/js-01-01-3.txt','js-01-02.txt','js-01-03.txt','js-01-04.txt',
-      'js-02-00.txt','js-02-01.txt','js-02-02.txt','fix/js-02-03-1.txt','fix/js-02-03-2.txt','fix/js-02-03-3.txt','js-02-04.txt',
-      'js-03-00.txt','js-03-01.txt','js-03-02.txt','js-03-03.txt','js-03-04.txt'
-    ];
-
-    const decode = async (text) => {
-      if (!('DecompressionStream' in window)) {
-        throw new Error('API DecompressionStream absente (Safari/iOS antérieur à 16.4).');
-      }
-      const clean = text.replace(/\s+/g, '');
-      const bytes = Uint8Array.from(atob(clean), character => character.charCodeAt(0));
-      const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
-      return await new Response(stream).text();
-    };
-
-    const getPart = async (name) => {
-      const response = await fetch(`./v2/${name}?v=${VERSION}`, { cache: 'no-store' });
-      if (!response.ok) throw new Error(`${name} introuvable (HTTP ${response.status}).`);
-      return await response.text();
-    };
-
-    const showError = (error) => {
-      console.error('Échec du démarrage de Podcast Facile', error);
-      document.getElementById('root').innerHTML = '';
-      document.getElementById('error-detail').textContent = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
-      document.getElementById('error').style.display = 'block';
-    };
-
+    const VERSION = '20260715-v3-1';
     try {
-      const [cssChunks, jsChunks] = await Promise.all([
-        Promise.all(cssParts.map(getPart)),
-        Promise.all(jsParts.map(getPart))
-      ]);
-
-      const css = await decode(cssChunks.join(''));
-      const style = document.createElement('style');
-      style.textContent = css;
-      document.head.appendChild(style);
-
-      const code = await decode(jsChunks.join(''));
-      const runApplication = new Function(`${code}\n//# sourceURL=podcast-facile-v2.js`);
+      if (!('DecompressionStream' in window)) {
+        throw new Error('Safari/iOS 16.4 ou plus récent est nécessaire.');
+      }
+      const response = await fetch(`./assets/index-DqgYMH7Z.js.gz?v=${VERSION}`, { cache: 'no-store' });
+      if (!response.ok || !response.body) {
+        throw new Error(`Bundle V3 introuvable (HTTP ${response.status}).`);
+      }
+      const stream = response.body.pipeThrough(new DecompressionStream('gzip'));
+      const code = await new Response(stream).text();
+      if (!code.includes('createRoot') || code.length < 250000) {
+        throw new Error('Le bundle V3 téléchargé est incomplet.');
+      }
+      const runApplication = new Function(`${code}\n//# sourceURL=podcast-facile-v3.js`);
       runApplication();
     } catch (error) {
-      showError(error);
+      console.error('Échec du démarrage de Podcast Facile V3', error);
+      document.getElementById('root').innerHTML = '';
+      document.getElementById('v3-error-detail').textContent = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+      document.getElementById('v3-error').style.display = 'block';
     }
   </script>
 </body>

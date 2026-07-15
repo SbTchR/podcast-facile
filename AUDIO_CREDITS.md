@@ -1,26 +1,29 @@
-# Crédits audio
+# Crédits audio — Podcast Facile V3
 
-## Bibliothèque intégrée de la version 2
+La V3 utilise **45 enregistrements réels** hébergés par Wikimedia Commons :
 
-Les 96 sons de la bibliothèque intégrée — 20 musiques et 76 bruitages — sont générés de manière procédurale par le code de Podcast Facile.
+- **13 musiques** de Jason Shaw / Audionautix, sous licence CC BY 3.0 ;
+- **32 bruitages et ambiances**, principalement issus de PDSounds.org et placés dans le domaine public, avec quelques fichiers sous CC BY 3.0 ou CC BY-SA 4.0.
 
-Ils ne contiennent aucun enregistrement, échantillon ou morceau provenant d’un tiers. Ils peuvent donc être utilisés et redistribués avec l’application sans attribution audio externe.
+La liste exhaustive, avec le titre, l’auteur, la licence et la page source de chaque fichier, est publiée dans :
 
-Les sons sont créés à la demande dans le navigateur, puis enregistrés dans le projet comme fichiers WAV lorsque l’utilisateur les choisit.
+- [`site/audio-credits.html`](site/audio-credits.html)
+- la fiche de chaque son directement dans la bibliothèque de l’application.
 
-## Fichiers importés par les utilisateurs
+## Fonctionnement
 
-Podcast Facile permet aussi d’importer des fichiers audio personnels. L’utilisateur reste responsable de vérifier qu’il possède le droit de les utiliser et de les diffuser.
+Les fichiers audio ne sont pas dupliqués dans le dépôt. L’application télécharge le fichier depuis Wikimedia Commons lors du premier aperçu ou de son ajout au projet. Le fichier est ensuite stocké localement avec le projet afin de permettre le montage et l’export WAV.
 
-## Ajouter ultérieurement un fichier audio externe
+## Principales sources
 
-Pour chaque fichier tiers ajouté au dépôt, documenter obligatoirement :
+- [Wikimedia Commons](https://commons.wikimedia.org/)
+- [Fichiers de PDSounds.org sur Wikimedia Commons](https://commons.wikimedia.org/wiki/Category:Audio_files_from_PDSounds.org)
+- [Audionautix](https://audionautix.com/)
 
-- titre ;
-- auteur ;
-- source ;
-- licence ;
-- lien d’origine ;
-- modifications éventuelles.
+## Licences utilisées
 
-Ne pas intégrer un fichier dont la licence n’autorise pas explicitement la redistribution et l’utilisation scolaire.
+- [Domaine public](https://creativecommons.org/publicdomain/mark/1.0/)
+- [Creative Commons Attribution 3.0](https://creativecommons.org/licenses/by/3.0/)
+- [Creative Commons Attribution-ShareAlike 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
+
+Les obligations d’attribution et de partage à l’identique sont conservées dans les métadonnées affichées par l’application et dans la page exhaustive des crédits.
