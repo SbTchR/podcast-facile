@@ -76,3 +76,5 @@ jobs:
             git commit -m "Publier le build V3"
             git push
           fi
+
+# Trigger de publication V3 : 2026-07-15
