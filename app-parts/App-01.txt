@@ -1,0 +1,295 @@
+
+    setEditingBlock(null);
+    setEditingIsNew(false);
+  };
+
+  const exportProjectFile = async () => {
+    if (!project) return;
+    setRendering(true);
+    try {
+      const blob = await serializeProject(project);
+      downloadBlob(blob, `${safeFilename(project.title)}.podfacile`);
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : 'Impossible d’exporter la sauvegarde.');
+    } finally {
+      setRendering(false);
+    }
+  };
+
+  const importProjectFile = async (file: File) => {
+    try {
+      const imported = await deserializeProject(file);
+      await saveProject(imported);
+      setToast('Projet importé.');
+      await refreshProjects();
+      await openProject(imported.id);
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : 'Ce fichier ne peut pas être importé.');
+    }
+  };
+
+  const exportWav = async () => {
+    if (!project) return;
+    setRendering(true);
+    setToast('Création du fichier WAV en cours…');
+    try {
+      const wav = await renderProjectToWav(project);
+      downloadBlob(wav, `${safeFilename(project.title)}.wav`);
+      setToast('Le podcast WAV a été créé.');
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : 'L’export WAV a échoué.');
+    } finally {
+      setRendering(false);
+    }
+  };
+
+  const projectDuration = project ? getProjectDuration(project) : 0;
+  const timeline = useMemo(() => project ? getTimeline(project) : [], [project]);
+
+  if (screen === 'home') {
+    return (
+      <HomeScreen
+        projects={projects}
+        onCreate={startSetup}
+        onOpen={openProject}
+        onDelete={async (id) => {
+          if (!window.confirm('Supprimer définitivement ce projet enregistré sur cet appareil ?')) return;
+          await deleteProject(id);
+          await refreshProjects();
+        }}
+        onDuplicate={async (source) => {
+          const copy = cloneProject(source);
+          copy.id = crypto.randomUUID();
+          copy.title = `${copy.title} – copie`;
+          copy.createdAt = new Date().toISOString();
+          copy.updatedAt = copy.createdAt;
+          await saveProject(copy);
+          await refreshProjects();
+          setToast('Projet dupliqué.');
+        }}
+        onImport={importProjectFile}
+        onHelp={() => setHelpOpen(true)}
+      />
+    );
+  }
+
+  if (screen === 'setup') {
+    return (
+      <SetupScreen
+        title={setupTitle}
+        author={setupAuthor}
+        target={setupTarget}
+        templateId={setupTemplateId}
+        sections={setupSections}
+        onTitle={setSetupTitle}
+        onAuthor={setSetupAuthor}
+        onTarget={setSetupTarget}
+        onTemplate={(id) => {
+          setSetupTemplateId(id);
+          setSetupSections([...(templates.find((template) => template.id === id)?.sections ?? ['Mon podcast'])]);
+        }}
+        onSections={setSetupSections}
+        onBack={() => setScreen('home')}
+        onFinish={finishSetup}
+      />
+    );
+  }
+
+  if (!project) return null;
+
+  if (screen === 'export') {
+    return (
+      <ExportScreen
+        project={project}
+        duration={projectDuration}
+        rendering={rendering}
+        onBack={() => setScreen('editor')}
+        onListen={() => void beginPlayback(0)}
+        onExportWav={() => void exportWav()}
+        onExportProject={() => void exportProjectFile()}
+      />
+    );
+  }
+
+  return (
+    <div className="app-shell">
+      <EditorTopbar
+        project={project}
+        duration={projectDuration}
+        saveState={saveState}
+        canUndo={undoRef.current.length > 0}
+        canRedo={redoRef.current.length > 0}
+        onHome={() => void goHome()}
+        onSave={() => void saveCurrentProject()}
+        onUndo={undo}
+        onRedo={redo}
+        onHelp={() => setHelpOpen(true)}
+        onExport={() => setScreen('export')}
+      />
+
+      <main className="editor-main">
+        <div className="editor-intro">
+          <div>
+            <h1>{project.title}</h1>
+            <p>Assemble les éléments dans l’ordre d’écoute. Les réglages complexes restent automatiques.</p>
+          </div>
+          <button className="primary-button add-main" onClick={() => setAddSectionId(project.sections[0]?.id ?? null)}>＋ Ajouter un élément</button>
+        </div>
+
+        {project.sections.map((section, sectionIndex) => {
+          const blocks = project.blocks.filter((block) => block.sectionId === section.id);
+          const duration = blocks.reduce((sum, block) => sum + getBlockDuration(block), 0);
+          return (
+            <SectionPanel
+              key={section.id}
+              section={section}
+              sectionIndex={sectionIndex}
+              sectionCount={project.sections.length}
+              blocks={blocks}
+              duration={duration}
+              activeBlockId={activeBlockId}
+              onRename={(title) => applyChange((draft) => { const item = draft.sections.find((candidate) => candidate.id === section.id); if (item) item.title = title; })}
+              onToggle={() => applyChange((draft) => { const item = draft.sections.find((candidate) => candidate.id === section.id); if (item) item.collapsed = !item.collapsed; })}
+              onAdd={() => setAddSectionId(section.id)}
+              onMoveSection={(direction) => applyChange((draft) => {
+                const index = draft.sections.findIndex((item) => item.id === section.id);
+                const target = index + direction;
+                if (target < 0 || target >= draft.sections.length) return;
+                [draft.sections[index], draft.sections[target]] = [draft.sections[target], draft.sections[index]];
+              })}
+              onDeleteSection={() => {
+                if (blocks.length > 0) { setToast('Une section contenant des éléments ne peut pas être supprimée.'); return; }
+                if (!window.confirm(`Supprimer la section « ${section.title} » ?`)) return;
+                applyChange((draft) => { draft.sections = draft.sections.filter((item) => item.id !== section.id); });
+              }}
+              onPlay={(block) => {
+                const entry = timeline.find((item) => item.block.id === block.id);
+                if (entry) void beginPlayback(entry.start);
+              }}
+              onEdit={(block) => { setEditingBlock(cloneProject({ ...project, blocks: [block] } as PodcastProject).blocks[0]); setEditingIsNew(false); }}
+              onDuplicate={(block) => applyChange((draft) => {
+                const index = draft.blocks.findIndex((item) => item.id === block.id);
+                const copy = structuredClone(block);
+                copy.id = crypto.randomUUID();
+                copy.title = `${copy.title} – copie`;
+                draft.blocks.splice(index + 1, 0, copy);
+              })}
+              onDelete={(block) => {
+                if (!window.confirm(`Supprimer « ${block.title} » ?`)) return;
+                applyChange((draft) => { draft.blocks = draft.blocks.filter((item) => item.id !== block.id); });
+              }}
+              onMove={(block, direction) => applyChange((draft) => {
+                const index = draft.blocks.findIndex((item) => item.id === block.id);
+                const sectionIndexes = draft.blocks.map((item, itemIndex) => item.sectionId === block.sectionId ? itemIndex : -1).filter((value) => value >= 0);
+                const localIndex = sectionIndexes.indexOf(index);
+                const targetLocal = localIndex + direction;
+                if (targetLocal < 0 || targetLocal >= sectionIndexes.length) return;
+                const targetIndex = sectionIndexes[targetLocal];
+                [draft.blocks[index], draft.blocks[targetIndex]] = [draft.blocks[targetIndex], draft.blocks[index]];
+              })}
+              onDropBlock={(draggedId, beforeId) => applyChange((draft) => {
+                const fromIndex = draft.blocks.findIndex((item) => item.id === draggedId);
+                if (fromIndex < 0) return;
+                const [moved] = draft.blocks.splice(fromIndex, 1);
+                moved.sectionId = section.id;
+                if (beforeId) {
+                  const beforeIndex = draft.blocks.findIndex((item) => item.id === beforeId);
+                  draft.blocks.splice(beforeIndex >= 0 ? beforeIndex : draft.blocks.length, 0, moved);
+                } else {
+                  const indexes = draft.blocks.map((item, index) => item.sectionId === section.id ? index : -1).filter((value) => value >= 0);
+                  draft.blocks.splice(indexes.length ? Math.max(...indexes) + 1 : draft.blocks.length, 0, moved);
+                }
+              })}
+            />
+          );
+        })}
+
+        <button className="add-section-button" onClick={() => applyChange((draft) => { draft.sections.push(makeSection('Nouvelle section')); })}>＋ Ajouter une section</button>
+      </main>
+
+      <GlobalPlayer
+        status={playbackStatus}
+        elapsed={elapsed}
+        duration={projectDuration}
+        activeTitle={timeline.find((entry) => entry.block.id === activeBlockId)?.block.title}
+        onPlayPause={() => void togglePause()}
+        onStop={() => { setElapsed(0); void stopPlayback(); }}
+        onSeek={(value) => { setElapsed(value); if (playbackStatus !== 'stopped') void beginPlayback(value); }}
+      />
+
+      {addSectionId && (
+        <AddBlockModal
+          onClose={() => setAddSectionId(null)}
+          onChoose={(type) => {
+            const block = makeBlock(type, addSectionId);
+            setAddSectionId(null);
+            setEditingBlock(block);
+            setEditingIsNew(true);
+          }}
+        />
+      )}
+
+      {editingBlock && (
+        <BlockEditorModal
+          key={`${editingBlock.id}-${editingIsNew ? 'new' : 'edit'}`}
+          block={editingBlock}
+          assets={project.assets}
+          isNew={editingIsNew}
+          onClose={() => { setEditingBlock(null); setEditingIsNew(false); }}
+          onSave={saveBlock}
+          onRegisterAsset={registerAsset}
+          onPreview={async (block) => {
+            const previewProject = { ...project, blocks: [block] };
+            try {
+              await stopPlayback();
+              const controller = await playProject(previewProject, 0);
+              playbackRef.current = controller;
+              setPlaybackStatus('playing');
+              window.setTimeout(() => void stopPlayback(), (getBlockDuration(block) + 0.2) * 1000);
+            } catch (error) {
+              setToast(error instanceof Error ? error.message : 'Impossible de lire cet élément.');
+            }
+          }}
+        />
+      )}
+
+      {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
+      {toast && <div className="toast" role="status">{toast}</div>}
+    </div>
+  );
+}
+
+function HomeScreen({
+  projects,
+  onCreate,
+  onOpen,
+  onDelete,
+  onDuplicate,
+  onImport,
+  onHelp,
+}: {
+  projects: PodcastProject[];
+  onCreate: () => void;
+  onOpen: (id: string) => void;
+  onDelete: (id: string) => void;
+  onDuplicate: (project: PodcastProject) => void;
+  onImport: (file: File) => void;
+  onHelp: () => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  return (
+    <div className="home-screen">
+      <header className="home-header">
+        <div className="brand"><span className="brand-mark">PF</span><span>{APP_NAME}</span></div>
+        <button className="ghost-button" onClick={onHelp}>? Aide</button>
+      </header>
+      <main className="home-content">
+        <section className="home-hero">
+          <div className="hero-symbol" aria-hidden="true"><span>🎙️</span><span>＋</span><span>🎵</span></div>
+          <h1>Ton podcast, bloc après bloc.</h1>
+          <p>{WELCOME_TEXT}</p>
+          <div className="hero-actions">
+            <button className="primary-button large" onClick={onCreate}>Créer un nouveau podcast</button>
+            <button className="secondary-button large" onClick={() => document.getElementById('saved-projects')?.scrollIntoView({ behavior: 'smooth' })}>Reprendre un projet</button>
+          </div>
+          <p 
