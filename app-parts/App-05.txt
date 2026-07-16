@@ -1,0 +1,144 @@
+etSearch] = useState('');
+  const [category, setCategory] = useState('Toutes');
+  const [playingId, setPlayingId] = useState<string | null>(null);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [addingId, setAddingId] = useState<string | null>(null);
+  const [error, setError] = useState('');
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const urlRef = useRef<string | null>(null);
+
+  const stopPreview = useCallback(() => {
+    audioRef.current?.pause();
+    audioRef.current = null;
+    if (urlRef.current) URL.revokeObjectURL(urlRef.current);
+    urlRef.current = null;
+    setPlayingId(null);
+  }, []);
+
+  useEffect(() => stopPreview, [stopPreview]);
+
+  const normalizedSearch = search.trim().toLocaleLowerCase('fr');
+  const results = AUDIO_LIBRARY.filter((preset) => {
+    if (preset.kind !== kind) return false;
+    if (category !== 'Toutes' && preset.category !== category) return false;
+    if (!normalizedSearch) return true;
+    return [preset.title, preset.description, preset.category, ...preset.tags].join(' ').toLocaleLowerCase('fr').includes(normalizedSearch);
+  });
+
+  const preview = async (preset: LibraryPreset) => {
+    setError('');
+    if (playingId === preset.id) { stopPreview(); return; }
+    stopPreview();
+    setLoadingId(preset.id);
+    try {
+      const blob = await loadLibraryAudio(preset);
+      const url = URL.createObjectURL(blob);
+      urlRef.current = url;
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.onended = stopPreview;
+      audio.onerror = () => { setError('Le navigateur ne parvient pas à lire cet aperçu.'); stopPreview(); };
+      await audio.play();
+      setPlayingId(preset.id);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Impossible de charger cet aperçu.');
+    } finally {
+      setLoadingId(null);
+    }
+  };
+
+  const add = async (preset: LibraryPreset) => {
+    stopPreview();
+    setAddingId(preset.id);
+    setError('');
+    try {
+      await onChoose(preset);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Impossible d’ajouter ce son.');
+      setAddingId(null);
+    }
+  };
+
+  return (
+    <div className="modal-backdrop library-layer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <div className="modal audio-library-modal" role="dialog" aria-modal="true" aria-label={kind === 'music' ? 'Bibliothèque musicale' : 'Bibliothèque de bruitages'}>
+        <div className="modal-header"><div><h2>{kind === 'music' ? 'Bibliothèque musicale' : 'Bibliothèque de bruitages'}</h2><small>{AUDIO_LIBRARY.filter((item) => item.kind === kind).length} enregistrements libres</small></div><button onClick={onClose} aria-label="Fermer">×</button></div>
+        <div className="library-toolbar">
+          <label className="library-search"><span>⌕</span><input autoFocus placeholder={kind === 'music' ? 'Rechercher : médiéval, ville, mystère…' : 'Rechercher : canon, pluie, bateau…'} value={search} onChange={(event) => setSearch(event.target.value)} /></label>
+          <div className="library-categories"><button className={category === 'Toutes' ? 'selected' : ''} onClick={() => setCategory('Toutes')}>Toutes</button>{LIBRARY_CATEGORIES[kind].map((item) => <button key={item} className={category === item ? 'selected' : ''} onClick={() => setCategory(item)}>{item}</button>)}</div>
+        </div>
+        <div className="library-info"><strong>Enregistrements réels</strong><span>Les fichiers proviennent de Wikimedia Commons. Une connexion est nécessaire au premier aperçu ou ajout ; le son est ensuite conservé dans le projet. <a href="./audio-credits.html" target="_blank" rel="noreferrer">Crédits et licences</a></span></div>
+        <div className="library-results-heading"><strong>{results.length} résultat{results.length > 1 ? 's' : ''}</strong>{category !== 'Toutes' && <button onClick={() => setCategory('Toutes')}>Effacer le filtre</button>}</div>
+        <div className="library-grid">
+          {results.map((preset) => (
+            <article className="library-card" key={preset.id}>
+              <div className="library-card-icon">{preset.icon}</div>
+              <div className="library-card-copy"><span>{preset.category}</span><h3>{preset.title}</h3><p>{preset.description}</p><small>{formatTime(preset.duration)} · {preset.tags.slice(0, 3).join(' · ')}</small><div className="library-credit"><a href={preset.sourcePage} target="_blank" rel="noreferrer">Source</a><span>·</span><a href={preset.licenseUrl} target="_blank" rel="noreferrer">{preset.license}</a><span>· {preset.author}</span></div></div>
+              <div className="library-card-actions"><button className="preview-button" disabled={Boolean(loadingId || addingId)} onClick={() => void preview(preset)}>{loadingId === preset.id ? '…' : playingId === preset.id ? '■ Arrêter' : '▶ Écouter'}</button><button className="primary-button compact" disabled={Boolean(addingId)} onClick={() => void add(preset)}>{addingId === preset.id ? 'Création…' : '＋ Ajouter'}</button></div>
+            </article>
+          ))}
+          {results.length === 0 && <div className="library-no-result"><span>🔎</span><strong>Aucun son trouvé</strong><p>Essaie un mot plus simple ou choisis une autre catégorie.</p></div>}
+        </div>
+        {error && <div className="error-box library-error">{error}</div>}
+      </div>
+    </div>
+  );
+}
+
+function ChoiceSetting({ title, value, options, onChange }: { title: string; value: string; options: [string, string][]; onChange: (value: string) => void }) {
+  return <div className="choice-setting"><h3>{title}</h3><div className="choice-buttons">{options.map(([key, label]) => <button key={key} className={value === key ? 'selected' : ''} onClick={() => onChange(key)}>{label}</button>)}</div></div>;
+}
+
+function GlobalPlayer({ status, elapsed, duration, activeTitle, onPlayPause, onStop, onSeek }: {
+  status: 'stopped' | 'playing' | 'paused'; elapsed: number; duration: number; activeTitle?: string;
+  onPlayPause: () => void; onStop: () => void; onSeek: (value: number) => void;
+}) {
+  return (
+    <div className="global-player">
+      <button className="player-main-button" disabled={duration <= 0} onClick={onPlayPause}>{status === 'playing' ? 'Ⅱ' : '▶'}</button>
+      <button className="player-stop-button" disabled={status === 'stopped'} onClick={onStop}>■</button>
+      <div className="player-track"><div className="player-title"><strong>{activeTitle || (duration > 0 ? 'Podcast complet' : 'Ajoute un premier élément')}</strong><span>{formatTime(elapsed)} / {formatTime(duration)}</span></div><input type="range" min="0" max={Math.max(0.01, duration)} step="0.05" value={Math.min(elapsed, duration)} disabled={duration <= 0} onChange={(event) => onSeek(Number(event.target.value))} /></div>
+    </div>
+  );
+}
+
+function ExportScreen({ project, duration, rendering, onBack, onListen, onExportWav, onExportProject }: {
+  project: PodcastProject; duration: number; rendering: boolean; onBack: () => void; onListen: () => void; onExportWav: () => void; onExportProject: () => void;
+}) {
+  const warnings: string[] = [];
+  if (!project.blocks.some((block) => block.type === 'voice' && block.assetId)) warnings.push('Le podcast ne contient encore aucun enregistrement vocal.');
+  const empty = project.blocks.filter((block) => ['voice', 'music', 'sfx'].includes(block.type) && !block.assetId);
+  if (empty.length) warnings.push(`${empty.length} élément${empty.length > 1 ? 's sont vides' : ' est vide'}.`);
+  if (project.targetDuration && duration > project.targetDuration * 1.1) warnings.push(`Le podcast dépasse la durée cible de ${formatTime(project.targetDuration)}.`);
+  if (project.targetDuration && duration < project.targetDuration * 0.7) warnings.push(`Le podcast est nettement plus court que la durée cible de ${formatTime(project.targetDuration)}.`);
+  if (project.blocks.some((block) => block.type === 'music' && block.volume === 'high')) warnings.push('Une musique réglée sur « fort » peut fatiguer l’écoute.');
+  if (project.blocks.some((block) => block.type === 'voice' && block.background?.level === 'present')) warnings.push('Une musique de fond « présente » peut masquer certains mots. Écoute le résultat avant l’export.');
+  return (
+    <div className="export-screen">
+      <header className="simple-header"><button className="ghost-button" onClick={onBack}>← Retour au montage</button><div className="brand"><span className="brand-mark">PF</span><span>{APP_NAME}</span></div><span /></header>
+      <main className="export-content">
+        <div className="export-icon">🎧</div><h1>Ton podcast est prêt à être vérifié</h1><h2>{project.title}</h2>
+        <div className="export-summary"><div><span>Durée totale</span><strong>{formatTime(duration)}</strong></div><div><span>Éléments</span><strong>{project.blocks.length}</strong></div><div><span>Sections</span><strong>{project.sections.length}</strong></div></div>
+        <button className="secondary-button large listen-button" disabled={duration <= 0} onClick={onListen}>▶ Écouter le podcast complet</button>
+        <section className="checks-panel"><h3>Vérifications</h3>{warnings.length === 0 ? <div className="check-success">✓ Aucun problème évident détecté.</div> : warnings.map((warning) => <div className="warning-row" key={warning}>⚠ {warning}</div>)}<p>Ces avertissements ne bloquent jamais l’export.</p></section>
+        <section className="export-actions-panel"><div><h3>Exporter le fichier audio</h3><p>Format WAV, compatible avec la plupart des appareils et logiciels.</p></div><button className="primary-button large" disabled={rendering || duration <= 0} onClick={onExportWav}>{rendering ? 'Création…' : 'Télécharger le podcast (.wav)'}</button></section>
+        <section className="export-actions-panel secondary"><div><h3>Garder une sauvegarde transférable</h3><p>Le fichier .podfacile contient le projet et ses fichiers audio.</p></div><button className="secondary-button" disabled={rendering} onClick={onExportProject}>Télécharger la sauvegarde</button></section>
+      </main>
+    </div>
+  );
+}
+
+function HelpModal({ onClose }: { onClose: () => void }) {
+  return <Modal title="Aide rapide" onClose={onClose}><div className="help-steps"><div><span>1</span><p><strong>Ajoute des éléments.</strong><br />Voix, musique, bruitage, jingle, transition ou pause.</p></div><div><span>2</span><p><strong>Mets-les dans l’ordre.</strong><br />Glisse les cartes ou utilise les flèches.</p></div><div><span>3</span><p><strong>Écoute et corrige.</strong><br />Les fondus et la baisse de musique sont automatiques.</p></div><div><span>4</span><p><strong>Exporte.</strong><br />Télécharge le podcast en WAV et une sauvegarde .podfacile.</p></div></div><div className="important-note"><strong>Important</strong><p>Les projets enregistrés uniquement dans le navigateur peuvent disparaître si ses données sont effacées. Télécharge régulièrement une sauvegarde .podfacile.</p></div></Modal>;
+}
+
+function Modal({ title, onClose, wide = false, children }: { title: string; onClose: () => void; wide?: boolean; children: React.ReactNode }) {
+  useEffect(() => {
+    const listener = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', listener);
+    return () => window.removeEventListener('keydown', listener);
+  }, [onClose]);
+  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><div className={`modal ${wide ? 'wide' : ''}`} role="dialog" aria-modal="true" aria-label={title}><div className="modal-header"><h2>{title}</h2><button onClick={onClose} aria-label="Fermer">×</button></div>{children}</div></div>;
+}
+
+export default App;
