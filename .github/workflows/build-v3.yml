@@ -53,8 +53,26 @@ jobs:
         run: npm install --no-audit --no-fund
 
       - name: Type check
+        id: typecheck
         working-directory: app
-        run: npm run check
+        shell: bash
+        run: |
+          set +e
+          npm run check > ../build-diagnostics.txt 2>&1
+          status=$?
+          cat ../build-diagnostics.txt
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Publish type-check diagnostic
+        if: steps.typecheck.outputs.status != '0'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add build-diagnostics.txt app/package-lock.json
+          git commit -m "Enregistrer le diagnostic du build V3" || true
+          git push origin HEAD:main
+          exit 1
 
       - name: Build standard Vite site
         working-directory: app
@@ -74,6 +92,7 @@ jobs:
           mkdir site
           cp -R app/dist/. site/
           touch site/.nojekyll
+          rm -f build-diagnostics.txt
           cat > index.html <<'HTML'
           <!doctype html>
           <html lang="fr">
@@ -92,7 +111,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A site index.html app/package-lock.json
+          git add -A site index.html app/package-lock.json build-diagnostics.txt
           if git diff --cached --quiet; then
             echo "No generated changes to commit."
           else
