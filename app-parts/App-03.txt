@@ -1,0 +1,166 @@
+r</span></button>
+      </div>
+      <div className="move-buttons"><button disabled={!canMoveUp} onClick={onMoveUp} aria-label="Monter">↑</button><button disabled={!canMoveDown} onClick={onMoveDown} aria-label="Descendre">↓</button></div>
+    </article>
+  );
+}
+
+function AddBlockModal({ onClose, onChoose }: { onClose: () => void; onChoose: (type: BlockType) => void }) {
+  const choices: { type: BlockType; title: string; description: string }[] = [
+    { type: 'voice', title: 'Enregistrer ma voix', description: 'Microphone ou fichier audio' },
+    { type: 'music', title: 'Ajouter une musique', description: 'Introduction, fond ou conclusion' },
+    { type: 'sfx', title: 'Ajouter un bruitage', description: 'Ambiance, objet ou effet sonore' },
+    { type: 'jingle', title: 'Créer un jingle', description: 'Introduction guidée et automatique' },
+    { type: 'transition', title: 'Ajouter une transition', description: 'Whoosh, radio, cloche…' },
+    { type: 'silence', title: 'Ajouter une pause', description: 'De 0,5 à 10 secondes' },
+  ];
+  return (
+    <Modal title="Ajouter un élément" onClose={onClose} wide>
+      <p className="modal-lead">Choisis ce que tu veux entendre ensuite.</p>
+      <div className="add-choice-grid">
+        {choices.map((choice) => <button key={choice.type} className={`add-choice block-${choice.type}`} onClick={() => onChoose(choice.type)}><span>{blockIcons[choice.type]}</span><strong>{choice.title}</strong><small>{choice.description}</small></button>)}
+      </div>
+      <p className="privacy-note">🔒 Les enregistrements et fichiers importés restent sur cet appareil.</p>
+    </Modal>
+  );
+}
+
+function BlockEditorModal({ block: initialBlock, assets, isNew, onClose, onSave, onRegisterAsset, onPreview }: {
+  block: PodcastBlock; assets: AudioAsset[]; isNew: boolean; onClose: () => void; onSave: (block: PodcastBlock) => void;
+  onRegisterAsset: (blob: Blob, name: string, mimeType?: string, knownDuration?: number, metadata?: Pick<AudioAsset, 'source' | 'libraryId'>) => Promise<AudioAsset>;
+  onPreview: (block: PodcastBlock) => void;
+}) {
+  type LibraryTarget = 'block' | 'background' | 'musicAssetId' | 'openingAssetId' | 'closingAssetId';
+  const [block, setBlock] = useState<PodcastBlock>(() => structuredClone(initialBlock));
+  const [error, setError] = useState('');
+  const [libraryTarget, setLibraryTarget] = useState<LibraryTarget | null>(null);
+  const selectedAsset = assets.find((asset) => asset.id === block.assetId);
+  const requiresAsset = block.type === 'voice' || block.type === 'music' || block.type === 'sfx';
+  const canSave = !requiresAsset || Boolean(block.assetId);
+
+  const update = <K extends keyof PodcastBlock>(key: K, value: PodcastBlock[K]) => setBlock((current) => ({ ...current, [key]: value }));
+
+  const importForBlock = async (file: File) => {
+    setError('');
+    try {
+      const asset = await onRegisterAsset(file, file.name, file.type, undefined, { source: 'import' });
+      setBlock((current) => ({ ...current, assetId: asset.id, duration: asset.duration, trimStart: 0, trimEnd: asset.duration, title: current.title.startsWith('Nou') ? file.name.replace(/\.[^.]+$/, '') : current.title }));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Ce fichier audio ne peut pas être utilisé.');
+    }
+  };
+
+  const attachAsset = async (field: 'background' | 'musicAssetId' | 'voiceAssetId' | 'openingAssetId' | 'closingAssetId', file: File) => {
+    setError('');
+    try {
+      const asset = await onRegisterAsset(file, file.name, file.type, undefined, { source: 'import' });
+      setBlock((current) => {
+        if (field === 'background') return { ...current, background: { assetId: asset.id, level: 'low', startBefore: true, continueAfter: true } };
+        return { ...current, jingle: { ...(current.jingle ?? { style: 'modern-radio', length: 'normal', musicLevel: 'low' }), [field]: asset.id } };
+      });
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Ce fichier audio ne peut pas être utilisé.');
+    }
+  };
+
+  const chooseLibraryPreset = async (preset: LibraryPreset) => {
+    setError('');
+    try {
+      const existing = assets.find((asset) => asset.libraryId === preset.id);
+      const asset = existing ?? await onRegisterAsset(
+        await loadLibraryAudio(preset),
+        preset.title,
+        undefined,
+        undefined,
+        { source: 'library', libraryId: preset.id },
+      );
+      setBlock((current) => {
+        if (libraryTarget === 'block') {
+          return {
+            ...current,
+            assetId: asset.id,
+            duration: asset.duration,
+            trimStart: 0,
+            trimEnd: asset.duration,
+            title: current.title.startsWith('Nou') ? preset.title : current.title,
+          };
+        }
+        if (libraryTarget === 'background') {
+          return { ...current, background: { assetId: asset.id, level: 'low', startBefore: true, continueAfter: true } };
+        }
+        if (libraryTarget) {
+          return { ...current, jingle: { ...(current.jingle ?? { style: 'modern-radio', length: 'normal', musicLevel: 'low' }), [libraryTarget]: asset.id } };
+        }
+        return current;
+      });
+      setLibraryTarget(null);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Impossible de télécharger ce son.');
+      throw reason;
+    }
+  };
+
+  const libraryKind: LibraryKind = libraryTarget === 'block'
+    ? (block.type === 'sfx' ? 'sfx' : 'music')
+    : libraryTarget === 'openingAssetId' || libraryTarget === 'closingAssetId'
+      ? 'sfx'
+      : 'music';
+
+  return (
+    <>
+      <Modal title={`${isNew ? 'Ajouter' : 'Modifier'} : ${blockLabels[block.type]}`} onClose={onClose} wide>
+        <div className="editor-modal-body">
+          <label className="field"><span>Nom de l’élément</span><input value={block.title} onChange={(event) => update('title', event.target.value)} /></label>
+
+          {requiresAsset && (
+            <div className="audio-source-panel">
+              <h3>{block.type === 'voice' ? 'Ta voix' : block.type === 'music' ? 'Choisir une musique' : 'Choisir un bruitage'}</h3>
+              {block.type === 'voice' && <Recorder onReady={async (blob, duration) => { const asset = await onRegisterAsset(blob, `Enregistrement ${new Date().toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' })}`, blob.type, duration, { source: 'recording' }); setBlock((current) => ({ ...current, assetId: asset.id, duration: asset.duration, trimStart: 0, trimEnd: asset.duration })); }} />}
+              <div className="source-actions">
+                {block.type !== 'voice' && <button className="primary-button file-button" onClick={() => setLibraryTarget('block')}>{block.type === 'music' ? '🎼 Ouvrir la bibliothèque musicale' : '🔊 Ouvrir la bibliothèque de bruitages'}</button>}
+                <FilePicker label={block.type === 'voice' ? 'Importer un enregistrement' : block.type === 'music' ? 'Importer ma propre musique' : 'Importer mon propre bruitage'} onFile={importForBlock} />
+              </div>
+              {selectedAsset ? <div className="selected-audio">✓ {selectedAsset.name} · {formatTime(selectedAsset.duration)}{selectedAsset.source === 'library' ? ' · bibliothèque intégrée' : ''}</div> : <div className="missing-audio">Aucun fichier sélectionné</div>}
+              {block.type !== 'voice' && <p className="library-note">Les sons intégrés sont produits directement par l’application. Ils fonctionnent hors ligne et ne nécessitent aucun crédit externe.</p>}
+            </div>
+          )}
+
+          {selectedAsset && (
+            <TrimControl asset={selectedAsset} start={block.trimStart} end={block.trimEnd || selectedAsset.duration} onChange={(start, end) => setBlock((current) => ({ ...current, trimStart: start, trimEnd: end, duration: end - start }))} />
+          )}
+
+          {block.type === 'silence' && (
+            <div className="setting-group"><h3>Durée de la pause</h3><div className="segmented-wrap">{[0.5, 1, 2, 3].map((value) => <button key={value} className={block.duration === value ? 'selected' : ''} onClick={() => update('duration', value)}>{value} s</button>)}</div><label className="field compact-field"><span>Durée personnalisée</span><input type="number" min="0.5" max="10" step="0.5" value={block.duration} onChange={(event) => update('duration', Math.min(10, Math.max(0.5, Number(event.target.value))))} /></label></div>
+          )}
+
+          {block.type === 'transition' && (
+            <div className="setting-group"><h3>Type de transition</h3><div className="option-grid">{(Object.keys(transitionLabels) as TransitionPreset[]).map((preset) => <button key={preset} className={block.transitionPreset === preset ? 'selected' : ''} onClick={() => update('transitionPreset', preset)}>{transitionLabels[preset]}</button>)}</div><label className="field compact-field"><span>Durée</span><input type="range" min="0.5" max="3" step="0.1" value={block.duration} onChange={(event) => update('duration', Number(event.target.value))} /><strong>{block.duration.toFixed(1)} s</strong></label></div>
+          )}
+
+          {block.type === 'jingle' && (
+            <JingleSettings block={block} assets={assets} onBlock={setBlock} onAttach={attachAsset} onOpenLibrary={setLibraryTarget} />
+          )}
+
+          {(block.type === 'voice' || block.type === 'music' || block.type === 'sfx') && (
+            <div className="settings-columns">
+              <ChoiceSetting title="Volume" value={block.volume} options={block.type === 'voice' ? [['low', 'Plus faible'], ['normal', 'Normal'], ['high', 'Plus fort']] : [['low', 'Discret'], ['normal', 'Normal'], ['high', 'Fort']]} onChange={(value) => update('volume', value as VolumeLevel)} />
+              <ChoiceSetting title="Début" value={block.fadeIn} options={[["none", "Direct"], ["short", "Fondu court"], ["normal", "Fondu normal"]]} onChange={(value) => update('fadeIn', value as FadeLevel)} />
+              <ChoiceSetting title="Fin" value={block.fadeOut} options={[["none", "Directe"], ["short", "Fondu court"], ["normal", "Fondu normal"]]} onChange={(value) => update('fadeOut', value as FadeLevel)} />
+            </div>
+          )}
+
+          {block.type === 'voice' && (
+            <>
+              <div className="setting-group"><h3>Effet sur la voix</h3><div className="option-grid compact-options">{(Object.keys(voiceEffectLabels) as VoiceEffect[]).map((effect) => <button key={effect} className={block.voiceEffect === effect ? 'selected' : ''} onClick={() => update('voiceEffect', effect)}>{voiceEffectLabels[effect]}</button>)}</div></div>
+              <div className="setting-group background-setting">
+                <div className="setting-title-row"><div><h3>Musique de fond</h3><p>L’application baisse automatiquement la musique pendant la voix.</p></div>{block.background && <button className="danger-text" onClick={() => update('background', undefined)}>Retirer</button>}</div>
+                {!block.background ? (
+                  <div className="source-actions">
+                    <button className="primary-button file-button" onClick={() => setLibraryTarget('background')}>🎼 Choisir dans la bibliothèque</button>
+                    <FilePicker label="Importer une musique de fond" onFile={(file) => attachAsset('background', file)} />
+                  </div>
+                ) : (
+                  <div className="background-controls">
+                    <div className="selected-audio">✓ {assets.find((asset) => asset.id === block.background?.assetId)?.name ?? 'Musique choisie'}</div>
+                    <ChoiceSetting title="Présence" value={block.background.level} options={[["very-low", "Très discrète"], ["low", "Discrète"], ["present", "Présente"]]} onChange={(value) => setBlock((current) => ({ ...current, background: current.background ? { ...current.background, level: value as 'very-low' | 'low' | 'present' } : undefined }))} />
+                    <label className="che
