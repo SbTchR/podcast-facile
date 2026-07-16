@@ -219,14 +219,12 @@ function App() {
     return () => window.clearTimeout(timeout);
   }, [dirty, project, saveCurrentProject]);
 
-  const stopPlayback = useCallback(async () => {
+  const stopPlayback = useCallback(() => {
     if (playbackTimerRef.current !== null) window.clearInterval(playbackTimerRef.current);
     playbackTimerRef.current = null;
     const controller = playbackRef.current;
     playbackRef.current = null;
-    if (controller) {
-      try { await controller.stop(); } catch { /* already closed */ }
-    }
+    if (controller) void controller.stop().catch(() => undefined);
     setPlaybackStatus('stopped');
     setActiveBlockId(null);
   }, []);
@@ -235,8 +233,10 @@ function App() {
 
   const beginPlayback = useCallback(async (offset = 0) => {
     if (!project || getProjectDuration(project) <= 0) return;
-    await stopPlayback();
+    stopPlayback();
     try {
+      // playProject() est appelé immédiatement depuis le clic afin de déverrouiller
+      // AudioContext sur Safari avant toute attente asynchrone.
       const controller = await playProject(project, offset);
       playbackRef.current = controller;
       setElapsed(offset);
@@ -252,7 +252,7 @@ function App() {
       }, 100);
     } catch (error) {
       setToast(error instanceof Error ? error.message : 'La lecture audio a échoué.');
-      await stopPlayback();
+      stopPlayback();
     }
   }, [project, stopPlayback]);
 
@@ -352,3 +352,10 @@ function App() {
         draft.blocks.splice(insertAt, 0, block);
       }
     });
+    setEditingBlock(null);
+    setEditingIsNew(false);
+  };
+
+  const exportProjectFile = async () => {
+    if (!project) return;
+    setRendering(true);
