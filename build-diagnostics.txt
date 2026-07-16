@@ -1,5 +1,0 @@
-
-> podcast-facile@0.3.0 check
-> tsc -b
-
-src/data/audioLibrary.ts(621,6): error TS1136: Property assignment expected.
