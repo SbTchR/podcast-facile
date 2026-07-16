@@ -169,7 +169,7 @@ function transitionTone(context: RenderContext, destination: AudioNode, preset: 
   const gain = context.createGain();
   gain.connect(destination);
   gain.gain.setValueAtTime(0.0001, start);
-  gain.gain.linearRampToValueAtTime(0.22, start + Math.min(0.08, duration / 3));
+  gain.gain.linearRampToValueAtTime(0.34, start + Math.min(0.08, duration / 3));
   gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
 
   if (preset === 'whoosh' || preset === 'page' || preset === 'radio') {
@@ -375,8 +375,35 @@ async function scheduleBlock(
   );
 }
 
-async function scheduleProject(context: RenderContext, destination: AudioNode, project: PodcastProject, offset: number, baseStart: number): Promise<void> {
+function referencedAssetIds(project: PodcastProject): Set<string> {
+  const ids = new Set<string>();
+  for (const block of project.blocks) {
+    if (block.assetId) ids.add(block.assetId);
+    if (block.background?.assetId) ids.add(block.background.assetId);
+    if (block.jingle?.musicAssetId) ids.add(block.jingle.musicAssetId);
+    if (block.jingle?.voiceAssetId) ids.add(block.jingle.voiceAssetId);
+    if (block.jingle?.openingAssetId) ids.add(block.jingle.openingAssetId);
+    if (block.jingle?.closingAssetId) ids.add(block.jingle.closingAssetId);
+  }
+  return ids;
+}
+
+async function decodeProjectAssets(context: RenderContext, project: PodcastProject): Promise<Map<string, AudioBuffer>> {
   const cache = new Map<string, AudioBuffer>();
+  const ids = referencedAssetIds(project);
+  const assets = project.assets.filter((asset) => ids.has(asset.id));
+  await Promise.all(assets.map((asset) => decodeAsset(context, asset, cache)));
+  return cache;
+}
+
+async function scheduleProject(
+  context: RenderContext,
+  destination: AudioNode,
+  project: PodcastProject,
+  offset: number,
+  baseStart: number,
+  cache: Map<string, AudioBuffer>,
+): Promise<void> {
   const timeline = getTimeline(project);
   let scheduleCursor = baseStart;
   for (const entry of timeline) {
@@ -389,6 +416,13 @@ async function scheduleProject(context: RenderContext, destination: AudioNode, p
 
 export async function playProject(project: PodcastProject, offset = 0): Promise<PlaybackController> {
   const context = new AudioContext();
+
+  // Safari iOS exige que resume() soit appelé pendant le geste utilisateur.
+  // L'appel est lancé immédiatement, avant tout décodage ou autre attente asynchrone.
+  const unlockPromise = context.state === 'suspended'
+    ? context.resume().catch(() => undefined)
+    : Promise.resolve();
+
   const compressor = context.createDynamicsCompressor();
   compressor.threshold.value = -8;
   compressor.knee.value = 12;
@@ -396,18 +430,30 @@ export async function playProject(project: PodcastProject, offset = 0): Promise<
   compressor.attack.value = 0.003;
   compressor.release.value = 0.2;
   compressor.connect(context.destination);
-  const startAt = context.currentTime + 0.05;
-  await scheduleProject(context, compressor, project, offset, startAt);
-  const totalDuration = getProjectDuration(project);
-  return {
-    context,
-    totalDuration,
-    startOffset: offset,
-    getElapsed: () => Math.min(totalDuration, offset + Math.max(0, context.currentTime - startAt)),
-    pause: () => context.suspend(),
-    resume: () => context.resume(),
-    stop: () => context.close(),
-  };
+
+  try {
+    // Tous les fichiers sont décodés avant de fixer l'instant de départ.
+    // La timeline ne peut ainsi plus commencer dans le passé pendant le décodage.
+    const cache = await decodeProjectAssets(context, project);
+    await unlockPromise;
+    if (context.state === 'suspended') await context.resume();
+
+    const startAt = context.currentTime + 0.2;
+    await scheduleProject(context, compressor, project, offset, startAt, cache);
+    const totalDuration = getProjectDuration(project);
+    return {
+      context,
+      totalDuration,
+      startOffset: offset,
+      getElapsed: () => Math.min(totalDuration, offset + Math.max(0, context.currentTime - startAt)),
+      pause: () => context.suspend(),
+      resume: () => context.resume(),
+      stop: () => context.state === 'closed' ? Promise.resolve() : context.close(),
+    };
+  } catch (error) {
+    if (context.state !== 'closed') await context.close().catch(() => undefined);
+    throw error;
+  }
 }
 
 function audioBufferToWav(buffer: AudioBuffer): Blob {
@@ -455,7 +501,8 @@ export async function renderProjectToWav(project: PodcastProject): Promise<Blob>
   compressor.attack.value = 0.003;
   compressor.release.value = 0.25;
   compressor.connect(context.destination);
-  await scheduleProject(context, compressor, project, 0, 0);
+  const cache = await decodeProjectAssets(context, project);
+  await scheduleProject(context, compressor, project, 0, 0, cache);
   const rendered = await context.startRendering();
   return audioBufferToWav(rendered);
 }
