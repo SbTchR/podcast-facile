@@ -1,18 +1,19 @@
-name: Build and publish Podcast Facile V3
+name: Build and publish Podcast Facile V3 standard
 
 on:
   push:
     branches: [main]
     paths:
-      - release/podcast-facile-v3-source.zip
-      - .github/workflows/build-v3.yml
+      - 'app/**'
+      - 'app-parts/**'
+      - '.github/workflows/build-v3.yml'
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: build-v3
+  group: build-v3-standard
   cancel-in-progress: true
 
 jobs:
@@ -28,53 +29,70 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: app/package.json
 
-      - name: Extract V3 source
+      - name: Reconstruct complete source files
         run: |
-          rm -rf .v3-build
-          mkdir .v3-build
-          unzip -q release/podcast-facile-v3-source.zip -d .v3-build
+          mkdir -p app/src/data
+          cat app-parts/App-00.txt app-parts/App-01.txt app-parts/App-02.txt app-parts/App-03.txt app-parts/App-04.txt app-parts/App-05.txt > app/src/App.tsx
+          cat app-parts/styles-00.txt app-parts/styles-01.txt app-parts/styles-02.txt > app/src/styles.css
+          cat app-parts/audioLibrary-00.txt app-parts/audioLibrary-01.txt app-parts/audioLibrary-02.txt app-parts/audioLibrary-03.txt > app/src/data/audioLibrary.ts
+          test -s app/src/App.tsx
+          test -s app/src/styles.css
+          test -s app/src/data/audioLibrary.ts
+          echo "App.tsx: $(wc -c < app/src/App.tsx) bytes"
+          echo "styles.css: $(wc -c < app/src/styles.css) bytes"
+          echo "audioLibrary.ts: $(wc -c < app/src/data/audioLibrary.ts) bytes"
 
-      - name: Install and build
-        working-directory: .v3-build
+      - name: Install dependencies
+        working-directory: app
+        run: npm install --no-audit --no-fund
+
+      - name: Type check
+        working-directory: app
+        run: npm run check
+
+      - name: Build standard Vite site
+        working-directory: app
+        run: npm run build
+
+      - name: Verify standard output
         run: |
-          npm ci
-          npm run check
-          npm run build
+          test -s app/dist/index.html
+          test -n "$(find app/dist/assets -maxdepth 1 -name '*.js' -print -quit)"
+          test -n "$(find app/dist/assets -maxdepth 1 -name '*.css' -print -quit)"
+          ! grep -R "DecompressionStream\|pako\.ungzip\|\.js\.gz" app/dist/index.html app/dist/assets/*.js
+          grep -q '<script type="module"' app/dist/index.html
 
       - name: Install static site
         run: |
           rm -rf site
           mkdir site
-          cp -R .v3-build/dist/. site/
+          cp -R app/dist/. site/
           touch site/.nojekyll
-          cp .v3-build/README.md README.md
-          cp .v3-build/AUDIO_CREDITS.md AUDIO_CREDITS.md
           cat > index.html <<'HTML'
           <!doctype html>
           <html lang="fr">
           <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width,initial-scale=1">
-            <meta http-equiv="refresh" content="0;url=./site/?v=20260715-v3-1">
+            <meta http-equiv="refresh" content="0;url=./site/?v=20260716-v3-standard-1">
             <title>Podcast Facile V3</title>
-            <script>location.replace('./site/?v=20260715-v3-1')</script>
+            <script>location.replace('./site/?v=20260716-v3-standard-1')</script>
           </head>
-          <body><a href="./site/?v=20260715-v3-1">Ouvrir Podcast Facile V3</a></body>
+          <body><a href="./site/?v=20260716-v3-standard-1">Ouvrir Podcast Facile V3</a></body>
           </html>
           HTML
-          rm -rf .v3-build
 
       - name: Commit generated site
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A site index.html README.md AUDIO_CREDITS.md
+          git add -A site index.html app/package-lock.json
           if git diff --cached --quiet; then
             echo "No generated changes to commit."
           else
-            git commit -m "Publier le build V3"
+            git commit -m "Publier la V3 standard"
             git push
           fi
-
-# Trigger de publication V3 : 2026-07-15
