@@ -1,11 +1,3 @@
-
-    setEditingBlock(null);
-    setEditingIsNew(false);
-  };
-
-  const exportProjectFile = async () => {
-    if (!project) return;
-    setRendering(true);
     try {
       const blob = await serializeProject(project);
       downloadBlob(blob, `${safeFilename(project.title)}.podfacile`);
@@ -241,7 +233,7 @@
           onPreview={async (block) => {
             const previewProject = { ...project, blocks: [block] };
             try {
-              await stopPlayback();
+              stopPlayback();
               const controller = await playProject(previewProject, 0);
               playbackRef.current = controller;
               setPlaybackStatus('playing');
