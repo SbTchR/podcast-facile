@@ -36,6 +36,8 @@ jobs:
           cache-dependency-path: app/package.json
 
       - name: Reconstruct complete source files
+        id: reconstruct
+        shell: bash
         run: |
           mkdir -p app/src/data
           cat app-parts/App-00.txt app-parts/App-01.txt app-parts/App-02.txt app-parts/App-03.txt app-parts/App-04.txt app-parts/App-05.txt > app/src/App.tsx
@@ -43,14 +45,32 @@ jobs:
           cat app-parts/audioLibrary-00.txt > app/src/data/audioLibrary.ts
           sed '$d' app-parts/audioLibrary-01.txt >> app/src/data/audioLibrary.ts
           cat app-parts/audioLibrary-02.txt app-parts/audioLibrary-03.txt >> app/src/data/audioLibrary.ts
-          node app/scripts/apply-runtime-fixes.mjs
-          test -s app/src/App.tsx
-          test -s app/src/styles.css
-          test -s app/src/data/audioLibrary.ts
-          ! grep -R "structuredClone(" app/src/App.tsx
-          echo "App.tsx: $(wc -c < app/src/App.tsx) bytes"
-          echo "styles.css: $(wc -c < app/src/styles.css) bytes"
-          echo "audioLibrary.ts: $(wc -c < app/src/data/audioLibrary.ts) bytes"
+          set +e
+          node app/scripts/apply-runtime-fixes.mjs > runtime-fix-diagnostics.txt 2>&1
+          status=$?
+          cat runtime-fix-diagnostics.txt
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          if [ "$status" = "0" ]; then
+            rm -f runtime-fix-diagnostics.txt
+            test -s app/src/App.tsx
+            test -s app/src/styles.css
+            test -s app/src/data/audioLibrary.ts
+            ! grep -R "structuredClone(" app/src/App.tsx
+            echo "App.tsx: $(wc -c < app/src/App.tsx) bytes"
+            echo "styles.css: $(wc -c < app/src/styles.css) bytes"
+            echo "audioLibrary.ts: $(wc -c < app/src/data/audioLibrary.ts) bytes"
+          fi
+          exit 0
+
+      - name: Publish runtime-fix diagnostic
+        if: steps.reconstruct.outputs.status != '0'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add runtime-fix-diagnostics.txt
+          git commit -m "Enregistrer le diagnostic du correctif audio" || true
+          git push origin HEAD:main
+          exit 1
 
       - name: Install dependencies
         working-directory: app
@@ -96,7 +116,7 @@ jobs:
           mkdir site
           cp -R app/dist/. site/
           touch site/.nojekyll
-          rm -f build-diagnostics.txt
+          rm -f build-diagnostics.txt runtime-fix-diagnostics.txt
           cat > index.html <<'HTML'
           <!doctype html>
           <html lang="fr">
@@ -115,7 +135,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A site index.html app/package-lock.json build-diagnostics.txt
+          git add -A site index.html app/package-lock.json build-diagnostics.txt runtime-fix-diagnostics.txt
           if git diff --cached --quiet; then
             echo "No generated changes to commit."
           else
