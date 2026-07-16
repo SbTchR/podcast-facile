@@ -1,0 +1,168 @@
+ck-row"><input type="checkbox" checked={block.background.startBefore} onChange={(event) => setBlock((current) => ({ ...current, background: current.background ? { ...current.background, startBefore: event.target.checked } : undefined }))} /> Commencer légèrement avant la voix</label>
+                    <label className="check-row"><input type="checkbox" checked={block.background.continueAfter} onChange={(event) => setBlock((current) => ({ ...current, background: current.background ? { ...current.background, continueAfter: event.target.checked } : undefined }))} /> Continuer légèrement après la voix</label>
+                    <button className="secondary-button compact" onClick={() => setLibraryTarget('background')}>Changer de musique</button>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {error && <div className="error-box">{error}</div>}
+        </div>
+        <div className="modal-footer">
+          <button className="secondary-button" onClick={() => onPreview(block)} disabled={!canSave}>▶ Écouter l’aperçu</button>
+          <span className="footer-spacer" />
+          <button className="ghost-button" onClick={onClose}>Annuler</button>
+          <button className="primary-button" disabled={!canSave || !block.title.trim()} onClick={() => onSave(block)}>✓ {isNew ? 'Ajouter' : 'Enregistrer'}</button>
+        </div>
+      </Modal>
+      {libraryTarget && <AudioLibraryModal kind={libraryKind} onClose={() => setLibraryTarget(null)} onChoose={chooseLibraryPreset} />}
+    </>
+  );
+}
+
+function Recorder({ onReady }: { onReady: (blob: Blob, duration: number) => Promise<void> | void }) {
+  const [state, setState] = useState<'idle' | 'countdown' | 'recording' | 'paused' | 'processing'>('idle');
+  const [seconds, setSeconds] = useState(0);
+  const [countdown, setCountdown] = useState(true);
+  const [count, setCount] = useState(3);
+  const [error, setError] = useState('');
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<number | null>(null);
+  const elapsedRef = useRef(0);
+
+  const cleanup = () => {
+    if (timerRef.current !== null) window.clearInterval(timerRef.current);
+    timerRef.current = null;
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+  };
+  useEffect(() => cleanup, []);
+
+  const beginActualRecording = async () => {
+    try {
+      if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') throw new Error('L’enregistrement micro n’est pas pris en charge par ce navigateur.');
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+      streamRef.current = stream;
+      const candidates = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/webm'];
+      const mimeType = candidates.find((candidate) => MediaRecorder.isTypeSupported(candidate));
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      recorderRef.current = recorder;
+      chunksRef.current = [];
+      recorder.ondataavailable = (event) => { if (event.data.size > 0) chunksRef.current.push(event.data); };
+      recorder.onstop = async () => {
+        setState('processing');
+        const blob = new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' });
+        const duration = Math.max(0.2, elapsedRef.current);
+        cleanup();
+        try { await onReady(blob, duration); setState('idle'); setSeconds(0); elapsedRef.current = 0; } catch (reason) { setError(reason instanceof Error ? reason.message : 'Impossible de conserver l’enregistrement.'); setState('idle'); }
+      };
+      recorder.start(250);
+      setSeconds(0);
+      setState('recording');
+      const started = performance.now();
+      timerRef.current = window.setInterval(() => {
+        const value = (performance.now() - started) / 1000;
+        elapsedRef.current = value;
+        setSeconds(value);
+      }, 100);
+    } catch (reason) {
+      cleanup();
+      setState('idle');
+      setError(reason instanceof Error ? reason.message : 'Le microphone est inaccessible.');
+    }
+  };
+
+  const start = async () => {
+    setError('');
+    if (countdown) {
+      setState('countdown');
+      for (let value = 3; value >= 1; value -= 1) {
+        setCount(value);
+        await new Promise((resolve) => window.setTimeout(resolve, 700));
+      }
+    }
+    await beginActualRecording();
+  };
+
+  const pause = () => {
+    const recorder = recorderRef.current;
+    if (!recorder) return;
+    if (state === 'recording') { recorder.pause(); setState('paused'); if (timerRef.current !== null) window.clearInterval(timerRef.current); }
+    else if (state === 'paused') {
+      recorder.resume();
+      setState('recording');
+      const base = performance.now() - elapsedRef.current * 1000;
+      timerRef.current = window.setInterval(() => {
+        const value = (performance.now() - base) / 1000;
+        elapsedRef.current = value;
+        setSeconds(value);
+      }, 100);
+    }
+  };
+
+  return (
+    <div className={`recorder recorder-${state}`}>
+      <div className="recorder-display">
+        <div className="mic-animation"><i /><i /><i /><i /><i /></div>
+        <div><strong>{state === 'idle' ? 'Prêt à enregistrer' : state === 'countdown' ? `Départ dans ${count}` : state === 'processing' ? 'Traitement…' : state === 'paused' ? 'En pause' : 'Enregistrement en cours'}</strong><span>{formatTime(seconds)}</span></div>
+      </div>
+      <div className="recorder-actions">
+        {state === 'idle' && <button className="record-button" onClick={() => void start()}>● Enregistrer</button>}
+        {(state === 'recording' || state === 'paused') && <button className="secondary-button compact" onClick={pause}>{state === 'recording' ? 'Ⅱ Pause' : '▶ Reprendre'}</button>}
+        {(state === 'recording' || state === 'paused') && <button className="primary-button compact" onClick={() => recorderRef.current?.stop()}>■ Terminer</button>}
+        {state === 'idle' && <label className="check-row"><input type="checkbox" checked={countdown} onChange={(event) => setCountdown(event.target.checked)} /> Compte à rebours de 3 secondes</label>}
+      </div>
+      {error && <div className="error-box small">{error}</div>}
+    </div>
+  );
+}
+
+function FilePicker({ label, onFile }: { label: string; onFile: (file: File) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  return <><button className="secondary-button file-button" onClick={() => inputRef.current?.click()}>↑ {label}</button><input ref={inputRef} hidden type="file" accept="audio/*,.wav,.mp3,.m4a,.ogg,.webm" onChange={(event) => { const file = event.target.files?.[0]; if (file) onFile(file); event.currentTarget.value = ''; }} /></>;
+}
+
+function TrimControl({ asset, start, end, onChange }: { asset: AudioAsset; start: number; end: number; onChange: (start: number, end: number) => void }) {
+  const safeEnd = Math.min(asset.duration, Math.max(start + 0.05, end));
+  const left = asset.duration ? (start / asset.duration) * 100 : 0;
+  const right = asset.duration ? (safeEnd / asset.duration) * 100 : 100;
+  return (
+    <div className="trim-panel">
+      <div className="setting-title-row"><div><h3>Couper le début ou la fin</h3><p>Garde seulement la partie utile.</p></div><button className="ghost-button compact" onClick={() => onChange(0, asset.duration)}>Réinitialiser</button></div>
+      <div className="trim-visual" style={{ '--trim-left': `${left}%`, '--trim-right': `${100 - right}%` } as React.CSSProperties}><span>début</span><span>partie conservée</span><span>fin</span></div>
+      <div className="trim-sliders">
+        <label><span>Début : {start.toFixed(1)} s</span><input type="range" min="0" max={Math.max(0, safeEnd - 0.05)} step="0.05" value={start} onChange={(event) => onChange(Number(event.target.value), safeEnd)} /></label>
+        <label><span>Fin : {safeEnd.toFixed(1)} s</span><input type="range" min={Math.min(asset.duration, start + 0.05)} max={asset.duration} step="0.05" value={safeEnd} onChange={(event) => onChange(start, Number(event.target.value))} /></label>
+      </div>
+      <strong className="kept-duration">Durée conservée : {formatTime(safeEnd - start)}</strong>
+    </div>
+  );
+}
+
+function JingleSettings({ block, assets, onBlock, onAttach, onOpenLibrary }: {
+  block: PodcastBlock; assets: AudioAsset[]; onBlock: React.Dispatch<React.SetStateAction<PodcastBlock>>;
+  onAttach: (field: 'background' | 'musicAssetId' | 'voiceAssetId' | 'openingAssetId' | 'closingAssetId', file: File) => void;
+  onOpenLibrary: (target: 'musicAssetId' | 'openingAssetId' | 'closingAssetId') => void;
+}) {
+  const jingle = block.jingle ?? { style: 'modern-radio' as const, length: 'normal' as const, musicLevel: 'low' as const };
+  const updateJingle = (values: Partial<NonNullable<PodcastBlock['jingle']>>) => onBlock((current) => ({ ...current, jingle: { ...(current.jingle ?? jingle), ...values } }));
+  const assetName = (id?: string) => assets.find((asset) => asset.id === id)?.name;
+  return (
+    <div className="jingle-builder">
+      <div className="jingle-step"><span>1</span><div><h3>Musique</h3><div className="source-actions"><button className="primary-button compact" onClick={() => onOpenLibrary('musicAssetId')}>🎼 Bibliothèque musicale</button><FilePicker label="Importer une musique" onFile={(file) => onAttach('musicAssetId', file)} /></div>{jingle.musicAssetId && <small>✓ {assetName(jingle.musicAssetId)}</small>}</div></div>
+      <div className="jingle-step"><span>2</span><div><h3>Texte avec ta voix</h3><Recorder onReady={async (blob, duration) => { const file = new File([blob], 'voix-jingle.webm', { type: blob.type }); onAttach('voiceAssetId', file); void duration; }} /><FilePicker label="Ou importer une voix" onFile={(file) => onAttach('voiceAssetId', file)} />{jingle.voiceAssetId && <small>✓ {assetName(jingle.voiceAssetId)}</small>}</div></div>
+      <div className="jingle-step"><span>3</span><div><h3>Bruits facultatifs</h3><div className="jingle-sound-grid"><div><strong>Ouverture</strong><div className="source-actions"><button className="secondary-button compact" onClick={() => onOpenLibrary('openingAssetId')}>🔊 Bibliothèque</button><FilePicker label="Importer" onFile={(file) => onAttach('openingAssetId', file)} /></div>{jingle.openingAssetId && <small>✓ {assetName(jingle.openingAssetId)}</small>}</div><div><strong>Fermeture</strong><div className="source-actions"><button className="secondary-button compact" onClick={() => onOpenLibrary('closingAssetId')}>🔊 Bibliothèque</button><FilePicker label="Importer" onFile={(file) => onAttach('closingAssetId', file)} /></div>{jingle.closingAssetId && <small>✓ {assetName(jingle.closingAssetId)}</small>}</div></div></div></div>
+      <div className="settings-columns">
+        <ChoiceSetting title="Style" value={jingle.style} options={[["dynamic", "Dynamique"], ["adventure", "Aventure"], ["mysterious", "Mystérieux"], ["serious", "Sérieux"], ["historical", "Historique"], ["modern-radio", "Radio moderne"]]} onChange={(value) => updateJingle({ style: value as NonNullable<PodcastBlock['jingle']>['style'] })} />
+        <ChoiceSetting title="Durée" value={jingle.length} options={[["short", "Courte · 6 s"], ["normal", "Normale · 10 s"], ["long", "Longue · 15 s"]]} onChange={(value) => updateJingle({ length: value as 'short' | 'normal' | 'long' })} />
+        <ChoiceSetting title="Musique sous la voix" value={jingle.musicLevel} options={[["very-low", "Très discrète"], ["low", "Discrète"], ["present", "Présente"]]} onChange={(value) => updateJingle({ musicLevel: value as 'very-low' | 'low' | 'present' })} />
+      </div>
+    </div>
+  );
+}
+
+function AudioLibraryModal({ kind, onClose, onChoose }: { kind: LibraryKind; onClose: () => void; onChoose: (preset: LibraryPreset) => Promise<void> }) {
+  const [search, s
