@@ -1,0 +1,163 @@
+className="privacy-line">🔒 Tes fichiers restent sur cet appareil. Rien n’est envoyé sur internet.</p>
+        </section>
+
+        <section id="saved-projects" className="saved-projects">
+          <div className="section-heading-row">
+            <div><h2>Projets enregistrés</h2><p>Les projets restent dans ce navigateur tant que ses données ne sont pas effacées.</p></div>
+            <button className="secondary-button" onClick={() => inputRef.current?.click()}>Ouvrir un fichier .podfacile</button>
+            <input ref={inputRef} type="file" accept=".podfacile,application/json" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) onImport(file); event.currentTarget.value = ''; }} />
+          </div>
+          {projects.length === 0 ? (
+            <div className="empty-projects"><div>📭</div><strong>Aucun projet sauvegardé</strong><p>Crée ton premier podcast ou ouvre une sauvegarde.</p></div>
+          ) : (
+            <div className="project-list">
+              {projects.map((project) => (
+                <article className="project-row" key={project.id}>
+                  <div className="project-icon">🎧</div>
+                  <div className="project-details"><h3>{project.title}</h3><p>{project.author || 'Auteur non indiqué'} · modifié le {new Date(project.updatedAt).toLocaleDateString('fr-CH')}</p></div>
+                  <div className="project-actions">
+                    <button className="primary-button compact" onClick={() => onOpen(project.id)}>Ouvrir</button>
+                    <button className="icon-text-button" onClick={() => onDuplicate(project)}>⧉ Dupliquer</button>
+                    <button className="icon-text-button danger" onClick={() => onDelete(project.id)}>🗑 Supprimer</button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      </main>
+    </div>
+  );
+}
+
+function SetupScreen({
+  title, author, target, templateId, sections, onTitle, onAuthor, onTarget, onTemplate, onSections, onBack, onFinish,
+}: {
+  title: string; author: string; target: string; templateId: string; sections: string[];
+  onTitle: (value: string) => void; onAuthor: (value: string) => void; onTarget: (value: string) => void;
+  onTemplate: (value: string) => void; onSections: (value: string[]) => void; onBack: () => void; onFinish: () => void;
+}) {
+  return (
+    <div className="setup-screen">
+      <header className="simple-header"><button className="ghost-button" onClick={onBack}>← Retour</button><div className="brand"><span className="brand-mark">PF</span><span>{APP_NAME}</span></div><span /></header>
+      <main className="setup-content">
+        <div className="step-number">1 sur 2</div>
+        <h1>Prépare ton projet</h1>
+        <p className="lead">Quelques informations suffisent. Tout pourra encore être modifié ensuite.</p>
+        <div className="setup-form-grid">
+          <label className="field"><span>Titre du podcast <b>*</b></span><input autoFocus value={title} onChange={(event) => onTitle(event.target.value)} placeholder="Ex. Magellan : héros ou envahisseur ?" /></label>
+          <label className="field"><span>Élève ou groupe <small>(facultatif)</small></span><input value={author} onChange={(event) => onAuthor(event.target.value)} placeholder="Ex. Groupe 3" /></label>
+          <label className="field"><span>Durée souhaitée <small>(minutes, facultatif)</small></span><input type="number" min="1" max="120" value={target} onChange={(event) => onTarget(event.target.value)} placeholder="Ex. 5" /></label>
+        </div>
+
+        <h2>Choisis une structure de départ</h2>
+        <div className="template-grid">
+          {templates.map((template) => (
+            <button key={template.id} className={`template-card ${templateId === template.id ? 'selected' : ''}`} onClick={() => onTemplate(template.id)}>
+              <span className="template-check">{templateId === template.id ? '✓' : ''}</span>
+              <strong>{template.title}</strong><small>{template.description}</small>
+            </button>
+          ))}
+        </div>
+
+        <div className="section-builder">
+          <div className="section-heading-row"><div><h2>Sections proposées</h2><p>Ce sont seulement des repères visuels.</p></div><button className="secondary-button compact" onClick={() => onSections([...sections, 'Nouvelle section'])}>＋ Ajouter</button></div>
+          <div className="section-edit-list">
+            {sections.map((section, index) => (
+              <div className="section-edit-row" key={`${index}-${section}`}>
+                <span>{index + 1}</span><input value={section} onChange={(event) => onSections(sections.map((item, itemIndex) => itemIndex === index ? event.target.value : item))} />
+                <button aria-label="Monter" disabled={index === 0} onClick={() => { const next = [...sections]; [next[index - 1], next[index]] = [next[index], next[index - 1]]; onSections(next); }}>↑</button>
+                <button aria-label="Descendre" disabled={index === sections.length - 1} onClick={() => { const next = [...sections]; [next[index + 1], next[index]] = [next[index], next[index + 1]]; onSections(next); }}>↓</button>
+                <button aria-label="Supprimer" className="danger" disabled={sections.length === 1} onClick={() => onSections(sections.filter((_, itemIndex) => itemIndex !== index))}>×</button>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="setup-footer"><button className="secondary-button large" onClick={onBack}>Annuler</button><button className="primary-button large" onClick={onFinish}>Commencer le montage →</button></div>
+      </main>
+    </div>
+  );
+}
+
+function EditorTopbar({ project, duration, saveState, canUndo, canRedo, onHome, onSave, onUndo, onRedo, onHelp, onExport }: {
+  project: PodcastProject; duration: number; saveState: 'saved' | 'dirty' | 'saving'; canUndo: boolean; canRedo: boolean;
+  onHome: () => void; onSave: () => void; onUndo: () => void; onRedo: () => void; onHelp: () => void; onExport: () => void;
+}) {
+  return (
+    <header className="editor-topbar">
+      <button className="brand-button" onClick={onHome}><span className="brand-mark">PF</span><span className="brand-name">{APP_NAME}</span></button>
+      <div className="topbar-project"><strong>{project.title}</strong><span className={`save-indicator ${saveState}`}>{saveState === 'saved' ? '✓ Sauvegardé' : saveState === 'saving' ? 'Sauvegarde…' : '● Modifications non sauvegardées'}</span></div>
+      <div className="topbar-actions">
+        <button className="toolbar-button" onClick={onSave}>💾 <span>Enregistrer</span></button>
+        <button className="toolbar-button" disabled={!canUndo} onClick={onUndo} title="Annuler">↶</button>
+        <button className="toolbar-button" disabled={!canRedo} onClick={onRedo} title="Rétablir">↷</button>
+        <button className="toolbar-button" onClick={onHelp}>? <span>Aide</span></button>
+        <span className="duration-chip">⏱ {formatTime(duration)}</span>
+        <button className="primary-button compact" onClick={onExport}>Exporter →</button>
+      </div>
+    </header>
+  );
+}
+
+function SectionPanel({
+  section, sectionIndex, sectionCount, blocks, duration, activeBlockId,
+  onRename, onToggle, onAdd, onMoveSection, onDeleteSection, onPlay, onEdit, onDuplicate, onDelete, onMove, onDropBlock,
+}: {
+  section: PodcastSection; sectionIndex: number; sectionCount: number; blocks: PodcastBlock[]; duration: number; activeBlockId: string | null;
+  onRename: (title: string) => void; onToggle: () => void; onAdd: () => void; onMoveSection: (direction: -1 | 1) => void; onDeleteSection: () => void;
+  onPlay: (block: PodcastBlock) => void; onEdit: (block: PodcastBlock) => void; onDuplicate: (block: PodcastBlock) => void; onDelete: (block: PodcastBlock) => void;
+  onMove: (block: PodcastBlock, direction: -1 | 1) => void; onDropBlock: (draggedId: string, beforeId?: string) => void;
+}) {
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  return (
+    <section className="podcast-section" onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); const id = event.dataTransfer.getData('text/plain') || draggedId; if (id) onDropBlock(id); setDraggedId(null); }}>
+      <div className="podcast-section-header">
+        <button className="collapse-button" onClick={onToggle} aria-label={section.collapsed ? 'Déplier' : 'Replier'}>{section.collapsed ? '▸' : '▾'}</button>
+        <input className="section-title-input" value={section.title} onChange={(event) => onRename(event.target.value)} aria-label="Nom de la section" />
+        <span className="section-duration">{formatTime(duration)}</span>
+        <button className="mini-button" disabled={sectionIndex === 0} onClick={() => onMoveSection(-1)} title="Monter la section">↑</button>
+        <button className="mini-button" disabled={sectionIndex === sectionCount - 1} onClick={() => onMoveSection(1)} title="Descendre la section">↓</button>
+        <button className="mini-button danger" onClick={onDeleteSection} title="Supprimer la section">×</button>
+      </div>
+      {!section.collapsed && (
+        <div className="block-stack">
+          {blocks.length === 0 && <div className="empty-section">Cette section est vide. Ajoute une voix, une musique ou un autre élément.</div>}
+          {blocks.map((block, index) => (
+            <BlockCard
+              key={block.id}
+              block={block}
+              active={block.id === activeBlockId}
+              canMoveUp={index > 0}
+              canMoveDown={index < blocks.length - 1}
+              onPlay={() => onPlay(block)}
+              onEdit={() => onEdit(block)}
+              onDuplicate={() => onDuplicate(block)}
+              onDelete={() => onDelete(block)}
+              onMoveUp={() => onMove(block, -1)}
+              onMoveDown={() => onMove(block, 1)}
+              onDragStart={(event) => { setDraggedId(block.id); event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', block.id); }}
+              onDropBefore={(event) => { event.preventDefault(); event.stopPropagation(); const id = event.dataTransfer.getData('text/plain') || draggedId; if (id && id !== block.id) onDropBlock(id, block.id); setDraggedId(null); }}
+            />
+          ))}
+          <button className="add-inside-button" onClick={onAdd}>＋ Ajouter un élément dans cette section</button>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function BlockCard({ block, active, canMoveUp, canMoveDown, onPlay, onEdit, onDuplicate, onDelete, onMoveUp, onMoveDown, onDragStart, onDropBefore }: {
+  block: PodcastBlock; active: boolean; canMoveUp: boolean; canMoveDown: boolean;
+  onPlay: () => void; onEdit: () => void; onDuplicate: () => void; onDelete: () => void; onMoveUp: () => void; onMoveDown: () => void;
+  onDragStart: (event: React.DragEvent) => void; onDropBefore: (event: React.DragEvent) => void;
+}) {
+  return (
+    <article className={`block-card block-${block.type} ${active ? 'active' : ''}`} draggable onDragStart={onDragStart} onDragOver={(event) => event.preventDefault()} onDrop={onDropBefore}>
+      <div className="drag-handle" title="Glisser pour déplacer">⋮⋮</div>
+      <div className="block-icon" aria-hidden="true">{blockIcons[block.type]}</div>
+      <div className="block-info"><span className="block-type-label">{blockLabels[block.type]}</span><strong>{block.title}</strong><small>{formatTime(getBlockDuration(block))}{block.background ? ' · musique de fond' : ''}{block.voiceEffect !== 'none' ? ` · ${voiceEffectLabels[block.voiceEffect]}` : ''}</small></div>
+      <button className="round-play" onClick={onPlay} aria-label={`Lire ${block.title}`}>▶</button>
+      <div className="block-actions">
+        <button onClick={onEdit}>✎ <span>Modifier</span></button>
+        <button onClick={onDuplicate}>⧉ <span>Dupliquer</span></button>
+        <button className="danger" onClick={onDelete}>🗑 <span>Supprime
