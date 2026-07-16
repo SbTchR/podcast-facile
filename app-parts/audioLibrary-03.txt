@@ -1,0 +1,157 @@
+  ],
+    "filename": "Douzen kids on playground.ogg",
+    "audioUrl": "https://upload.wikimedia.org/wikipedia/commons/transcoded/d/de/Douzen_kids_on_playground.ogg/Douzen_kids_on_playground.ogg.mp3",
+    "fallbackUrl": "https://upload.wikimedia.org/wikipedia/commons/d/de/Douzen_kids_on_playground.ogg",
+    "sourcePage": "https://commons.wikimedia.org/wiki/File:Douzen_kids_on_playground.ogg",
+    "author": "Contributeur de PDSounds.org",
+    "license": "Domaine public",
+    "licenseUrl": "https://creativecommons.org/publicdomain/mark/1.0/",
+    "attribution": "Fichier issu de PDSounds.org, placé dans le domaine public."
+  },
+  {
+    "id": "sfx-applause",
+    "kind": "sfx",
+    "title": "Applaudissements",
+    "category": "École · Société",
+    "icon": "👏",
+    "duration": 17,
+    "description": "Applaudissements d’un groupe.",
+    "tags": [
+      "applaudissements",
+      "public",
+      "spectacle",
+      "classe"
+    ],
+    "filename": "Applause i.ogg",
+    "audioUrl": "https://upload.wikimedia.org/wikipedia/commons/transcoded/5/5b/Applause_i.ogg/Applause_i.ogg.mp3",
+    "fallbackUrl": "https://upload.wikimedia.org/wikipedia/commons/5/5b/Applause_i.ogg",
+    "sourcePage": "https://commons.wikimedia.org/wiki/File:Applause_i.ogg",
+    "author": "Contributeur de PDSounds.org",
+    "license": "Domaine public",
+    "licenseUrl": "https://creativecommons.org/publicdomain/mark/1.0/",
+    "attribution": "Fichier issu de PDSounds.org, placé dans le domaine public."
+  },
+  {
+    "id": "sfx-drill",
+    "kind": "sfx",
+    "title": "Perceuse de chantier",
+    "category": "Industrie · Travail",
+    "icon": "🛠️",
+    "duration": 60,
+    "description": "Perçage entendu depuis une pièce voisine.",
+    "tags": [
+      "perceuse",
+      "chantier",
+      "travail",
+      "construction"
+    ],
+    "filename": "Drilling next door 5.ogg",
+    "audioUrl": "https://upload.wikimedia.org/wikipedia/commons/transcoded/9/9f/Drilling_next_door_5.ogg/Drilling_next_door_5.ogg.mp3",
+    "fallbackUrl": "https://upload.wikimedia.org/wikipedia/commons/9/9f/Drilling_next_door_5.ogg",
+    "sourcePage": "https://commons.wikimedia.org/wiki/File:Drilling_next_door_5.ogg",
+    "author": "Contributeur de PDSounds.org",
+    "license": "Domaine public",
+    "licenseUrl": "https://creativecommons.org/publicdomain/mark/1.0/",
+    "attribution": "Fichier issu de PDSounds.org, placé dans le domaine public."
+  },
+  {
+    "id": "sfx-chainsaw",
+    "kind": "sfx",
+    "title": "Tronçonneuse",
+    "category": "Industrie · Travail",
+    "icon": "🪚",
+    "duration": 9.8,
+    "description": "Démarrage et fonctionnement court d’une tronçonneuse.",
+    "tags": [
+      "tronçonneuse",
+      "forêt",
+      "machine",
+      "travail"
+    ],
+    "filename": "Chainsaw 10.ogg",
+    "audioUrl": "https://upload.wikimedia.org/wikipedia/commons/transcoded/f/f3/Chainsaw_10.ogg/Chainsaw_10.ogg.mp3",
+    "fallbackUrl": "https://upload.wikimedia.org/wikipedia/commons/f/f3/Chainsaw_10.ogg",
+    "sourcePage": "https://commons.wikimedia.org/wiki/File:Chainsaw_10.ogg",
+    "author": "Contributeur de PDSounds.org",
+    "license": "Domaine public",
+    "licenseUrl": "https://creativecommons.org/publicdomain/mark/1.0/",
+    "attribution": "Fichier issu de PDSounds.org, placé dans le domaine public."
+  },
+  {
+    "id": "sfx-compressor",
+    "kind": "sfx",
+    "title": "Compresseur industriel",
+    "category": "Industrie · Travail",
+    "icon": "⚙️",
+    "duration": 3.8,
+    "description": "Moteur de compresseur court.",
+    "tags": [
+      "compresseur",
+      "machine",
+      "usine",
+      "industrie"
+    ],
+    "filename": "Compressor motor.ogg",
+    "audioUrl": "https://upload.wikimedia.org/wikipedia/commons/transcoded/d/db/Compressor_motor.ogg/Compressor_motor.ogg.mp3",
+    "fallbackUrl": "https://upload.wikimedia.org/wikipedia/commons/d/db/Compressor_motor.ogg",
+    "sourcePage": "https://commons.wikimedia.org/wiki/File:Compressor_motor.ogg",
+    "author": "Contributeur de PDSounds.org",
+    "license": "Domaine public",
+    "licenseUrl": "https://creativecommons.org/publicdomain/mark/1.0/",
+    "attribution": "Fichier issu de PDSounds.org, placé dans le domaine public."
+  },
+  {
+    "id": "sfx-elevator",
+    "kind": "sfx",
+    "title": "Porte d’ascenseur",
+    "category": "Ville · Objets",
+    "icon": "🛗",
+    "duration": 8.1,
+    "description": "Mécanisme et fermeture d’une porte d’ascenseur.",
+    "tags": [
+      "ascenseur",
+      "ville",
+      "bâtiment",
+      "porte"
+    ],
+    "filename": "Elevator door closing.ogg",
+    "audioUrl": "https://upload.wikimedia.org/wikipedia/commons/transcoded/c/ce/Elevator_door_closing.ogg/Elevator_door_closing.ogg.mp3",
+    "fallbackUrl": "https://upload.wikimedia.org/wikipedia/commons/c/ce/Elevator_door_closing.ogg",
+    "sourcePage": "https://commons.wikimedia.org/wiki/File:Elevator_door_closing.ogg",
+    "author": "Contributeur de PDSounds.org",
+    "license": "Domaine public",
+    "licenseUrl": "https://creativecommons.org/publicdomain/mark/1.0/",
+    "attribution": "Fichier issu de PDSounds.org, placé dans le domaine public."
+  }
+] as LibraryPreset[];
+
+export const LIBRARY_CATEGORIES: Record<LibraryKind, string[]> = {
+  music: [...new Set(AUDIO_LIBRARY.filter((item) => item.kind === 'music').map((item) => item.category))],
+  sfx: [...new Set(AUDIO_LIBRARY.filter((item) => item.kind === 'sfx').map((item) => item.category))],
+};
+
+const blobCache = new Map<string, Promise<Blob>>();
+
+const fetchAudio = async (url: string): Promise<Blob> => {
+  const response = await fetch(url, { mode: 'cors', cache: 'force-cache' });
+  if (!response.ok) throw new Error(`Téléchargement impossible (HTTP ${response.status}).`);
+  const blob = await response.blob();
+  if (!blob.size) throw new Error('Le fichier audio téléchargé est vide.');
+  return blob;
+};
+
+export const loadLibraryAudio = async (preset: LibraryPreset): Promise<Blob> => {
+  const cached = blobCache.get(preset.id);
+  if (cached) return cached;
+  const request = (async () => {
+    try { return await fetchAudio(preset.audioUrl); }
+    catch (firstError) {
+      if (preset.fallbackUrl === preset.audioUrl) throw firstError;
+      try { return await fetchAudio(preset.fallbackUrl); }
+      catch { throw new Error('Impossible de télécharger ce son. Vérifie la connexion internet puis réessaie.'); }
+    }
+  })();
+  blobCache.set(preset.id, request);
+  try { return await request; }
+  catch (error) { blobCache.delete(preset.id); throw error; }
+};
