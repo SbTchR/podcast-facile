@@ -40,7 +40,9 @@ jobs:
           mkdir -p app/src/data
           cat app-parts/App-00.txt app-parts/App-01.txt app-parts/App-02.txt app-parts/App-03.txt app-parts/App-04.txt app-parts/App-05.txt > app/src/App.tsx
           cat app-parts/styles-00.txt app-parts/styles-01.txt app-parts/styles-02.txt > app/src/styles.css
-          cat app-parts/audioLibrary-00.txt app-parts/audioLibrary-01.txt app-parts/audioLibrary-02.txt app-parts/audioLibrary-03.txt > app/src/data/audioLibrary.ts
+          cat app-parts/audioLibrary-00.txt > app/src/data/audioLibrary.ts
+          sed '$d' app-parts/audioLibrary-01.txt >> app/src/data/audioLibrary.ts
+          cat app-parts/audioLibrary-02.txt app-parts/audioLibrary-03.txt >> app/src/data/audioLibrary.ts
           test -s app/src/App.tsx
           test -s app/src/styles.css
           test -s app/src/data/audioLibrary.ts
