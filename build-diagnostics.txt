@@ -1,0 +1,6 @@
+
+> podcast-facile@0.3.0 check
+> tsc -b
+
+src/App.tsx(359,9): error TS2451: Cannot redeclare block-scoped variable 'exportProjectFile'.
+src/App.tsx(367,9): error TS2451: Cannot redeclare block-scoped variable 'exportProjectFile'.
