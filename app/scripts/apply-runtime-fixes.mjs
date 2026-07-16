@@ -45,6 +45,13 @@ app = replaceRequired(
 
 app = replaceRequired(
   app,
+  `  const [block, setBlock] = useState<PodcastBlock>(() => structuredClone(initialBlock));`,
+  `  const [block, setBlock] = useState<PodcastBlock>(() => cloneBlock(initialBlock));`,
+  'initialisation de l’éditeur sans structuredClone',
+);
+
+app = replaceRequired(
+  app,
   `          onPreview={async (block) => {\n            const previewProject = { ...project, blocks: [block] };\n            try {\n              stopPlayback();\n              const controller = await playProject(previewProject, 0);\n              playbackRef.current = controller;\n              setPlaybackStatus('playing');\n              window.setTimeout(() => void stopPlayback(), (getBlockDuration(block) + 0.2) * 1000);\n            } catch (error) {\n              setToast(error instanceof Error ? error.message : 'Impossible de lire cet élément.');\n            }\n          }}`,
   `          onPreview={(block) => {\n            const previewProject = { ...project, blocks: [block] };\n            stopPlayback();\n            void playProject(previewProject, 0).then((controller) => {\n              playbackRef.current = controller;\n              setElapsed(0);\n              setActiveBlockId(block.id);\n              setPlaybackStatus('playing');\n              window.setTimeout(() => stopPlayback(), (controller.totalDuration + 0.25) * 1000);\n            }).catch((error) => {\n              setToast(error instanceof Error ? error.message : 'Impossible de lire cet élément.');\n              stopPlayback();\n            });\n          }}`,
   'aperçu isolé dans la fenêtre',
