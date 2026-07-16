@@ -1,0 +1,318 @@
+export type LibraryKind = 'music' | 'sfx';
+
+export interface LibraryPreset {
+  id: string;
+  kind: LibraryKind;
+  title: string;
+  category: string;
+  icon: string;
+  duration: number;
+  description: string;
+  tags: string[];
+  filename: string;
+  audioUrl: string;
+  fallbackUrl: string;
+  sourcePage: string;
+  author: string;
+  license: string;
+  licenseUrl: string;
+  attribution: string;
+}
+
+export const AUDIO_LIBRARY: LibraryPreset[] = [
+  {
+    "id": "music-classical",
+    "kind": "music",
+    "title": "Introduction classique",
+    "category": "Histoire",
+    "icon": "🎻",
+    "duration": 36,
+    "description": "Courte pièce orchestrale pour une introduction historique.",
+    "tags": [
+      "classique",
+      "histoire",
+      "culture",
+      "introduction"
+    ],
+    "filename": "Audionautix-com-ccby-30secondclassical.mp3",
+    "audioUrl": "https://upload.wikimedia.org/wikipedia/commons/b/b2/Audionautix-com-ccby-30secondclassical.mp3",
+    "fallbackUrl": "https://upload.wikimedia.org/wikipedia/commons/b/b2/Audionautix-com-ccby-30secondclassical.mp3",
+    "sourcePage": "https://commons.wikimedia.org/wiki/File:Audionautix-com-ccby-30secondclassical.mp3",
+    "author": "Jason Shaw / Audionautix",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+    "attribution": "Music by audionautix.com — Jason Shaw — CC BY 3.0."
+  },
+  {
+    "id": "music-forest",
+    "kind": "music",
+    "title": "Bois et nature",
+    "category": "Géographie",
+    "icon": "🌲",
+    "duration": 34,
+    "description": "Fond acoustique chaleureux pour paysages et environnement.",
+    "tags": [
+      "forêt",
+      "nature",
+      "paysage",
+      "calme"
+    ],
+    "filename": "Audionautix-com-ccby-allgoodinthewood.mp3",
+    "audioUrl": "https://upload.wikimedia.org/wikipedia/commons/d/d3/Audionautix-com-ccby-allgoodinthewood.mp3",
+    "fallbackUrl": "https://upload.wikimedia.org/wikipedia/commons/d/d3/Audionautix-com-ccby-allgoodinthewood.mp3",
+    "sourcePage": "https://commons.wikimedia.org/wiki/File:Audionautix-com-ccby-allgoodinthewood.mp3",
+    "author": "Jason Shaw / Audionautix",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+    "attribution": "Music by audionautix.com — Jason Shaw — CC BY 3.0."
+  },
+  {
+    "id": "music-ask-rufus",
+    "kind": "music",
+    "title": "Chronique légère",
+    "category": "Podcast",
+    "icon": "🎙️",
+    "duration": 16,
+    "description": "Petit thème instrumental pour une transition.",
+    "tags": [
+      "chronique",
+      "transition",
+      "léger",
+      "radio"
+    ],
+    "filename": "Audionautix-com-ccby-askrufus.mp3",
+    "audioUrl": "https://upload.wikimedia.org/wikipedia/commons/b/b7/Audionautix-com-ccby-askrufus.mp3",
+    "fallbackUrl": "https://upload.wikimedia.org/wikipedia/commons/b/b7/Audionautix-com-ccby-askrufus.mp3",
+    "sourcePage": "https://commons.wikimedia.org/wiki/File:Audionautix-com-ccby-askrufus.mp3",
+    "author": "Jason Shaw / Audionautix",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+    "attribution": "Music by audionautix.com — Jason Shaw — CC BY 3.0."
+  },
+  {
+    "id": "music-tall-ship",
+    "kind": "music",
+    "title": "Grand voilier",
+    "category": "Histoire",
+    "icon": "⛵",
+    "duration": 62,
+    "description": "Musique d’aventure maritime pour les Grandes Découvertes.",
+    "tags": [
+      "bateau",
+      "exploration",
+      "grandes découvertes",
+      "aventure"
+    ],
+    "filename": "Audionautix-com-ccby-atallship.mp3",
+    "audioUrl": "https://upload.wikimedia.org/wikipedia/commons/f/f8/Audionautix-com-ccby-atallship.mp3",
+    "fallbackUrl": "https://upload.wikimedia.org/wikipedia/commons/f/f8/Audionautix-com-ccby-atallship.mp3",
+    "sourcePage": "https://commons.wikimedia.org/wiki/File:Audionautix-com-ccby-atallship.mp3",
+    "author": "Jason Shaw / Audionautix",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+    "attribution": "Music by audionautix.com — Jason Shaw — CC BY 3.0."
+  },
+  {
+    "id": "music-banjo-short",
+    "kind": "music",
+    "title": "Transition folk",
+    "category": "Podcast",
+    "icon": "🪕",
+    "duration": 9.9,
+    "description": "Jingle acoustique très court.",
+    "tags": [
+      "jingle",
+      "folk",
+      "transition",
+      "court"
+    ],
+    "filename": "Audionautix-com-ccby-banjoshort.mp3",
+    "audioUrl": "https://upload.wikimedia.org/wikipedia/commons/7/7c/Audionautix-com-ccby-banjoshort.mp3",
+    "fallbackUrl": "https://upload.wikimedia.org/wikipedia/commons/7/7c/Audionautix-com-ccby-banjoshort.mp3",
+    "sourcePage": "https://commons.wikimedia.org/wiki/File:Audionautix-com-ccby-banjoshort.mp3",
+    "author": "Jason Shaw / Audionautix",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+    "attribution": "Music by audionautix.com — Jason Shaw — CC BY 3.0."
+  },
+  {
+    "id": "music-brass-intro",
+    "kind": "music",
+    "title": "Générique cuivres",
+    "category": "Podcast",
+    "icon": "🎺",
+    "duration": 12,
+    "description": "Introduction énergique avec cuivres.",
+    "tags": [
+      "générique",
+      "cuivres",
+      "radio",
+      "dynamique"
+    ],
+    "filename": "Audionautix-com-ccby-bighornsintro2.mp3",
+    "audioUrl": "https://upload.wikimedia.org/wikipedia/commons/3/3e/Audionautix-com-ccby-bighornsintro2.mp3",
+    "fallbackUrl": "https://upload.wikimedia.org/wikipedia/commons/3/3e/Audionautix-com-ccby-bighornsintro2.mp3",
+    "sourcePage": "https://commons.wikimedia.org/wiki/File:Audionautix-com-ccby-bighornsintro2.mp3",
+    "author": "Jason Shaw / Audionautix",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+    "attribution": "Music by audionautix.com — Jason Shaw — CC BY 3.0."
+  },
+  {
+    "id": "music-country-cue",
+    "kind": "music",
+    "title": "Voyage rural",
+    "category": "Géographie",
+    "icon": "🛤️",
+    "duration": 18,
+    "description": "Fond country bref pour campagne ou récit de voyage.",
+    "tags": [
+      "campagne",
+      "voyage",
+      "route",
+      "rural"
+    ],
+    "filename": "Audionautix-com-ccby-countrycue1.mp3",
+    "audioUrl": "https://upload.wikimedia.org/wikipedia/commons/0/00/Audionautix-com-ccby-countrycue1.mp3",
+    "fallbackUrl": "https://upload.wikimedia.org/wikipedia/commons/0/00/Audionautix-com-ccby-countrycue1.mp3",
+    "sourcePage": "https://commons.wikimedia.org/wiki/File:Audionautix-com-ccby-countrycue1.mp3",
+    "author": "Jason Shaw / Audionautix",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+    "attribution": "Music by audionautix.com — Jason Shaw — CC BY 3.0."
+  },
+  {
+    "id": "music-dobro",
+    "kind": "music",
+    "title": "Route et exploration",
+    "category": "Récit",
+    "icon": "🧭",
+    "duration": 17,
+    "description": "Thème acoustique rythmé pour expédition ou voyage.",
+    "tags": [
+      "route",
+      "exploration",
+      "aventure",
+      "voyage"
+    ],
+    "filename": "Audionautix-com-ccby-dobromash.mp3",
+    "audioUrl": "https://upload.wikimedia.org/wikipedia/commons/1/1a/Audionautix-com-ccby-dobromash.mp3",
+    "fallbackUrl": "https://upload.wikimedia.org/wikipedia/commons/1/1a/Audionautix-com-ccby-dobromash.mp3",
+    "sourcePage": "https://commons.wikimedia.org/wiki/File:Audionautix-com-ccby-dobromash.mp3",
+    "author": "Jason Shaw / Audionautix",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+    "attribution": "Music by audionautix.com — Jason Shaw — CC BY 3.0."
+  },
+  {
+    "id": "music-enemy-ships",
+    "kind": "music",
+    "title": "Navires ennemis",
+    "category": "Histoire",
+    "icon": "⚓",
+    "duration": 33,
+    "description": "Musique tendue pour bataille navale et rivalités.",
+    "tags": [
+      "navires",
+      "bataille",
+      "tension",
+      "guerre"
+    ],
+    "filename": "Audionautix-com-ccby-enemyships.mp3",
+    "audioUrl": "https://upload.wikimedia.org/wikipedia/commons/f/f9/Audionautix-com-ccby-enemyships.mp3",
+    "fallbackUrl": "https://upload.wikimedia.org/wikipedia/commons/f/f9/Audionautix-com-ccby-enemyships.mp3",
+    "sourcePage": "https://commons.wikimedia.org/wiki/File:Audionautix-com-ccby-enemyships.mp3",
+    "author": "Jason Shaw / Audionautix",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+    "attribution": "Music by audionautix.com — Jason Shaw — CC BY 3.0."
+  },
+  {
+    "id": "music-busy-intro",
+    "kind": "music",
+    "title": "Journal dynamique",
+    "category": "Podcast",
+    "icon": "📰",
+    "duration": 28,
+    "description": "Générique rapide pour actualité ou émission scolaire.",
+    "tags": [
+      "journal",
+      "actualité",
+      "générique",
+      "dynamique"
+    ],
+    "filename": "Audionautix-com-ccby-funbusyintro.mp3",
+    "audioUrl": "https://upload.wikimedia.org/wikipedia/commons/8/82/Audionautix-com-ccby-funbusyintro.mp3",
+    "fallbackUrl": "https://upload.wikimedia.org/wikipedia/commons/8/82/Audionautix-com-ccby-funbusyintro.mp3",
+    "sourcePage": "https://commons.wikimedia.org/wiki/File:Audionautix-com-ccby-funbusyintro.mp3",
+    "author": "Jason Shaw / Audionautix",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+    "attribution": "Music by audionautix.com — Jason Shaw — CC BY 3.0."
+  },
+  {
+    "id": "music-glitch",
+    "kind": "music",
+    "title": "Technologie",
+    "category": "Géographie",
+    "icon": "💻",
+    "duration": 16,
+    "description": "Texture électronique pour numérique et réseaux.",
+    "tags": [
+      "technologie",
+      "numérique",
+      "réseaux",
+      "innovation"
+    ],
+    "filename": "Audionautix-com-ccby-glitch.mp3",
+    "audioUrl": "https://upload.wikimedia.org/wikipedia/commons/b/b7/Audionautix-com-ccby-glitch.mp3",
+    "fallbackUrl": "https://upload.wikimedia.org/wikipedia/commons/b/b7/Audionautix-com-ccby-glitch.mp3",
+    "sourcePage": "https://commons.wikimedia.org/wiki/File:Audionautix-com-ccby-glitch.mp3",
+    "author": "Jason Shaw / Audionautix",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+    "attribution": "Music by audionautix.com — Jason Shaw — CC BY 3.0."
+  },
+  {
+    "id": "music-hero-peril",
+    "kind": "music",
+    "title": "Héros en danger",
+    "category": "Récit",
+    "icon": "🗡️",
+    "duration": 29,
+    "description": "Fond dramatique pour suspense ou moment décisif.",
+    "tags": [
+      "suspense",
+      "danger",
+      "héros",
+      "dramatique"
+    ],
+    "filename": "Audionautix-com-ccby-heroinperil.mp3",
+    "audioUrl": "https://upload.wikimedia.org/wikipedia/commons/4/40/Audionautix-com-ccby-heroinperil.mp3",
+    "fallbackUrl": "https://upload.wikimedia.org/wikipedia/commons/4/40/Audionautix-com-ccby-heroinperil.mp3",
+    "sourcePage": "https://commons.wikimedia.org/wiki/File:Audionautix-com-ccby-heroinperil.mp3",
+    "author": "Jason Shaw / Audionautix",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+    "attribution": "Music by audionautix.com — Jason Shaw — CC BY 3.0."
+  },
+  {
+    "id": "music-house-evil",
+    "kind": "music",
+    "title": "Mystère sombre",
+    "category": "Récit",
+    "icon": "🕯️",
+    "duration": 55,
+    "description": "Ambiance inquiétante pour enquête ou événement mystérieux.",
+    "tags": [
+      "mystère",
+      "peur",
+      "enquête",
+      "sombre"
+    ],
+    "filename": "Audionautix-com-ccby-houseofevil.mp3",
+    "audioUrl": "https://upload.wikimedia.org/wikipedia/commons/5/5c/Audionautix-com-ccby-houseofevil.mp3",
+    "fallbackUrl": "https://upload.wikimedia.org/wikipedia/commons/5/5c/Audionautix-com-ccby-houseofevil.mp3",
+    "sourcePage": "https://commons.wikimedia.org/wiki/File:Audionautix-com-ccby-houseofevil.mp3",
+    "author": "Jason Shaw / Audionautix",
+    "license": "CC BY 3.0"
