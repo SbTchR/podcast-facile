@@ -43,9 +43,11 @@ jobs:
           cat app-parts/audioLibrary-00.txt > app/src/data/audioLibrary.ts
           sed '$d' app-parts/audioLibrary-01.txt >> app/src/data/audioLibrary.ts
           cat app-parts/audioLibrary-02.txt app-parts/audioLibrary-03.txt >> app/src/data/audioLibrary.ts
+          node app/scripts/apply-runtime-fixes.mjs
           test -s app/src/App.tsx
           test -s app/src/styles.css
           test -s app/src/data/audioLibrary.ts
+          ! grep -R "structuredClone(" app/src/App.tsx
           echo "App.tsx: $(wc -c < app/src/App.tsx) bytes"
           echo "styles.css: $(wc -c < app/src/styles.css) bytes"
           echo "audioLibrary.ts: $(wc -c < app/src/data/audioLibrary.ts) bytes"
@@ -85,7 +87,7 @@ jobs:
           test -s app/dist/index.html
           test -n "$(find app/dist/assets -maxdepth 1 -name '*.js' -print -quit)"
           test -n "$(find app/dist/assets -maxdepth 1 -name '*.css' -print -quit)"
-          ! grep -R "DecompressionStream\|pako\.ungzip\|\.js\.gz" app/dist/index.html app/dist/assets/*.js
+          ! grep -R "DecompressionStream\|pako\.ungzip\|\.js\.gz\|structuredClone(" app/dist/index.html app/dist/assets/*.js
           grep -q '<script type="module"' app/dist/index.html
 
       - name: Install static site
@@ -101,11 +103,11 @@ jobs:
           <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width,initial-scale=1">
-            <meta http-equiv="refresh" content="0;url=./site/?v=20260716-v3-standard-1">
+            <meta http-equiv="refresh" content="0;url=./site/?v=20260716-audiofix-2">
             <title>Podcast Facile V3</title>
-            <script>location.replace('./site/?v=20260716-v3-standard-1')</script>
+            <script>location.replace('./site/?v=20260716-audiofix-2')</script>
           </head>
-          <body><a href="./site/?v=20260716-v3-standard-1">Ouvrir Podcast Facile V3</a></body>
+          <body><a href="./site/?v=20260716-audiofix-2">Ouvrir Podcast Facile V3</a></body>
           </html>
           HTML
 
@@ -117,6 +119,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No generated changes to commit."
           else
-            git commit -m "Publier la V3 standard"
+            git commit -m "Publier le correctif audio Safari"
             git push origin HEAD:main
           fi
