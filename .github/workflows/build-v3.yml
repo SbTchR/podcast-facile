@@ -52,6 +52,10 @@ jobs:
             node app/scripts/apply-ios-output-fix.mjs >> runtime-fix-diagnostics.txt 2>&1
             status=$?
           fi
+          if [ "$status" = "0" ]; then
+            node app/scripts/apply-recording-session-fix.mjs >> runtime-fix-diagnostics.txt 2>&1
+            status=$?
+          fi
           cat runtime-fix-diagnostics.txt
           echo "status=$status" >> "$GITHUB_OUTPUT"
           if [ "$status" = "0" ]; then
@@ -61,6 +65,8 @@ jobs:
             test -s app/src/data/audioLibrary.ts
             ! grep -R "structuredClone(" app/src/App.tsx
             grep -q "createMediaStreamDestination" app/src/audio/engine.ts
+            grep -q "setBrowserAudioSession('play-and-record')" app/src/App.tsx
+            grep -q "restoreBrowserAudioSession" app/src/App.tsx
             echo "App.tsx: $(wc -c < app/src/App.tsx) bytes"
             echo "styles.css: $(wc -c < app/src/styles.css) bytes"
             echo "audioLibrary.ts: $(wc -c < app/src/data/audioLibrary.ts) bytes"
@@ -115,6 +121,7 @@ jobs:
           ! grep -R "DecompressionStream\|pako\.ungzip\|\.js\.gz\|structuredClone(" app/dist/index.html app/dist/assets/*.js
           grep -q '<script type="module"' app/dist/index.html
           grep -q "createMediaStreamDestination" app/dist/assets/*.js
+          grep -q "play-and-record" app/dist/assets/*.js
 
       - name: Install static site
         run: |
@@ -129,11 +136,11 @@ jobs:
           <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width,initial-scale=1">
-            <meta http-equiv="refresh" content="0;url=./site/?v=20260716-audiofix-3">
+            <meta http-equiv="refresh" content="0;url=./site/?v=20260717-audiofix-4">
             <title>Podcast Facile V3</title>
-            <script>location.replace('./site/?v=20260716-audiofix-3')</script>
+            <script>location.replace('./site/?v=20260717-audiofix-4')</script>
           </head>
-          <body><a href="./site/?v=20260716-audiofix-3">Ouvrir Podcast Facile V3</a></body>
+          <body><a href="./site/?v=20260717-audiofix-4">Ouvrir Podcast Facile V3</a></body>
           </html>
           HTML
 
@@ -145,6 +152,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No generated changes to commit."
           else
-            git commit -m "Publier la sortie audio iOS"
+            git commit -m "Publier le correctif de capture audio iOS"
             git push origin HEAD:main
           fi
