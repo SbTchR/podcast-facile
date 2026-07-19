@@ -60,6 +60,10 @@ jobs:
             python3 app/scripts/apply-student-workflow-v2.py >> runtime-fix-diagnostics.txt 2>&1
             status=$?
           fi
+          if [ "$status" = "0" ]; then
+            python3 app/scripts/apply-sfx-library-upgrade.py >> runtime-fix-diagnostics.txt 2>&1
+            status=$?
+          fi
           cat runtime-fix-diagnostics.txt
           echo "status=$status" >> "$GITHUB_OUTPUT"
           if [ "$status" = "0" ]; then
@@ -67,6 +71,7 @@ jobs:
             test -s app/src/App.tsx
             test -s app/src/styles.css
             test -s app/src/data/audioLibrary.ts
+            test -s app/public/audio-credits.html
             ! grep -R "structuredClone(" app/src/App.tsx
             grep -q "createMediaStreamDestination" app/src/audio/engine.ts
             grep -q "setBrowserAudioSession('play-and-record')" app/src/App.tsx
@@ -77,6 +82,11 @@ jobs:
             grep -q "voiceCues" app/src/audio/engine.ts
             grep -q "Ajouter un jingle" app/src/App.tsx
             ! grep -q "Choisis une structure de départ" app/src/App.tsx
+            grep -q "generated:sword-clash" app/src/data/audioLibrary.ts
+            grep -q "sfx-dog-bark" app/src/data/audioLibrary.ts
+            grep -q "synthesizeGeneratedEffect" app/src/data/audioLibrary.ts
+            grep -q "Sons vérifiés" app/src/App.tsx
+            ! grep -q "Chocs métalliques / épées" app/src/data/audioLibrary.ts
             echo "App.tsx: $(wc -c < app/src/App.tsx) bytes"
             echo "styles.css: $(wc -c < app/src/styles.css) bytes"
             echo "audioLibrary.ts: $(wc -c < app/src/data/audioLibrary.ts) bytes"
@@ -89,7 +99,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add runtime-fix-diagnostics.txt
-          git commit -m "Enregistrer le diagnostic du correctif interface" || true
+          git commit -m "Enregistrer le diagnostic de la bibliothèque audio" || true
           git push origin HEAD:main
           exit 1
 
@@ -126,6 +136,7 @@ jobs:
       - name: Verify standard output
         run: |
           test -s app/dist/index.html
+          test -s app/dist/audio-credits.html
           test -n "$(find app/dist/assets -maxdepth 1 -name '*.js' -print -quit)"
           test -n "$(find app/dist/assets -maxdepth 1 -name '*.css' -print -quit)"
           ! grep -R "DecompressionStream\|pako\.ungzip\|\.js\.gz\|structuredClone(" app/dist/index.html app/dist/assets/*.js
@@ -137,6 +148,10 @@ jobs:
           grep -q "Ajouter un bruitage ici" app/dist/assets/*.js
           grep -q "voiceCues" app/dist/assets/*.js
           grep -q "Ajouter un jingle" app/dist/assets/*.js
+          grep -q "generated:sword-clash" app/dist/assets/*.js
+          grep -q "sfx-dog-bark" app/dist/assets/*.js
+          grep -q "Sons vérifiés" app/dist/assets/*.js
+          ! grep -q "Chocs métalliques / épées" app/dist/assets/*.js
 
       - name: Install static site
         run: |
@@ -151,11 +166,11 @@ jobs:
           <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width,initial-scale=1">
-            <meta http-equiv="refresh" content="0;url=./site/?v=20260719-ux-1">
+            <meta http-equiv="refresh" content="0;url=./site/?v=20260719-sfx-1">
             <title>Podcast Facile V3</title>
-            <script>location.replace('./site/?v=20260719-ux-1')</script>
+            <script>location.replace('./site/?v=20260719-sfx-1')</script>
           </head>
-          <body><a href="./site/?v=20260719-ux-1">Ouvrir Podcast Facile V3</a></body>
+          <body><a href="./site/?v=20260719-sfx-1">Ouvrir Podcast Facile V3</a></body>
           </html>
           HTML
 
@@ -167,6 +182,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No generated changes to commit."
           else
-            git commit -m "Publier l’interface élèves et les bruitages synchronisés"
+            git commit -m "Publier la bibliothèque de bruitages auditée"
             git push origin HEAD:main
           fi
