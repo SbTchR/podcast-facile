@@ -75,6 +75,17 @@ jobs:
             status=$?
           fi
           if [ "$status" = "0" ]; then
+            python3 - <<'PY'
+          from pathlib import Path
+          path = Path('app/scripts/apply-recorded-sfx-only.py')
+          source = path.read_text(encoding='utf-8')
+          marker = "music = [item for item in items if item.get('kind') == 'music']"
+          replacement = "items = [item for item in items if item.get('id') not in {'sfx-small-stream', 'sfx-writing-feltpen', 'sfx-wine-glass'}]\n" + marker
+          if marker not in source:
+              raise SystemExit('Point de limitation de la bibliothèque introuvable.')
+          source = source.replace(marker, replacement, 1)
+          path.write_text(source, encoding='utf-8')
+          PY
             python3 app/scripts/apply-recorded-sfx-only.py >> runtime-fix-diagnostics.txt 2>&1
             status=$?
           fi
