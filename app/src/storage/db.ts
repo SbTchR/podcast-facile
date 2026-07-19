@@ -101,14 +101,6 @@ async function restoreProject(raw: StoredPodcastProject): Promise<{
         return { ...metadata, blob };
       }
 
-      if (ArrayBuffer.isView(audioBytes)) {
-        const bytes = audioBytes.buffer.slice(audioBytes.byteOffset, audioBytes.byteOffset + audioBytes.byteLength);
-        const blob = new Blob([bytes], { type: metadata.mimeType });
-        blobBytesCache.set(blob, Promise.resolve(bytes));
-        needsMigration = true;
-        return { ...metadata, blob };
-      }
-
       if (legacyBlob instanceof Blob) {
         try {
           const bytes = (await blobToBytes(legacyBlob)).slice(0);
