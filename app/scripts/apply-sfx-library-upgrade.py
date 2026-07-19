@@ -106,7 +106,7 @@ library = replace_required(
 )
 
 marker = 'export const AUDIO_LIBRARY: LibraryPreset[] = '
-array_start = library.index('[', library.index(marker))
+array_start = library.index('[', library.index(marker) + len(marker))
 array_end = library.index('] as LibraryPreset[];', array_start) + 1
 items: list[dict] = json.loads(library[array_start:array_end])
 by_id = {item['id']: item for item in items}
