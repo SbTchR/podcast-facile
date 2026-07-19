@@ -1,1 +1,1 @@
-Validation finale de la bibliothèque de 100 enregistrements réels
+Validation finale terminée : 100 enregistrements réels, aucun son synthétique
