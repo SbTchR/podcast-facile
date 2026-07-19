@@ -61,6 +61,16 @@ jobs:
             status=$?
           fi
           if [ "$status" = "0" ]; then
+            python3 - <<'PY'
+          from pathlib import Path
+          path = Path('app/scripts/apply-sfx-library-upgrade.py')
+          source = path.read_text(encoding='utf-8')
+          source = source.replace(
+              "array_start = library.index('[', library.index(marker))",
+              "array_start = library.index('[', library.index(marker) + len(marker))",
+          )
+          path.write_text(source, encoding='utf-8')
+          PY
             python3 app/scripts/apply-sfx-library-upgrade.py >> runtime-fix-diagnostics.txt 2>&1
             status=$?
           fi
@@ -178,7 +188,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A site index.html app/package-lock.json
+          git add -A site index.html app/package-lock.json app/scripts/apply-sfx-library-upgrade.py
+          git add -u runtime-fix-diagnostics.txt build-diagnostics.txt || true
           if git diff --cached --quiet; then
             echo "No generated changes to commit."
           else
