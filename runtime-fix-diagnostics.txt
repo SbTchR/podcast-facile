@@ -1,0 +1,9 @@
+Correctifs Safari et aperçus audio appliqués.
+Sortie audio iOS routée via un élément média HTML.
+Session audio iOS compatible avec la capture micro.
+Interface élèves v2 et bruitages synchronisés appliqués.
+Bibliothèque de bruitages auditée : 70 sons, dont 13 effets locaux.
+Traceback (most recent call last):
+  File "/home/runner/work/podcast-facile/podcast-facile/app/scripts/apply-recorded-sfx-only.py", line 318, in <module>
+    raise RuntimeError(f'La bibliothèque doit contenir entre 80 et 100 bruitages réels, résultat : {sfx_count}.')
+RuntimeError: La bibliothèque doit contenir entre 80 et 100 bruitages réels, résultat : 103.
