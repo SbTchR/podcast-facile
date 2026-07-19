@@ -67,6 +67,8 @@ jobs:
             grep -q "createMediaStreamDestination" app/src/audio/engine.ts
             grep -q "setBrowserAudioSession('play-and-record')" app/src/App.tsx
             grep -q "restoreBrowserAudioSession" app/src/App.tsx
+            grep -q "arraybuffer-v2" app/src/storage/db.ts
+            grep -q "audioBytes" app/src/storage/db.ts
             echo "App.tsx: $(wc -c < app/src/App.tsx) bytes"
             echo "styles.css: $(wc -c < app/src/styles.css) bytes"
             echo "audioLibrary.ts: $(wc -c < app/src/data/audioLibrary.ts) bytes"
@@ -122,6 +124,8 @@ jobs:
           grep -q '<script type="module"' app/dist/index.html
           grep -q "createMediaStreamDestination" app/dist/assets/*.js
           grep -q "play-and-record" app/dist/assets/*.js
+          grep -q "arraybuffer-v2" app/dist/assets/*.js
+          grep -q "audioBytes" app/dist/assets/*.js
 
       - name: Install static site
         run: |
@@ -136,11 +140,11 @@ jobs:
           <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width,initial-scale=1">
-            <meta http-equiv="refresh" content="0;url=./site/?v=20260717-audiofix-4">
+            <meta http-equiv="refresh" content="0;url=./site/?v=20260719-audiofix-5">
             <title>Podcast Facile V3</title>
-            <script>location.replace('./site/?v=20260717-audiofix-4')</script>
+            <script>location.replace('./site/?v=20260719-audiofix-5')</script>
           </head>
-          <body><a href="./site/?v=20260717-audiofix-4">Ouvrir Podcast Facile V3</a></body>
+          <body><a href="./site/?v=20260719-audiofix-5">Ouvrir Podcast Facile V3</a></body>
           </html>
           HTML
 
@@ -152,6 +156,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No generated changes to commit."
           else
-            git commit -m "Publier le correctif de capture audio iOS"
+            git commit -m "Publier la persistance audio Safari robuste"
             git push origin HEAD:main
           fi
