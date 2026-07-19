@@ -1,11 +1,14 @@
-file:///home/runner/work/podcast-facile/podcast-facile/app/scripts/apply-runtime-fixes.mjs:54
-  throw new Error('Un appel à structuredClone subsiste dans App.tsx.');
-        ^
-
-Error: Un appel à structuredClone subsiste dans App.tsx.
-    at file:///home/runner/work/podcast-facile/podcast-facile/app/scripts/apply-runtime-fixes.mjs:54:9
-    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
-    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
-    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
-
-Node.js v22.23.1
+Correctifs Safari et aperçus audio appliqués.
+Sortie audio iOS routée via un élément média HTML.
+Session audio iOS compatible avec la capture micro.
+Interface élèves v2 et bruitages synchronisés appliqués.
+Traceback (most recent call last):
+  File "/home/runner/work/podcast-facile/podcast-facile/app/scripts/apply-sfx-library-upgrade.py", line 111, in <module>
+    items: list[dict] = json.loads(library[array_start:array_end])
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 340, in decode
+    raise JSONDecodeError("Extra data", s, end)
+json.decoder.JSONDecodeError: Extra data: line 1 column 4 (char 3)
