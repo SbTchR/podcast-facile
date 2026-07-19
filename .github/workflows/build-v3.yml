@@ -56,6 +56,10 @@ jobs:
             node app/scripts/apply-recording-session-fix.mjs >> runtime-fix-diagnostics.txt 2>&1
             status=$?
           fi
+          if [ "$status" = "0" ]; then
+            python3 app/scripts/apply-student-workflow-v2.py >> runtime-fix-diagnostics.txt 2>&1
+            status=$?
+          fi
           cat runtime-fix-diagnostics.txt
           echo "status=$status" >> "$GITHUB_OUTPUT"
           if [ "$status" = "0" ]; then
@@ -69,6 +73,10 @@ jobs:
             grep -q "restoreBrowserAudioSession" app/src/App.tsx
             grep -q "arraybuffer-v2" app/src/storage/db.ts
             grep -q "audioBytes" app/src/storage/db.ts
+            grep -q "Ajouter un bruitage ici" app/src/App.tsx
+            grep -q "voiceCues" app/src/audio/engine.ts
+            grep -q "Ajouter un jingle" app/src/App.tsx
+            ! grep -q "Choisis une structure de départ" app/src/App.tsx
             echo "App.tsx: $(wc -c < app/src/App.tsx) bytes"
             echo "styles.css: $(wc -c < app/src/styles.css) bytes"
             echo "audioLibrary.ts: $(wc -c < app/src/data/audioLibrary.ts) bytes"
@@ -81,7 +89,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add runtime-fix-diagnostics.txt
-          git commit -m "Enregistrer le diagnostic du correctif audio" || true
+          git commit -m "Enregistrer le diagnostic du correctif interface" || true
           git push origin HEAD:main
           exit 1
 
@@ -126,6 +134,9 @@ jobs:
           grep -q "play-and-record" app/dist/assets/*.js
           grep -q "arraybuffer-v2" app/dist/assets/*.js
           grep -q "audioBytes" app/dist/assets/*.js
+          grep -q "Ajouter un bruitage ici" app/dist/assets/*.js
+          grep -q "voiceCues" app/dist/assets/*.js
+          grep -q "Ajouter un jingle" app/dist/assets/*.js
 
       - name: Install static site
         run: |
@@ -140,11 +151,11 @@ jobs:
           <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width,initial-scale=1">
-            <meta http-equiv="refresh" content="0;url=./site/?v=20260719-audiofix-5">
+            <meta http-equiv="refresh" content="0;url=./site/?v=20260719-ux-1">
             <title>Podcast Facile V3</title>
-            <script>location.replace('./site/?v=20260719-audiofix-5')</script>
+            <script>location.replace('./site/?v=20260719-ux-1')</script>
           </head>
-          <body><a href="./site/?v=20260719-audiofix-5">Ouvrir Podcast Facile V3</a></body>
+          <body><a href="./site/?v=20260719-ux-1">Ouvrir Podcast Facile V3</a></body>
           </html>
           HTML
 
@@ -156,6 +167,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No generated changes to commit."
           else
-            git commit -m "Publier la persistance audio Safari robuste"
+            git commit -m "Publier l’interface élèves et les bruitages synchronisés"
             git push origin HEAD:main
           fi
