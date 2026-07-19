@@ -272,6 +272,7 @@ for item in new_recordings:
         items.append(item)
         existing_ids.add(item['id'])
 
+items = [item for item in items if item.get('id') not in {'sfx-small-stream', 'sfx-writing-feltpen', 'sfx-wine-glass'}]
 music = [item for item in items if item.get('kind') == 'music']
 sfx = sorted([item for item in items if item.get('kind') == 'sfx'], key=lambda item: (item.get('category', ''), item.get('title', '')))
 items = music + sfx
