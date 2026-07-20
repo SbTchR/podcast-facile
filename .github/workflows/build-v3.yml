@@ -92,6 +92,10 @@ jobs:
             python3 app/scripts/apply-recorded-sfx-only.py >> runtime-fix-diagnostics.txt 2>&1
             status=$?
           fi
+          if [ "$status" = "0" ]; then
+            python3 app/scripts/apply-historical-library.py >> runtime-fix-diagnostics.txt 2>&1
+            status=$?
+          fi
           cat runtime-fix-diagnostics.txt
           echo "status=$status" >> "$GITHUB_OUTPUT"
           if [ "$status" = "0" ]; then
@@ -112,7 +116,14 @@ jobs:
             ! grep -q "Choisis une structure de départ" app/src/App.tsx
             grep -q "sfx-dog-bark" app/src/data/audioLibrary.ts
             grep -q "sfx-human-sneeze" app/src/data/audioLibrary.ts
-            grep -q "sfx-helicopter-takeoff" app/src/data/audioLibrary.ts
+            grep -q "sfx-horse-gallop-pavement" app/src/data/audioLibrary.ts
+            grep -q "sfx-steam-locomotive" app/src/data/audioLibrary.ts
+            grep -q "sfx-seaport-ambience" app/src/data/audioLibrary.ts
+            grep -q "sfx-steamship-telegraph" app/src/data/audioLibrary.ts
+            grep -q "music-medieval-story" app/src/data/audioLibrary.ts
+            grep -q "music-monteverdi-battle" app/src/data/audioLibrary.ts
+            grep -q "music-epic-series" app/src/data/audioLibrary.ts
+            grep -q "music-egyptian-crawl" app/src/data/audioLibrary.ts
             grep -q "Sons vérifiés" app/src/App.tsx
             ! grep -q "generated:\|synthesizeGeneratedEffect\|loadGeneratedAudio\|Créé dans l’application\|disponible hors ligne" app/src/data/audioLibrary.ts app/src/App.tsx
             ! grep -q "Chocs métalliques / épées" app/src/data/audioLibrary.ts
@@ -128,7 +139,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add runtime-fix-diagnostics.txt
-          git commit -m "Enregistrer le diagnostic de la bibliothèque audio réelle" || true
+          git commit -m "Enregistrer le diagnostic de la bibliothèque historique" || true
           git push origin HEAD:main
           exit 1
 
@@ -177,9 +188,14 @@ jobs:
           grep -q "Ajouter un bruitage ici" app/dist/assets/*.js
           grep -q "voiceCues" app/dist/assets/*.js
           grep -q "Ajouter un jingle" app/dist/assets/*.js
-          grep -q "sfx-human-sneeze" app/dist/assets/*.js
-          grep -q "sfx-helicopter-takeoff" app/dist/assets/*.js
-          grep -q "sfx-wolf-howls" app/dist/assets/*.js
+          grep -q "sfx-horse-gallop-pavement" app/dist/assets/*.js
+          grep -q "sfx-steam-locomotive" app/dist/assets/*.js
+          grep -q "sfx-seaport-ambience" app/dist/assets/*.js
+          grep -q "sfx-steamship-telegraph" app/dist/assets/*.js
+          grep -q "music-medieval-story" app/dist/assets/*.js
+          grep -q "music-monteverdi-battle" app/dist/assets/*.js
+          grep -q "music-epic-series" app/dist/assets/*.js
+          grep -q "music-egyptian-crawl" app/dist/assets/*.js
           grep -q "Sons vérifiés" app/dist/assets/*.js
           ! grep -q "generated:\|synthesizeGeneratedEffect\|loadGeneratedAudio\|Créé dans l’application\|disponible hors ligne" app/dist/assets/*.js
           ! grep -q "Chocs métalliques / épées" app/dist/assets/*.js
@@ -197,11 +213,11 @@ jobs:
           <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width,initial-scale=1">
-            <meta http-equiv="refresh" content="0;url=./site/?v=20260719-sfx-2">
+            <meta http-equiv="refresh" content="0;url=./site/?v=20260720-history-1">
             <title>Podcast Facile V3</title>
-            <script>location.replace('./site/?v=20260719-sfx-2')</script>
+            <script>location.replace('./site/?v=20260720-history-1')</script>
           </head>
-          <body><a href="./site/?v=20260719-sfx-2">Ouvrir Podcast Facile V3</a></body>
+          <body><a href="./site/?v=20260720-history-1">Ouvrir Podcast Facile V3</a></body>
           </html>
           HTML
 
@@ -209,11 +225,11 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A site index.html app/package-lock.json app/scripts/apply-sfx-library-upgrade.py app/scripts/apply-recorded-sfx-only.py
+          git add -A site index.html app/package-lock.json app/scripts/apply-sfx-library-upgrade.py app/scripts/apply-recorded-sfx-only.py app/scripts/apply-historical-library.py
           git add -u runtime-fix-diagnostics.txt build-diagnostics.txt || true
           if git diff --cached --quiet; then
             echo "No generated changes to commit."
           else
-            git commit -m "Publier cent bruitages enregistrés"
+            git commit -m "Publier les sons historiques et les nouvelles musiques"
             git push origin HEAD:main
           fi
