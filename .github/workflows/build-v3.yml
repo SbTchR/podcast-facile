@@ -125,10 +125,12 @@ jobs:
             grep -q "sfx-sword-unsheathe-real" app/src/data/audioLibrary.ts
             grep -q "sfx-sword-hit-real" app/src/data/audioLibrary.ts
             grep -q "sfx-male-scream-fear" app/src/data/audioLibrary.ts
+            grep -q "sfx-cutting-beet-greens" app/src/data/audioLibrary.ts
             grep -q "Histoire & action" app/src/data/audioLibrary.ts
-            grep -q "Histoire & époques" app/src/data/audioLibrary.ts
+            grep -q "Époques historiques" app/src/data/audioLibrary.ts
             grep -q "library-footer-note" app/src/App.tsx app/src/styles.css
-            ! grep -q "library-info" app/src/App.tsx
+            grep -q "library-source-link" app/src/App.tsx app/src/styles.css
+            ! grep -q "library-info\|library-credit" app/src/App.tsx
             ! grep -q "generated:\|synthesizeGeneratedEffect\|loadGeneratedAudio\|Créé dans l’application\|disponible hors ligne" app/src/data/audioLibrary.ts app/src/App.tsx
             ! grep -q "Chocs métalliques / épées" app/src/data/audioLibrary.ts
             echo "App.tsx: $(wc -c < app/src/App.tsx) bytes"
@@ -196,10 +198,12 @@ jobs:
           grep -q "music-medieval-story" app/dist/assets/*.js
           grep -q "sfx-sword-fight-real" app/dist/assets/*.js
           grep -q "sfx-male-scream-fear" app/dist/assets/*.js
+          grep -q "sfx-cutting-beet-greens" app/dist/assets/*.js
           grep -q "Histoire & action" app/dist/assets/*.js
-          grep -q "Histoire & époques" app/dist/assets/*.js
+          grep -q "Époques historiques" app/dist/assets/*.js
           grep -q "library-footer-note" app/dist/assets/*.js app/dist/assets/*.css
-          ! grep -q "library-info" app/dist/assets/*.js
+          grep -q "library-source-link" app/dist/assets/*.js app/dist/assets/*.css
+          ! grep -q "library-info\|library-credit" app/dist/assets/*.js
           ! grep -q "generated:\|synthesizeGeneratedEffect\|loadGeneratedAudio\|Créé dans l’application\|disponible hors ligne" app/dist/assets/*.js
           ! grep -q "Chocs métalliques / épées" app/dist/assets/*.js
 
@@ -216,11 +220,11 @@ jobs:
           <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width,initial-scale=1">
-            <meta http-equiv="refresh" content="0;url=./site/?v=20260720-library-1">
+            <meta http-equiv="refresh" content="0;url=./site/?v=20260722-library-2">
             <title>Podcast Facile V3</title>
-            <script>location.replace('./site/?v=20260720-library-1')</script>
+            <script>location.replace('./site/?v=20260722-library-2')</script>
           </head>
-          <body><a href="./site/?v=20260720-library-1">Ouvrir Podcast Facile V3</a></body>
+          <body><a href="./site/?v=20260722-library-2">Ouvrir Podcast Facile V3</a></body>
           </html>
           HTML
 
@@ -233,6 +237,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No generated changes to commit."
           else
-            git commit -m "Simplifier les bibliothèques audio"
+            git commit -m "Affiner les bibliothèques audio"
             git push origin HEAD:main
           fi
