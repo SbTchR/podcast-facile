@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from pathlib import Path
+from urllib.parse import quote
 
 ROOT = Path(__file__).resolve().parents[1]
 LIB_PATH = ROOT / 'src' / 'data' / 'audioLibrary.ts'
@@ -10,6 +12,7 @@ APP_PATH = ROOT / 'src' / 'App.tsx'
 STYLES_PATH = ROOT / 'src' / 'styles.css'
 
 PIXABAY_LICENSE = 'https://pixabay.com/service/license-summary/'
+PD_LICENSE = 'https://creativecommons.org/publicdomain/mark/1.0/'
 
 
 def external_recording(
@@ -34,6 +37,40 @@ def external_recording(
         'license': 'Pixabay Content License',
         'licenseUrl': PIXABAY_LICENSE,
         'attribution': f'{title} — {author} — Pixabay Content License.',
+        'origin': 'recording',
+    }
+    if clip_duration is not None:
+        item['clipDuration'] = clip_duration
+    return item
+
+
+def commons_recording(
+    *, id: str, title: str, icon: str, duration: float, description: str,
+    tags: list[str], filename: str, author: str, attribution: str,
+    clip_duration: float | None = None,
+) -> dict:
+    normalized = filename.replace(' ', '_')
+    digest = hashlib.md5(normalized.encode('utf-8')).hexdigest()
+    encoded = quote(normalized, safe="_(),.-")
+    original = f'https://upload.wikimedia.org/wikipedia/commons/{digest[0]}/{digest[:2]}/{encoded}'
+    transcode = f'https://upload.wikimedia.org/wikipedia/commons/transcoded/{digest[0]}/{digest[:2]}/{encoded}/{encoded}.mp3'
+    item = {
+        'id': id,
+        'kind': 'sfx',
+        'title': title,
+        'category': 'Vie quotidienne & objets',
+        'icon': icon,
+        'duration': duration,
+        'description': description,
+        'tags': tags,
+        'filename': filename,
+        'audioUrl': transcode,
+        'fallbackUrl': original,
+        'sourcePage': f'https://commons.wikimedia.org/wiki/File:{encoded}',
+        'author': author,
+        'license': 'Domaine public',
+        'licenseUrl': PD_LICENSE,
+        'attribution': attribution,
         'origin': 'recording',
     }
     if clip_duration is not None:
@@ -82,7 +119,7 @@ EXTERNAL_SFX = [
     external_recording(
         id='sfx-male-scream-fear',
         title='Cri masculin de peur',
-        category='Voix & foule',
+        category='Voix & personnes',
         icon='😱',
         duration=1.5,
         description='Cri masculin très bref exprimant la peur ou la douleur.',
@@ -91,25 +128,57 @@ EXTERNAL_SFX = [
         source_page='https://pixabay.com/sound-effects/people-male-scream-in-fear-123079/',
         author='Universfield',
     ),
+    commons_recording(
+        id='sfx-cutting-beet-greens',
+        title='Couteau découpant des feuilles de betterave',
+        icon='🔪',
+        duration=12,
+        description='Découpe réelle de feuilles de betterave sur un plan de travail.',
+        tags=['couteau', 'découpe', 'légumes', 'cuisine'],
+        filename='Cutting beet greens.ogg',
+        author='hugh / PDSounds.org',
+        attribution='Cutting beet greens — hugh / PDSounds.org — domaine public.',
+        clip_duration=10,
+    ),
+]
+
+SFX_CATEGORIES = [
+    'Histoire & action',
+    'Lieux & ambiances',
+    'Nature & animaux',
+    'Transports & machines',
+    'Vie quotidienne & objets',
+    'Voix & personnes',
+]
+MUSIC_CATEGORIES = [
+    'Époques historiques',
+    'Épique & action',
+    'Mystère & tension',
+    'Lieux & voyages',
+    'Calme & émotion',
 ]
 
 
-def classify_sfx(item: dict) -> str:
-    text = ' '.join([
+def item_text(item: dict) -> str:
+    return ' '.join([
         str(item.get('category', '')),
         str(item.get('title', '')),
         str(item.get('description', '')),
-        ' '.join(item.get('tags', [])),
+        ' '.join(str(tag) for tag in item.get('tags', [])),
     ]).lower()
+
+
+def classify_sfx(item: dict) -> str:
+    text = item_text(item)
     if any(word in text for word in (
-        'bataille', 'combat', 'épée', 'sword', 'vik', 'médiéval', 'moyen âge',
-        'armée', 'militaire', 'guerre', 'forge historique', 'clairon', 'historique · action',
+        'bataille', 'combat', 'épée', 'sword', 'médiéval', 'moyen âge', 'armée',
+        'militaire', 'guerre', 'forge', 'clairon', 'canon', 'explosion', 'armure',
     )):
         return 'Histoire & action'
     if any(word in text for word in (
         'cheval', 'chien', 'chat', 'vache', 'cochon', 'mouton', 'canard', 'coq', 'hibou',
         'grenouille', 'loup', 'bourdon', 'oiseau', 'animal', 'forêt', 'jungle', 'pluie',
-        'orage', 'vent', 'ruisseau', 'rivière', 'vague', 'feu de camp', 'nature', 'eau',
+        'orage', 'vent', 'ruisseau', 'rivière', 'vague', 'feu de camp', 'nature',
     )):
         return 'Nature & animaux'
     if any(word in text for word in (
@@ -120,44 +189,31 @@ def classify_sfx(item: dict) -> str:
         return 'Transports & machines'
     if any(word in text for word in (
         'rire', 'pleur', 'cri', 'toux', 'éternu', 'ronfl', 'respiration', 'sifflement humain',
-        'applaud', 'foule', 'conversation', 'voix', 'bébé', 'homme qui', 'personne',
+        'applaud', 'conversation', 'voix', 'bébé', 'personne', 'public',
     )):
-        return 'Voix & foule'
+        return 'Voix & personnes'
     if any(word in text for word in (
         'restaurant', 'marché', 'rue', 'ville', 'centre commercial', 'cour d’école', 'salle',
-        'café', 'église', 'tunnel', 'ambiance', 'terrain de jeu', 'aéroport', 'hall',
+        'café', 'église', 'tunnel', 'ambiance', 'terrain de jeu', 'hall', 'foule',
     )):
         return 'Lieux & ambiances'
-    if any(word in text for word in (
-        'porte', 'sonnette', 'cloche', 'téléphone', 'verre', 'pièce', 'monnaie', 'papier',
-        'page', 'stylo', 'trombone', 'clavier', 'appareil photo', 'impact', 'choc', 'métal',
-        'buzzer', 'signal', 'horloge', 'boîte à musique', 'serrure', 'vaisselle',
-    )):
-        return 'Objets & signaux'
-    return 'Vie quotidienne'
+    return 'Vie quotidienne & objets'
 
 
 def classify_music(item: dict) -> str:
-    text = ' '.join([
-        str(item.get('category', '')),
-        str(item.get('title', '')),
-        str(item.get('description', '')),
-        ' '.join(item.get('tags', [])),
-    ]).lower()
+    text = item_text(item)
     if any(word in text for word in (
-        'médiéval', 'moyen âge', 'renaissance', 'baroque', 'xii', 'xiii', 'xv', 'xvii',
-        'hildegarde', 'monteverdi', 'janequin', 'binchois', 'antiquité', 'égypte', 'historique',
+        'médiéval', 'moyen âge', 'renaissance', 'baroque', 'xii', 'xiii', 'xve', 'xvi',
+        'xvii', 'hildegarde', 'monteverdi', 'janequin', 'binchois', 'antiquité', 'égypte',
     )):
-        return 'Histoire & époques'
+        return 'Époques historiques'
     if any(word in text for word in ('épique', 'combat', 'bataille', 'action', 'aventure', 'conquête', 'héros')):
         return 'Épique & action'
     if any(word in text for word in ('mystère', 'suspense', 'tension', 'menace', 'sombre', 'inquiét', 'danger')):
         return 'Mystère & tension'
-    if any(word in text for word in ('forêt', 'mer', 'port', 'fleuve', 'eau', 'voyage', 'exploration', 'désert', 'île', 'monde')):
-        return 'Lieux & voyage'
-    if any(word in text for word in ('calme', 'doux', 'nostalg', 'émotion', 'rêve', 'mélancol', 'paysage', 'conclusion')):
-        return 'Calme & émotion'
-    return 'Moderne & rythmé'
+    if any(word in text for word in ('forêt', 'mer', 'port', 'fleuve', 'eau', 'voyage', 'exploration', 'désert', 'île', 'monde', 'paysage')):
+        return 'Lieux & voyages'
+    return 'Calme & émotion'
 
 
 library = LIB_PATH.read_text(encoding='utf-8')
@@ -174,10 +230,22 @@ for item in EXTERNAL_SFX:
 for item in items:
     item['category'] = classify_music(item) if item.get('kind') == 'music' else classify_sfx(item)
 
-music = sorted([item for item in items if item.get('kind') == 'music'], key=lambda item: (item['category'], item['title']))
-sfx = sorted([item for item in items if item.get('kind') == 'sfx'], key=lambda item: (item['category'], item['title']))
+music_rank = {name: index for index, name in enumerate(MUSIC_CATEGORIES)}
+sfx_rank = {name: index for index, name in enumerate(SFX_CATEGORIES)}
+music = sorted([item for item in items if item.get('kind') == 'music'], key=lambda item: (music_rank[item['category']], item['title']))
+sfx = sorted([item for item in items if item.get('kind') == 'sfx'], key=lambda item: (sfx_rank[item['category']], item['title']))
 items = music + sfx
 library = library[:array_start] + json.dumps(items, ensure_ascii=False, indent=2) + library[array_end:]
+library = re.sub(
+    r"export const LIBRARY_CATEGORIES: Record<LibraryKind, string\[]> = \{.*?\n\};",
+    "export const LIBRARY_CATEGORIES: Record<LibraryKind, string[]> = {\n"
+    "  music: ['Époques historiques', 'Épique & action', 'Mystère & tension', 'Lieux & voyages', 'Calme & émotion'],\n"
+    "  sfx: ['Histoire & action', 'Lieux & ambiances', 'Nature & animaux', 'Transports & machines', 'Vie quotidienne & objets', 'Voix & personnes'],\n"
+    "};",
+    library,
+    count=1,
+    flags=re.DOTALL,
+)
 LIB_PATH.write_text(library, encoding='utf-8')
 
 app = APP_PATH.read_text(encoding='utf-8')
@@ -198,44 +266,61 @@ app, info_count = re.subn(
 )
 if info_count != 1:
     raise RuntimeError('Encadré de sources de la bibliothèque introuvable.')
+app, credit_count = re.subn(
+    r'<div className="library-credit">.*?</div>',
+    '<a className="library-source-link" href={preset.sourcePage} target="_blank" rel="noreferrer" title={`${preset.author} · ${preset.license}`}>ⓘ Source</a>',
+    app,
+    count=1,
+    flags=re.DOTALL,
+)
+if credit_count != 1:
+    raise RuntimeError('Crédits détaillés des cartes introuvables.')
 footer_anchor = '{error && <div className="error-box library-error">{error}</div>}'
-footer = footer_anchor + '\n        <div className="library-footer-note">Les sons sont téléchargés au premier usage. <a href="./audio-credits.html" target="_blank" rel="noreferrer">Sources, auteurs et licences</a></div>'
+footer = '''<div className="library-footer-note"><a href="./audio-credits.html" target="_blank" rel="noreferrer">Sources et licences de tous les sons</a><span>Les fichiers sont téléchargés au premier ajout puis conservés dans le projet.</span></div>\n        ''' + footer_anchor
 if footer_anchor not in app:
     raise RuntimeError('Point d’insertion de la note de crédits introuvable.')
 app = app.replace(footer_anchor, footer, 1)
 APP_PATH.write_text(app, encoding='utf-8')
 
 styles = STYLES_PATH.read_text(encoding='utf-8')
-if '.library-footer-note' not in styles:
-    styles += '''
+styles += '''
 
+.library-source-link {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: .3rem;
+  color: #667085;
+  font-size: .74rem;
+  text-decoration: none;
+  opacity: .7;
+}
+.library-source-link:hover { opacity: 1; text-decoration: underline; }
 .library-footer-note {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: .3rem .75rem;
   padding: 8px 18px 16px;
   text-align: center;
   color: #667085;
-  font-size: 0.78rem;
+  font-size: .78rem;
   line-height: 1.4;
 }
-
-.library-footer-note a {
-  color: inherit;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
+.library-footer-note a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 '''
 STYLES_PATH.write_text(styles, encoding='utf-8')
 
 music_categories = sorted({item['category'] for item in music})
 sfx_categories = sorted({item['category'] for item in sfx})
-if len(music_categories) > 6:
-    raise RuntimeError(f'Trop de catégories musicales : {music_categories}')
-if len(sfx_categories) > 7:
-    raise RuntimeError(f'Trop de catégories de bruitages : {sfx_categories}')
+if set(music_categories) != set(MUSIC_CATEGORIES):
+    raise RuntimeError(f'Catégories musicales inattendues : {music_categories}')
+if set(sfx_categories) != set(SFX_CATEGORIES):
+    raise RuntimeError(f'Catégories de bruitages inattendues : {sfx_categories}')
 combined = LIB_PATH.read_text(encoding='utf-8') + APP_PATH.read_text(encoding='utf-8')
-for required in ('sfx-sword-fight-real', 'sfx-sword-unsheathe-real', 'sfx-sword-hit-real', 'sfx-male-scream-fear', 'library-footer-note'):
+for required in ('sfx-sword-fight-real', 'sfx-sword-unsheathe-real', 'sfx-sword-hit-real', 'sfx-male-scream-fear', 'sfx-cutting-beet-greens', 'library-footer-note', 'library-source-link'):
     if required not in combined:
         raise RuntimeError(f'Élément attendu absent : {required}')
-if 'library-info' in APP_PATH.read_text(encoding='utf-8'):
-    raise RuntimeError('L’encadré vert des sources subsiste.')
+if 'library-info' in APP_PATH.read_text(encoding='utf-8') or 'library-credit' in APP_PATH.read_text(encoding='utf-8'):
+    raise RuntimeError('L’ancien affichage encombrant des sources subsiste.')
 
 print(f'Bibliothèques simplifiées : {len(sfx)} bruitages dans {len(sfx_categories)} catégories et {len(music)} musiques dans {len(music_categories)} catégories.')
