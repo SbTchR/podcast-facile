@@ -10,14 +10,36 @@ permissions:
   contents: read
 
 jobs:
-  verify-audio-bundle:
+  verify-audio-source:
     runs-on: ubuntu-latest
     steps:
-      - name: Récupérer le dépôt
+      - name: Récupérer la branche à vérifier
         uses: actions/checkout@v4
+
       - name: Installer Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Vérifier les correctifs audio
-        run: node tests/verify-runtime-loader.mjs
+          cache: npm
+          cache-dependency-path: app/package.json
+
+      - name: Reconstruire les sources complètes
+        run: bash app/scripts/reconstruct-podcast-source.sh
+
+      - name: Vérifier les sources corrigées
+        run: bash app/scripts/verify-audio-source.sh
+
+      - name: Installer les dépendances
+        working-directory: app
+        run: npm install --no-audit --no-fund
+
+      - name: Vérifier TypeScript
+        working-directory: app
+        run: npm run check
+
+      - name: Compiler l’application
+        working-directory: app
+        run: npm run build
+
+      - name: Vérifier le résultat compilé
+        run: bash app/scripts/verify-audio-build.sh
