@@ -66,11 +66,11 @@ jobs:
           <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width,initial-scale=1">
-            <meta http-equiv="refresh" content="0;url=./site/?v=20260722-sfx-volume-contrast-1">
+            <meta http-equiv="refresh" content="0;url=./site/?v=20260722-real-transitions-preview-1">
             <title>Podcast Facile V3</title>
-            <script>location.replace('./site/?v=20260722-sfx-volume-contrast-1')</script>
+            <script>location.replace('./site/?v=20260722-real-transitions-preview-1')</script>
           </head>
-          <body><a href="./site/?v=20260722-sfx-volume-contrast-1">Ouvrir Podcast Facile V3</a></body>
+          <body><a href="./site/?v=20260722-real-transitions-preview-1">Ouvrir Podcast Facile V3</a></body>
           </html>
           HTML
 

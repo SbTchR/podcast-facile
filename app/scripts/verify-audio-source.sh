@@ -23,6 +23,7 @@ grep -q "Ajouter une section" app/src/App.tsx
 python3 app/scripts/verify-editor-expansion.py
 python3 app/scripts/verify-guided-structure.py
 python3 app/scripts/verify-sfx-volume-contrast.py
+python3 app/scripts/verify-real-transitions-and-previews.py
 
 for id in \
   sfx-horse-gallop-pavement \

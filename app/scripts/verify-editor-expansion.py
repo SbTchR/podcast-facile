@@ -41,9 +41,11 @@ assert 'secondaryCategories?.includes(category)' in app
 transition_members = ['impact', 'sparkle', 'heartbeat', 'rewind', 'drop', 'question', 'failure', 'surprise', 'portal', 'cinematic']
 for preset in transition_members:
     assert f"'{preset}'" in types
-    assert f"  {preset}:" in app
+assert 'const TRANSITION_RECORDINGS: TransitionRecording[]' in app
+assert app.count("libraryId: 'sfx-") == 14
 assert "transitionVolume?: VolumeLevel" in types
 assert 'transitionVolumeValue(block.transitionVolume)' in engine
+assert 'transitionTone' not in engine
 
 assert "echo: 'Rêve'" in app
 assert "distant: 'Caverne'" in app
