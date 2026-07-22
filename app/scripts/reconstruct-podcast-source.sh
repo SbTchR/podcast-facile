@@ -44,3 +44,4 @@ python3 app/scripts/apply-historical-library.py
 python3 app/scripts/apply-library-simplification.py
 python3 app/scripts/apply-audio-corrections.py
 python3 app/scripts/apply-editor-expansion.py
+python3 app/scripts/apply-guided-structure.py

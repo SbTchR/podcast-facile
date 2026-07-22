@@ -46,9 +46,10 @@ assert "transitionVolume?: VolumeLevel" in types
 assert 'transitionVolumeValue(block.transitionVolume)' in engine
 
 assert "echo: 'Rêve'" in app
-assert "distant: 'Voix lointaine (réverbération)'" in app
+assert "distant: 'Caverne'" in app
 assert 'createConvolver()' in engine
-assert "effect === 'high' ? 1.16" in engine
+assert "effect === 'high' ? 1.12" in engine
+assert "effect === 'very-high' ? 1.24" in engine
 assert 'sourceStart + consumedCue' in engine
 assert 'cue.sourceEnd ?? legacyEnd' in engine
 

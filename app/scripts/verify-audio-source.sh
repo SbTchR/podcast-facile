@@ -18,9 +18,10 @@ grep -q "voicePlaybackRate" app/src/audio/engine.ts
 grep -q "coreTimelineDuration" app/src/audio/engine.ts
 grep -q "duration \* playbackRate" app/src/audio/engine.ts
 grep -q "cueAtSource / playbackRate" app/src/audio/engine.ts
-grep -q "Ajouter un jingle" app/src/App.tsx
-! grep -q "Choisis une structure de départ" app/src/App.tsx
+grep -q "Jingle d’intro" app/src/App.tsx
+grep -q "Ajouter une section" app/src/App.tsx
 python3 app/scripts/verify-editor-expansion.py
+python3 app/scripts/verify-guided-structure.py
 
 for id in \
   sfx-horse-gallop-pavement \
@@ -57,7 +58,7 @@ for category in \
 done
 
 grep -q "Chocs, impacts, transitions" app/src/data/audioLibrary.ts
-grep -q "Voix lointaine (réverbération)" app/src/App.tsx
+grep -q "distant: 'Caverne'" app/src/App.tsx
 grep -q "Plage du fichier" app/src/App.tsx
 grep -q "Volume de la transition" app/src/App.tsx
 grep -q "removeJingleAsset" app/src/App.tsx
