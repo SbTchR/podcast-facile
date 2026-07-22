@@ -1,0 +1,3 @@
+20260722-sfx-volume-contrast-1
+
+Échelle dédiée aux bruitages : discret 0,08, normal 0,28, fort 1,05.

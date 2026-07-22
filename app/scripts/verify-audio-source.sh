@@ -22,6 +22,7 @@ grep -q "Jingle d’intro" app/src/App.tsx
 grep -q "Ajouter une section" app/src/App.tsx
 python3 app/scripts/verify-editor-expansion.py
 python3 app/scripts/verify-guided-structure.py
+python3 app/scripts/verify-sfx-volume-contrast.py
 
 for id in \
   sfx-horse-gallop-pavement \
