@@ -20,240 +20,46 @@ jobs:
   build-and-commit:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout main
+      - name: Récupérer main
         uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
 
-      - name: Set up Node
+      - name: Installer Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: '22'
           cache: npm
           cache-dependency-path: app/package.json
 
-      - name: Reconstruct complete source files
-        id: reconstruct
-        shell: bash
-        run: |
-          mkdir -p app/src/data
-          cat app-parts/App-00.txt app-parts/App-01.txt app-parts/App-02.txt app-parts/App-03.txt app-parts/App-04.txt app-parts/App-05.txt > app/src/App.tsx
-          cat app-parts/styles-00.txt app-parts/styles-01.txt app-parts/styles-02.txt > app/src/styles.css
-          cat app-parts/audioLibrary-00.txt > app/src/data/audioLibrary.ts
-          sed '$d' app-parts/audioLibrary-01.txt >> app/src/data/audioLibrary.ts
-          cat app-parts/audioLibrary-02.txt app-parts/audioLibrary-03.txt >> app/src/data/audioLibrary.ts
-          set +e
-          node app/scripts/apply-runtime-fixes.mjs > runtime-fix-diagnostics.txt 2>&1
-          status=$?
-          if [ "$status" = "0" ]; then
-            node app/scripts/apply-ios-output-fix.mjs >> runtime-fix-diagnostics.txt 2>&1
-            status=$?
-          fi
-          if [ "$status" = "0" ]; then
-            node app/scripts/apply-recording-session-fix.mjs >> runtime-fix-diagnostics.txt 2>&1
-            status=$?
-          fi
-          if [ "$status" = "0" ]; then
-            python3 app/scripts/apply-student-workflow-v2.py >> runtime-fix-diagnostics.txt 2>&1
-            status=$?
-          fi
-          if [ "$status" = "0" ]; then
-            python3 - <<'PY'
-          from pathlib import Path
-          path = Path('app/scripts/apply-sfx-library-upgrade.py')
-          source = path.read_text(encoding='utf-8')
-          source = source.replace(
-              "array_start = library.index('[', library.index(marker))",
-              "array_start = library.index('[', library.index(marker) + len(marker))",
-          )
-          path.write_text(source, encoding='utf-8')
-          PY
-            python3 app/scripts/apply-sfx-library-upgrade.py >> runtime-fix-diagnostics.txt 2>&1
-            status=$?
-          fi
-          if [ "$status" = "0" ]; then
-            python3 - <<'PY'
-          from pathlib import Path
-          path = Path('app/scripts/apply-recorded-sfx-only.py')
-          source = path.read_text(encoding='utf-8')
-          marker = "music = [item for item in items if item.get('kind') == 'music']"
-          exclusion = "items = [item for item in items if item.get('id') not in {'sfx-small-stream', 'sfx-writing-feltpen', 'sfx-wine-glass'}]"
-          while f"{exclusion}\n{exclusion}" in source:
-              source = source.replace(f"{exclusion}\n{exclusion}", exclusion)
-          if exclusion not in source:
-              if marker not in source:
-                  raise SystemExit('Point de limitation de la bibliothèque introuvable.')
-              source = source.replace(marker, exclusion + "\n" + marker, 1)
-          path.write_text(source, encoding='utf-8')
-          PY
-            python3 app/scripts/apply-recorded-sfx-only.py >> runtime-fix-diagnostics.txt 2>&1
-            status=$?
-          fi
-          if [ "$status" = "0" ]; then
-            python3 app/scripts/apply-historical-library.py >> runtime-fix-diagnostics.txt 2>&1
-            status=$?
-          fi
-          if [ "$status" = "0" ]; then
-            python3 app/scripts/apply-library-simplification.py >> runtime-fix-diagnostics.txt 2>&1
-            status=$?
-          fi
-          if [ "$status" = "0" ]; then
-            python3 app/scripts/apply-audio-corrections.py >> runtime-fix-diagnostics.txt 2>&1
-            status=$?
-          fi
-          cat runtime-fix-diagnostics.txt
-          echo "status=$status" >> "$GITHUB_OUTPUT"
-          if [ "$status" = "0" ]; then
-            rm -f runtime-fix-diagnostics.txt
-            test -s app/src/App.tsx
-            test -s app/src/styles.css
-            test -s app/src/data/audioLibrary.ts
-            test -s app/public/audio-credits.html
-            test -s app/public/audio-diagnostics.html
-            ! grep -R "structuredClone(" app/src/App.tsx
-            grep -q "createMediaStreamDestination" app/src/audio/engine.ts
-            grep -q "setBrowserAudioSession('play-and-record')" app/src/App.tsx
-            grep -q "restoreBrowserAudioSession" app/src/App.tsx
-            grep -q "arraybuffer-v2" app/src/storage/db.ts
-            grep -q "audioBytes" app/src/storage/db.ts
-            grep -q "Ajouter un bruitage ici" app/src/App.tsx
-            grep -q "voiceCues" app/src/audio/engine.ts
-            grep -q "voicePlaybackRate" app/src/audio/engine.ts
-            grep -q "coreTimelineDuration" app/src/audio/engine.ts
-            grep -q "Ajouter un jingle" app/src/App.tsx
-            ! grep -q "Choisis une structure de départ" app/src/App.tsx
-            grep -q "sfx-horse-gallop-pavement" app/src/data/audioLibrary.ts
-            grep -q "sfx-steam-locomotive" app/src/data/audioLibrary.ts
-            grep -q "music-medieval-story" app/src/data/audioLibrary.ts
-            grep -q "sfx-sword-fight-real" app/src/data/audioLibrary.ts
-            grep -q "sfx-sword-unsheathe-real" app/src/data/audioLibrary.ts
-            grep -q "sfx-sword-hit-real" app/src/data/audioLibrary.ts
-            grep -q "sfx-male-scream-fear" app/src/data/audioLibrary.ts
-            grep -q "sfx-cutting-beet-greens" app/src/data/audioLibrary.ts
-            grep -q "sfx-explosion" app/src/data/audioLibrary.ts
-            grep -q "sfx-explosions" app/src/data/audioLibrary.ts
-            grep -q "sfx-gunshots-simulated" app/src/data/audioLibrary.ts
-            grep -q "sfx-cannon-reveille" app/src/data/audioLibrary.ts
-            grep -q "sfx-large-crowd-cheering" app/src/data/audioLibrary.ts
-            grep -q "sfx-provence-market" app/src/data/audioLibrary.ts
-            grep -q "sfx-fireworks-detonations" app/src/data/audioLibrary.ts
-            grep -q "sfx-rotary-printing-press-1926" app/src/data/audioLibrary.ts
-            grep -q "sfx-military-drumbeat" app/src/data/audioLibrary.ts
-            grep -q "sfx-1960s-factory-civil-defense-siren" app/src/data/audioLibrary.ts
-            grep -q "sfx-19th-century-fire-brigade-bell" app/src/data/audioLibrary.ts
-            grep -q "Guerres & combats" app/src/data/audioLibrary.ts
-            grep -q "Sociétés & lieux historiques" app/src/data/audioLibrary.ts
-            grep -q "Nature & paysages" app/src/data/audioLibrary.ts
-            grep -q "Transports & industrie" app/src/data/audioLibrary.ts
-            grep -q "Voix & foule" app/src/data/audioLibrary.ts
-            grep -q "Époques historiques" app/src/data/audioLibrary.ts
-            grep -q "Les sons de la bibliothèque proviennent de sources libres ou sous licence" app/src/App.tsx
-            ! grep -q "Les sons intégrés sont produits directement par l’application" app/src/App.tsx
-            grep -q "library-footer-note" app/src/App.tsx app/src/styles.css
-            grep -q "library-source-link" app/src/App.tsx app/src/styles.css
-            ! grep -q "library-info\|library-credit" app/src/App.tsx
-            ! grep -q "generated:\|synthesizeGeneratedEffect\|loadGeneratedAudio\|Créé dans l’application\|disponible hors ligne" app/src/data/audioLibrary.ts app/src/App.tsx
-            ! grep -q "Chocs métalliques / épées" app/src/data/audioLibrary.ts
-            echo "App.tsx: $(wc -c < app/src/App.tsx) bytes"
-            echo "styles.css: $(wc -c < app/src/styles.css) bytes"
-            echo "audioLibrary.ts: $(wc -c < app/src/data/audioLibrary.ts) bytes"
-          fi
-          exit 0
+      - name: Reconstruire les sources complètes
+        run: bash app/scripts/reconstruct-podcast-source.sh
 
-      - name: Publish runtime-fix diagnostic
-        if: steps.reconstruct.outputs.status != '0'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add runtime-fix-diagnostics.txt
-          git commit -m "Enregistrer le diagnostic de la navigation audio" || true
-          git push origin HEAD:main
-          exit 1
+      - name: Vérifier les sources corrigées
+        run: bash app/scripts/verify-audio-source.sh
 
-      - name: Install dependencies
+      - name: Installer les dépendances
         working-directory: app
         run: npm install --no-audit --no-fund
 
-      - name: Type check
-        id: typecheck
+      - name: Vérifier TypeScript
         working-directory: app
-        shell: bash
-        run: |
-          set +e
-          npm run check > ../build-diagnostics.txt 2>&1
-          status=$?
-          cat ../build-diagnostics.txt
-          echo "status=$status" >> "$GITHUB_OUTPUT"
-          exit 0
+        run: npm run check
 
-      - name: Publish type-check diagnostic
-        if: steps.typecheck.outputs.status != '0'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add build-diagnostics.txt app/package-lock.json
-          git commit -m "Enregistrer le diagnostic du build V3" || true
-          git push origin HEAD:main
-          exit 1
-
-      - name: Build standard Vite site
+      - name: Compiler l’application
         working-directory: app
         run: npm run build
 
-      - name: Verify standard output
-        run: |
-          test -s app/dist/index.html
-          test -s app/dist/audio-credits.html
-          test -s app/dist/audio-diagnostics.html
-          test -n "$(find app/dist/assets -maxdepth 1 -name '*.js' -print -quit)"
-          test -n "$(find app/dist/assets -maxdepth 1 -name '*.css' -print -quit)"
-          ! grep -R "DecompressionStream\|pako\.ungzip\|\.js\.gz\|structuredClone(" app/dist/index.html app/dist/assets/*.js
-          grep -q '<script type="module"' app/dist/index.html
-          grep -q "createMediaStreamDestination" app/dist/assets/*.js
-          grep -q "play-and-record" app/dist/assets/*.js
-          grep -q "arraybuffer-v2" app/dist/assets/*.js
-          grep -q "audioBytes" app/dist/assets/*.js
-          grep -q "Ajouter un bruitage ici" app/dist/assets/*.js
-          grep -q "voiceCues" app/dist/assets/*.js
-          grep -q "voicePlaybackRate" app/dist/assets/*.js
-          grep -q "coreTimelineDuration" app/dist/assets/*.js
-          grep -q "Ajouter un jingle" app/dist/assets/*.js
-          grep -q "sfx-horse-gallop-pavement" app/dist/assets/*.js
-          grep -q "music-medieval-story" app/dist/assets/*.js
-          grep -q "sfx-sword-fight-real" app/dist/assets/*.js
-          grep -q "sfx-male-scream-fear" app/dist/assets/*.js
-          grep -q "sfx-cutting-beet-greens" app/dist/assets/*.js
-          grep -q "sfx-gunshots-simulated" app/dist/assets/*.js
-          grep -q "sfx-cannon-reveille" app/dist/assets/*.js
-          grep -q "sfx-large-crowd-cheering" app/dist/assets/*.js
-          grep -q "sfx-provence-market" app/dist/assets/*.js
-          grep -q "sfx-fireworks-detonations" app/dist/assets/*.js
-          grep -q "sfx-rotary-printing-press-1926" app/dist/assets/*.js
-          grep -q "sfx-military-drumbeat" app/dist/assets/*.js
-          grep -q "sfx-1960s-factory-civil-defense-siren" app/dist/assets/*.js
-          grep -q "sfx-19th-century-fire-brigade-bell" app/dist/assets/*.js
-          grep -q "Guerres & combats" app/dist/assets/*.js
-          grep -q "Sociétés & lieux historiques" app/dist/assets/*.js
-          grep -q "Nature & paysages" app/dist/assets/*.js
-          grep -q "Transports & industrie" app/dist/assets/*.js
-          grep -q "Voix & foule" app/dist/assets/*.js
-          grep -q "Époques historiques" app/dist/assets/*.js
-          grep -q "Les sons de la bibliothèque proviennent de sources libres ou sous licence" app/dist/assets/*.js
-          ! grep -q "Les sons intégrés sont produits directement par l’application" app/dist/assets/*.js
-          grep -q "library-footer-note" app/dist/assets/*.js app/dist/assets/*.css
-          grep -q "library-source-link" app/dist/assets/*.js app/dist/assets/*.css
-          ! grep -q "library-info\|library-credit" app/dist/assets/*.js
-          ! grep -q "generated:\|synthesizeGeneratedEffect\|loadGeneratedAudio\|Créé dans l’application\|disponible hors ligne" app/dist/assets/*.js
-          ! grep -q "Chocs métalliques / épées" app/dist/assets/*.js
+      - name: Vérifier le résultat compilé
+        run: bash app/scripts/verify-audio-build.sh
 
-      - name: Install static site
+      - name: Installer le site statique
         run: |
           rm -rf site
           mkdir site
           cp -R app/dist/. site/
           touch site/.nojekyll
-          rm -f build-diagnostics.txt runtime-fix-diagnostics.txt
           cat > index.html <<'HTML'
           <!doctype html>
           <html lang="fr">
@@ -268,14 +74,13 @@ jobs:
           </html>
           HTML
 
-      - name: Commit generated site
+      - name: Publier le site généré
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A site index.html app/package-lock.json app/scripts/apply-sfx-library-upgrade.py app/scripts/apply-recorded-sfx-only.py app/scripts/apply-historical-library.py app/scripts/apply-library-simplification.py app/scripts/apply-audio-corrections.py
-          git add -u runtime-fix-diagnostics.txt build-diagnostics.txt || true
+          git add -A site index.html app/package-lock.json
           if git diff --cached --quiet; then
-            echo "No generated changes to commit."
+            echo "Aucun changement généré à publier."
           else
             git commit -m "Publier les corrections audio"
             git push origin HEAD:main
