@@ -24,81 +24,10 @@ jobs:
           cache-dependency-path: app/package.json
 
       - name: Reconstruire les sources complètes
-        shell: bash
-        run: |
-          mkdir -p app/src/data
-          cat app-parts/App-00.txt app-parts/App-01.txt app-parts/App-02.txt app-parts/App-03.txt app-parts/App-04.txt app-parts/App-05.txt > app/src/App.tsx
-          cat app-parts/styles-00.txt app-parts/styles-01.txt app-parts/styles-02.txt > app/src/styles.css
-          cat app-parts/audioLibrary-00.txt > app/src/data/audioLibrary.ts
-          sed '$d' app-parts/audioLibrary-01.txt >> app/src/data/audioLibrary.ts
-          cat app-parts/audioLibrary-02.txt app-parts/audioLibrary-03.txt >> app/src/data/audioLibrary.ts
-          node app/scripts/apply-runtime-fixes.mjs
-          node app/scripts/apply-ios-output-fix.mjs
-          node app/scripts/apply-recording-session-fix.mjs
-          python3 app/scripts/apply-student-workflow-v2.py
-          python3 - <<'PY'
-          from pathlib import Path
-          path = Path('app/scripts/apply-sfx-library-upgrade.py')
-          source = path.read_text(encoding='utf-8')
-          source = source.replace(
-              "array_start = library.index('[', library.index(marker))",
-              "array_start = library.index('[', library.index(marker) + len(marker))",
-          )
-          path.write_text(source, encoding='utf-8')
-          PY
-          python3 app/scripts/apply-sfx-library-upgrade.py
-          python3 - <<'PY'
-          from pathlib import Path
-          path = Path('app/scripts/apply-recorded-sfx-only.py')
-          source = path.read_text(encoding='utf-8')
-          marker = "music = [item for item in items if item.get('kind') == 'music']"
-          exclusion = "items = [item for item in items if item.get('id') not in {'sfx-small-stream', 'sfx-writing-feltpen', 'sfx-wine-glass'}]"
-          while f"{exclusion}\n{exclusion}" in source:
-              source = source.replace(f"{exclusion}\n{exclusion}", exclusion)
-          if exclusion not in source:
-              if marker not in source:
-                  raise SystemExit('Point de limitation de la bibliothèque introuvable.')
-              source = source.replace(marker, exclusion + "\n" + marker, 1)
-          path.write_text(source, encoding='utf-8')
-          PY
-          python3 app/scripts/apply-recorded-sfx-only.py
-          python3 app/scripts/apply-historical-library.py
-          python3 app/scripts/apply-library-simplification.py
-          python3 app/scripts/apply-audio-corrections.py
+        run: bash app/scripts/reconstruct-podcast-source.sh
 
       - name: Vérifier les sources corrigées
-        shell: bash
-        run: |
-          test -s app/public/audio-diagnostics.html
-          grep -q "voicePlaybackRate" app/src/audio/engine.ts
-          grep -q "coreTimelineDuration" app/src/audio/engine.ts
-          grep -q "duration \* playbackRate" app/src/audio/engine.ts
-          grep -q "cueAtSource / playbackRate" app/src/audio/engine.ts
-          grep -q "Les sons de la bibliothèque proviennent de sources libres ou sous licence" app/src/App.tsx
-          ! grep -q "Les sons intégrés sont produits directement par l’application" app/src/App.tsx
-          grep -q "sfx-explosion" app/src/data/audioLibrary.ts
-          grep -q "sfx-explosions" app/src/data/audioLibrary.ts
-          for id in \
-            sfx-gunshots-simulated \
-            sfx-cannon-reveille \
-            sfx-large-crowd-cheering \
-            sfx-provence-market \
-            sfx-fireworks-detonations \
-            sfx-rotary-printing-press-1926 \
-            sfx-military-drumbeat \
-            sfx-1960s-factory-civil-defense-siren \
-            sfx-19th-century-fire-brigade-bell; do
-            grep -q "$id" app/src/data/audioLibrary.ts
-          done
-          for category in \
-            "Guerres & combats" \
-            "Sociétés & lieux historiques" \
-            "Nature & paysages" \
-            "Transports & industrie" \
-            "Vie quotidienne & objets" \
-            "Voix & foule"; do
-            grep -q "$category" app/src/data/audioLibrary.ts
-          done
+        run: bash app/scripts/verify-audio-source.sh
 
       - name: Installer les dépendances
         working-directory: app
@@ -113,18 +42,4 @@ jobs:
         run: npm run build
 
       - name: Vérifier le résultat compilé
-        shell: bash
-        run: |
-          test -s app/dist/index.html
-          test -s app/dist/audio-credits.html
-          test -s app/dist/audio-diagnostics.html
-          grep -q "sfx-gunshots-simulated" app/dist/assets/*.js
-          grep -q "sfx-cannon-reveille" app/dist/assets/*.js
-          grep -q "sfx-large-crowd-cheering" app/dist/assets/*.js
-          grep -q "sfx-provence-market" app/dist/assets/*.js
-          grep -q "sfx-fireworks-detonations" app/dist/assets/*.js
-          grep -q "sfx-rotary-printing-press-1926" app/dist/assets/*.js
-          grep -q "sfx-military-drumbeat" app/dist/assets/*.js
-          grep -q "sfx-1960s-factory-civil-defense-siren" app/dist/assets/*.js
-          grep -q "sfx-19th-century-fire-brigade-bell" app/dist/assets/*.js
-          grep -q "Les sons de la bibliothèque proviennent de sources libres ou sous licence" app/dist/assets/*.js
+        run: bash app/scripts/verify-audio-build.sh
