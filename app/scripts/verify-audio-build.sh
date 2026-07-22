@@ -15,6 +15,12 @@ grep -q "audioBytes" app/dist/assets/*.js
 grep -q "Ajouter un bruitage ici" app/dist/assets/*.js
 grep -q "voiceCues" app/dist/assets/*.js
 grep -q "Ajouter un jingle" app/dist/assets/*.js
+grep -q "Chocs, impacts, transitions" app/dist/assets/*.js
+grep -q "Voix lointaine (réverbération)" app/dist/assets/*.js
+grep -q "Plage du fichier" app/dist/assets/*.js
+grep -q "Volume de la transition" app/dist/assets/*.js
+grep -q "music-chase-action" app/dist/assets/*.js
+grep -q "sfx-medieval-battle-ambience" app/dist/assets/*.js
 
 for id in \
   sfx-horse-gallop-pavement \
