@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#2457d6" />
+  <title>Diagnostic audio — Podcast Facile</title>
+  <style>
+    :root{color:#182238;background:#f5f7fb;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}*{box-sizing:border-box}body{margin:0;min-width:320px}main{width:min(980px,calc(100% - 32px));margin:0 auto;padding:42px 0 72px}h1{margin:0 0 8px;font-size:clamp(2rem,6vw,3rem);letter-spacing:-.035em}h2{margin:0 0 16px;font-size:1.25rem}p{color:#67738b;line-height:1.55}a{color:#2457d6}.panel{margin-top:22px;padding:22px;border:1px solid #dce2ee;border-radius:16px;background:#fff;box-shadow:0 12px 34px #2a385812}.actions{display:flex;flex-wrap:wrap;gap:10px;margin:22px 0}button{min-height:44px;padding:0 18px;border:0;border-radius:10px;font:inherit;font-weight:750;cursor:pointer}.primary{color:#fff;background:#2457d6}.secondary{color:#163eaa;background:#fff;border:1px solid #bfcbe3}button:disabled{opacity:.5;cursor:not-allowed}.api-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}.api-card{padding:14px;border:1px solid #e0e5ee;border-radius:12px;background:#fafbfe}.api-card strong{display:block;margin-bottom:5px}.ok{color:#19734f}.bad{color:#b42337}.pending{color:#8a6116}.sound-list{display:grid;gap:9px}.sound-row{display:grid;grid-template-columns:minmax(180px,1fr) auto auto;align-items:center;gap:12px;padding:14px;border:1px solid #e0e5ee;border-radius:12px}.sound-row small{display:block;margin-top:3px;color:#7a8599}.source{border-radius:999px;padding:5px 9px;background:#eef2f8;color:#4d5b72;font-size:.78rem;font-weight:750}.status{min-width:120px;text-align:right;font-weight:750}pre{overflow:auto;max-height:280px;padding:14px;border-radius:10px;background:#111827;color:#e5e7eb;white-space:pre-wrap}.privacy{padding:13px 15px;border-radius:11px;background:#eef5ff;color:#36517d}@media(max-width:680px){.sound-row{grid-template-columns:1fr auto}.status{grid-column:1/-1;text-align:left}}
+  </style>
+</head>
+<body>
+  <main>
+    <a href="./">← Retour à Podcast Facile</a>
+    <h1>Diagnostic audio</h1>
+    <p>Cette page vérifie les fonctions audio du navigateur et le téléchargement réel de plusieurs sons Wikimedia et Pixabay. Aucun enregistrement n’est envoyé.</p>
+    <div class="actions">
+      <button id="run-all" class="primary">Lancer tous les tests</button>
+      <button id="test-micro" class="secondary">Tester l’autorisation du microphone</button>
+    </div>
+    <section class="panel"><h2>Compatibilité du navigateur</h2><div id="api-grid" class="api-grid"></div></section>
+    <section class="panel"><h2>Accès aux fichiers audio</h2><p>Un test réussi signifie que le navigateur a téléchargé le fichier et a pu le décoder avec Web Audio.</p><div id="sound-list" class="sound-list"></div></section>
+    <section class="panel"><h2>Journal technique</h2><p class="privacy">Le journal reste dans cette page. Il peut être copié pour signaler précisément un problème.</p><pre id="log">Aucun test lancé.</pre></section>
+  </main>
+  <script type="module">
+    const sounds=[
+      {id:'wikimedia-explosion',title:'Explosion courte',source:'Wikimedia',url:'https://upload.wikimedia.org/wikipedia/commons/b/b9/Explosion-LS100155.ogg'},
+      {id:'wikimedia-cannon',title:'Salve de canon et réveil militaire',source:'Wikimedia',url:'https://upload.wikimedia.org/wikipedia/commons/2/2d/01_Salute_Cannon_Reveille.ogg'},
+      {id:'pixabay-sword-fight',title:'Combat d’épées enregistré',source:'Pixabay',url:'https://cdn.pixabay.com/download/audio/2021/08/04/audio_357038f64c.mp3?filename=sword-against-sword-6341.mp3'},
+      {id:'pixabay-sword-hit',title:'Coup d’épée isolé',source:'Pixabay',url:'https://cdn.pixabay.com/download/audio/2021/08/09/audio_4dd68e8e36.mp3?filename=sword-hit-7160.mp3'},
+      {id:'pixabay-unsheathe',title:'Épée dégainée',source:'Pixabay',url:'https://cdn.pixabay.com/download/audio/2021/08/04/audio_d08b83b6d7.mp3?filename=unsheath-sword-6113.mp3'},
+      {id:'pixabay-scream',title:'Cri masculin de peur',source:'Pixabay',url:'https://cdn.pixabay.com/download/audio/2022/10/16/audio_d7410dcb38.mp3?filename=male-scream-in-fear-123079.mp3'}
+    ];
+    const apiChecks=[['AudioContext',Boolean(window.AudioContext||window.webkitAudioContext)],['OfflineAudioContext',Boolean(window.OfflineAudioContext||window.webkitOfflineAudioContext)],['MediaRecorder',typeof MediaRecorder!=='undefined'],['Microphone',Boolean(navigator.mediaDevices?.getUserMedia)],['IndexedDB','indexedDB'in window],['Blob module','Blob'in window&&'URL'in window]];
+    const apiGrid=document.getElementById('api-grid'),soundList=document.getElementById('sound-list'),logBox=document.getElementById('log'),runAllButton=document.getElementById('run-all'),microphoneButton=document.getElementById('test-micro'),logLines=[];
+    function log(message){logLines.push(`[${new Date().toLocaleTimeString('fr-CH')}] ${message}`);logBox.textContent=logLines.join('\n')}
+    function renderApis(){apiGrid.innerHTML=apiChecks.map(([label,supported])=>`<div class="api-card"><strong>${label}</strong><span class="${supported?'ok':'bad'}">${supported?'✓ Disponible':'✕ Indisponible'}</span></div>`).join('')}
+    function renderSounds(){soundList.innerHTML=sounds.map(sound=>`<div class="sound-row" data-sound-id="${sound.id}"><div><strong>${sound.title}</strong><small>${sound.source==='Pixabay'?'Test spécifique de la source externe Pixabay':'Point de comparaison Wikimedia Commons'}</small></div><span class="source">${sound.source}</span><span class="status pending">Non testé</span></div>`).join('')}
+    function setStatus(id,text,kind){const status=document.querySelector(`[data-sound-id="${id}"] .status`);status.textContent=text;status.className=`status ${kind}`}
+    async function decodeAudio(arrayBuffer){const AudioContextClass=window.AudioContext||window.webkitAudioContext;if(!AudioContextClass)throw new Error('AudioContext indisponible');const context=new AudioContextClass();try{return(await context.decodeAudioData(arrayBuffer.slice(0))).duration}finally{await context.close()}}
+    async function testSound(sound){setStatus(sound.id,'Téléchargement…','pending');const started=performance.now();try{const response=await fetch(sound.url,{mode:'cors',cache:'no-store'});if(!response.ok)throw new Error(`HTTP ${response.status}`);const bytes=await response.arrayBuffer();if(bytes.byteLength<100)throw new Error('fichier vide ou trop petit');const duration=await decodeAudio(bytes),elapsed=((performance.now()-started)/1000).toFixed(1);setStatus(sound.id,`✓ ${duration.toFixed(1)} s`,'ok');log(`${sound.source} — ${sound.title} : OK, ${(bytes.byteLength/1024).toFixed(0)} Ko, ${duration.toFixed(1)} s, test ${elapsed} s.`);return true}catch(error){const message=error instanceof Error?error.message:String(error);setStatus(sound.id,`✕ ${message}`,'bad');log(`${sound.source} — ${sound.title} : ÉCHEC — ${message}.`);return false}}
+    async function runAll(){runAllButton.disabled=true;logLines.length=0;log(`Navigateur : ${navigator.userAgent}`);for(const sound of sounds)await testSound(sound);const failures=document.querySelectorAll('.sound-row .status.bad').length;log(failures===0?'Tous les fichiers ont été téléchargés et décodés.':`${failures} test(s) ont échoué.`);runAllButton.disabled=false}
+    async function testMicrophone(){microphoneButton.disabled=true;try{if(!navigator.mediaDevices?.getUserMedia)throw new Error('API microphone indisponible');const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}}),tracks=stream.getTracks();log(`Microphone : autorisation accordée, ${tracks.length} piste(s) reçue(s).`);tracks.forEach(track=>track.stop());microphoneButton.textContent='✓ Microphone accessible'}catch(error){const message=error instanceof Error?error.message:String(error);log(`Microphone : ÉCHEC — ${message}.`);microphoneButton.textContent='✕ Microphone inaccessible'}finally{microphoneButton.disabled=false}}
+    renderApis();renderSounds();runAllButton.addEventListener('click',()=>void runAll());microphoneButton.addEventListener('click',()=>void testMicrophone());
+  </script>
+</body>
+</html>
