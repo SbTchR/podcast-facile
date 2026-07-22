@@ -20,6 +20,7 @@ grep -q "duration \* playbackRate" app/src/audio/engine.ts
 grep -q "cueAtSource / playbackRate" app/src/audio/engine.ts
 grep -q "Ajouter un jingle" app/src/App.tsx
 ! grep -q "Choisis une structure de départ" app/src/App.tsx
+python3 app/scripts/verify-editor-expansion.py
 
 for id in \
   sfx-horse-gallop-pavement \
@@ -54,6 +55,12 @@ for category in \
   "Époques historiques"; do
   grep -q "$category" app/src/data/audioLibrary.ts
 done
+
+grep -q "Chocs, impacts, transitions" app/src/data/audioLibrary.ts
+grep -q "Voix lointaine (réverbération)" app/src/App.tsx
+grep -q "Plage du fichier" app/src/App.tsx
+grep -q "Volume de la transition" app/src/App.tsx
+grep -q "removeJingleAsset" app/src/App.tsx
 
 grep -q "Les sons de la bibliothèque proviennent de sources libres ou sous licence" app/src/App.tsx
 ! grep -q "Les sons intégrés sont produits directement par l’application" app/src/App.tsx
