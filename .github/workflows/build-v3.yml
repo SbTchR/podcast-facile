@@ -7,8 +7,6 @@ on:
       - 'app/**'
       - 'app-parts/**'
       - '.github/workflows/build-v3.yml'
-  pull_request:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -100,6 +98,10 @@ jobs:
             python3 app/scripts/apply-library-simplification.py >> runtime-fix-diagnostics.txt 2>&1
             status=$?
           fi
+          if [ "$status" = "0" ]; then
+            python3 app/scripts/apply-audio-corrections.py >> runtime-fix-diagnostics.txt 2>&1
+            status=$?
+          fi
           cat runtime-fix-diagnostics.txt
           echo "status=$status" >> "$GITHUB_OUTPUT"
           if [ "$status" = "0" ]; then
@@ -108,6 +110,7 @@ jobs:
             test -s app/src/styles.css
             test -s app/src/data/audioLibrary.ts
             test -s app/public/audio-credits.html
+            test -s app/public/audio-diagnostics.html
             ! grep -R "structuredClone(" app/src/App.tsx
             grep -q "createMediaStreamDestination" app/src/audio/engine.ts
             grep -q "setBrowserAudioSession('play-and-record')" app/src/App.tsx
@@ -116,6 +119,8 @@ jobs:
             grep -q "audioBytes" app/src/storage/db.ts
             grep -q "Ajouter un bruitage ici" app/src/App.tsx
             grep -q "voiceCues" app/src/audio/engine.ts
+            grep -q "voicePlaybackRate" app/src/audio/engine.ts
+            grep -q "coreTimelineDuration" app/src/audio/engine.ts
             grep -q "Ajouter un jingle" app/src/App.tsx
             ! grep -q "Choisis une structure de départ" app/src/App.tsx
             grep -q "sfx-horse-gallop-pavement" app/src/data/audioLibrary.ts
@@ -126,8 +131,25 @@ jobs:
             grep -q "sfx-sword-hit-real" app/src/data/audioLibrary.ts
             grep -q "sfx-male-scream-fear" app/src/data/audioLibrary.ts
             grep -q "sfx-cutting-beet-greens" app/src/data/audioLibrary.ts
-            grep -q "Histoire & action" app/src/data/audioLibrary.ts
+            grep -q "sfx-explosion" app/src/data/audioLibrary.ts
+            grep -q "sfx-explosions" app/src/data/audioLibrary.ts
+            grep -q "sfx-gunshots-simulated" app/src/data/audioLibrary.ts
+            grep -q "sfx-cannon-reveille" app/src/data/audioLibrary.ts
+            grep -q "sfx-large-crowd-cheering" app/src/data/audioLibrary.ts
+            grep -q "sfx-provence-market" app/src/data/audioLibrary.ts
+            grep -q "sfx-fireworks-detonations" app/src/data/audioLibrary.ts
+            grep -q "sfx-rotary-printing-press-1926" app/src/data/audioLibrary.ts
+            grep -q "sfx-military-drumbeat" app/src/data/audioLibrary.ts
+            grep -q "sfx-1960s-factory-civil-defense-siren" app/src/data/audioLibrary.ts
+            grep -q "sfx-19th-century-fire-brigade-bell" app/src/data/audioLibrary.ts
+            grep -q "Guerres & combats" app/src/data/audioLibrary.ts
+            grep -q "Sociétés & lieux historiques" app/src/data/audioLibrary.ts
+            grep -q "Nature & paysages" app/src/data/audioLibrary.ts
+            grep -q "Transports & industrie" app/src/data/audioLibrary.ts
+            grep -q "Voix & foule" app/src/data/audioLibrary.ts
             grep -q "Époques historiques" app/src/data/audioLibrary.ts
+            grep -q "Les sons de la bibliothèque proviennent de sources libres ou sous licence" app/src/App.tsx
+            ! grep -q "Les sons intégrés sont produits directement par l’application" app/src/App.tsx
             grep -q "library-footer-note" app/src/App.tsx app/src/styles.css
             grep -q "library-source-link" app/src/App.tsx app/src/styles.css
             ! grep -q "library-info\|library-credit" app/src/App.tsx
@@ -183,6 +205,7 @@ jobs:
         run: |
           test -s app/dist/index.html
           test -s app/dist/audio-credits.html
+          test -s app/dist/audio-diagnostics.html
           test -n "$(find app/dist/assets -maxdepth 1 -name '*.js' -print -quit)"
           test -n "$(find app/dist/assets -maxdepth 1 -name '*.css' -print -quit)"
           ! grep -R "DecompressionStream\|pako\.ungzip\|\.js\.gz\|structuredClone(" app/dist/index.html app/dist/assets/*.js
@@ -193,14 +216,31 @@ jobs:
           grep -q "audioBytes" app/dist/assets/*.js
           grep -q "Ajouter un bruitage ici" app/dist/assets/*.js
           grep -q "voiceCues" app/dist/assets/*.js
+          grep -q "voicePlaybackRate" app/dist/assets/*.js
+          grep -q "coreTimelineDuration" app/dist/assets/*.js
           grep -q "Ajouter un jingle" app/dist/assets/*.js
           grep -q "sfx-horse-gallop-pavement" app/dist/assets/*.js
           grep -q "music-medieval-story" app/dist/assets/*.js
           grep -q "sfx-sword-fight-real" app/dist/assets/*.js
           grep -q "sfx-male-scream-fear" app/dist/assets/*.js
           grep -q "sfx-cutting-beet-greens" app/dist/assets/*.js
-          grep -q "Histoire & action" app/dist/assets/*.js
+          grep -q "sfx-gunshots-simulated" app/dist/assets/*.js
+          grep -q "sfx-cannon-reveille" app/dist/assets/*.js
+          grep -q "sfx-large-crowd-cheering" app/dist/assets/*.js
+          grep -q "sfx-provence-market" app/dist/assets/*.js
+          grep -q "sfx-fireworks-detonations" app/dist/assets/*.js
+          grep -q "sfx-rotary-printing-press-1926" app/dist/assets/*.js
+          grep -q "sfx-military-drumbeat" app/dist/assets/*.js
+          grep -q "sfx-1960s-factory-civil-defense-siren" app/dist/assets/*.js
+          grep -q "sfx-19th-century-fire-brigade-bell" app/dist/assets/*.js
+          grep -q "Guerres & combats" app/dist/assets/*.js
+          grep -q "Sociétés & lieux historiques" app/dist/assets/*.js
+          grep -q "Nature & paysages" app/dist/assets/*.js
+          grep -q "Transports & industrie" app/dist/assets/*.js
+          grep -q "Voix & foule" app/dist/assets/*.js
           grep -q "Époques historiques" app/dist/assets/*.js
+          grep -q "Les sons de la bibliothèque proviennent de sources libres ou sous licence" app/dist/assets/*.js
+          ! grep -q "Les sons intégrés sont produits directement par l’application" app/dist/assets/*.js
           grep -q "library-footer-note" app/dist/assets/*.js app/dist/assets/*.css
           grep -q "library-source-link" app/dist/assets/*.js app/dist/assets/*.css
           ! grep -q "library-info\|library-credit" app/dist/assets/*.js
@@ -220,11 +260,11 @@ jobs:
           <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width,initial-scale=1">
-            <meta http-equiv="refresh" content="0;url=./site/?v=20260722-library-2">
+            <meta http-equiv="refresh" content="0;url=./site/?v=20260722-audio-source-1">
             <title>Podcast Facile V3</title>
-            <script>location.replace('./site/?v=20260722-library-2')</script>
+            <script>location.replace('./site/?v=20260722-audio-source-1')</script>
           </head>
-          <body><a href="./site/?v=20260722-library-2">Ouvrir Podcast Facile V3</a></body>
+          <body><a href="./site/?v=20260722-audio-source-1">Ouvrir Podcast Facile V3</a></body>
           </html>
           HTML
 
@@ -232,11 +272,11 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A site index.html app/package-lock.json app/scripts/apply-sfx-library-upgrade.py app/scripts/apply-recorded-sfx-only.py app/scripts/apply-historical-library.py app/scripts/apply-library-simplification.py
+          git add -A site index.html app/package-lock.json app/scripts/apply-sfx-library-upgrade.py app/scripts/apply-recorded-sfx-only.py app/scripts/apply-historical-library.py app/scripts/apply-library-simplification.py app/scripts/apply-audio-corrections.py
           git add -u runtime-fix-diagnostics.txt build-diagnostics.txt || true
           if git diff --cached --quiet; then
             echo "No generated changes to commit."
           else
-            git commit -m "Affiner les bibliothèques audio"
+            git commit -m "Publier les corrections audio"
             git push origin HEAD:main
           fi
