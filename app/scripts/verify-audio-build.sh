@@ -24,6 +24,11 @@ grep -q "music-chase-action" app/dist/assets/*.js
 grep -q "sfx-medieval-battle-ambience" app/dist/assets/*.js
 grep -q "Enregistrer mon propre bruitage" app/dist/assets/*.js
 grep -q "Commencer avant la voix" app/dist/assets/*.js
+grep -Eq "low.{0,24}\\.08.{0,24}high.{0,24}1\\.05.{0,24}\\.28" app/dist/assets/*.js
+grep -q "Enregistrements réels" app/dist/assets/*.js
+grep -q "Chargement…" app/dist/assets/*.js
+grep -q "Coups à la porte" app/dist/assets/*.js
+grep -q "Pop vocal" app/dist/assets/*.js
 
 for id in \
   sfx-horse-gallop-pavement \
