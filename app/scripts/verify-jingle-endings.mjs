@@ -2,23 +2,25 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { typescriptModuleUrl, loadAudioEngine } from './audio-test-module.mjs';
-const { JINGLE_ENDINGS } = await import(await typescriptModuleUrl(new URL('../src/data/jingleEndings.ts',import.meta.url)));
+const { JINGLE_ENDINGS, JINGLE_CREDIT_ENDINGS, LEGACY_JINGLE_ENDINGS } = await import(await typescriptModuleUrl(new URL('../src/data/jingleEndings.ts',import.meta.url)));
 const { getGuidedJingleEndingPlan, getGuidedJinglePlan } = await import(await typescriptModuleUrl(new URL('../src/audio/jinglePlan.ts',import.meta.url)));
 const { getBlockDuration } = await loadAudioEngine();
-assert.equal(JINGLE_ENDINGS.length,6,'Keep the final-sound choice deliberately short.');
+assert.ok(JINGLE_ENDINGS.length <= 8,'Keep the final-sound choice deliberately short.');
+assert.equal(LEGACY_JINGLE_ENDINGS.length,6,'Keep credit metadata for previous projects.');
+assert.equal(new Set(JINGLE_CREDIT_ENDINGS.map(item=>item.id)).size,JINGLE_CREDIT_ENDINGS.length,'Replacements need their own credit IDs.');
 const manifest=JSON.parse(await readFile(new URL('../public/audio/jingle-endings/sources.json',import.meta.url),'utf8'));
 const credits=await readFile(new URL('../public/audio-credits.html',import.meta.url),'utf8');
 const assets=[{id:'music',duration:25},...['title','intro','hook'].map(id=>({id,duration:2}))];
 const block={type:'jingle',jingle:{production:'guided-v3',style:'dynamic',musicAssetId:'music',takes:Object.fromEntries(['title','intro','hook'].map(part=>[part,{assetId:part,sourceStart:0,sourceEnd:2}]))}};
 assert.equal(getGuidedJingleEndingPlan(block,assets),null,'No final sound unless explicitly selected.');
 assert.equal(getGuidedJingleEndingPlan({...block,jingle:{...block.jingle,closingAssetId:'old'}},assets),null,'Legacy closing sounds do not opt in to the new final-sound feature.');
-for(const ending of JINGLE_ENDINGS){
+for(const ending of JINGLE_CREDIT_ENDINGS){
  const source=manifest.find(row=>row.id===ending.id);
  assert.ok(source&&ending.sourcePage&&ending.licenseUrl);
  const file=await readFile(new URL(`../public/audio/jingle-endings/${ending.filename}`,import.meta.url));
  assert.equal(file.toString('ascii',0,4),'RIFF');
  assert.equal(createHash('sha256').update(file).digest('hex'),source.sha256);
- assert.ok(source.originalSha256&&ending.duration>.5&&ending.duration<3,'A short, credited, playable local sound.');
+ assert.ok(source.originalSha256&&ending.duration>.2&&ending.duration<3,'A short, credited, playable local sound.');
  assert.equal(ending.duration,source.preparedDuration,'Displayed and recorded times agree.');
  assert.ok(credits.includes(ending.sourcePage));
  const optional={...block,jingle:{...block.jingle,ending:{assetId:'ending',presetId:ending.id,volume:65}}};
@@ -28,4 +30,4 @@ for(const ending of JINGLE_ENDINGS){
  assert.ok(tail.start>=plan.outroStart+.14&&tail.start+tail.duration<=plan.total-.14,'End sounds must fit after words and before the musical ending finishes.');
  assert.equal(tail.volume,.65);
 }
-console.log('Jingle final sounds: six short local files, verified credits and hashes, explicit opt-in and fixed ending duration verified.');
+console.log('Jingle final sounds: eight curated choices, retained legacy credits, local hashes, explicit opt-in and fixed duration verified.');

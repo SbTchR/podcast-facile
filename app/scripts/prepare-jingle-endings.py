@@ -14,6 +14,9 @@ TARGET.mkdir(parents=True, exist_ok=True)
 CACHE.mkdir(parents=True, exist_ok=True)
 manifest = json.loads((TARGET / 'sources.json').read_text())
 for item in manifest:
+    if item.get('preparedFrom'):
+        # Curated CC0 endings have a different preparation recipe and immutable IDs.
+        continue
     original = CACHE / item['originalFilename']
     if not original.exists():
         request = urllib.request.Request(item['originalUrl'], headers={'User-Agent': 'PodcastFacile/0.3 (educational audio preparation)'})

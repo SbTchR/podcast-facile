@@ -1,12 +1,13 @@
 import type { LibraryPreset } from './audioLibrary';
+import { CURATED_JINGLE_ENDINGS } from './curatedJingleEndings';
 
 export interface JingleEnding {
   id: string; title: string; icon: string; filename: string; duration: number;
   sourcePage: string; author: string; licenseName: string; licenseUrl: string; changes: string;
 }
 
-// A deliberately short selection, separate from the podcast's complete sound library.
-export const JINGLE_ENDINGS: JingleEnding[] = [
+// Preserve credit information for recordings embedded in earlier project files.
+export const LEGACY_JINGLE_ENDINGS: JingleEnding[] = [
   {
     "id": "jingle-ending-bell",
     "title": "Cloche",
@@ -80,6 +81,10 @@ export const JINGLE_ENDINGS: JingleEnding[] = [
     "changes": "Extrait court (2.80 s), mono 44,1 kHz, niveau et fondus ajustés ; mixage facultatif à la fin du jingle."
   }
 ];
+
+// A deliberately short selection, separate from the complete podcast sound library.
+export const JINGLE_ENDINGS = CURATED_JINGLE_ENDINGS;
+export const JINGLE_CREDIT_ENDINGS = [...JINGLE_ENDINGS, ...LEGACY_JINGLE_ENDINGS];
 
 export function endingPreviewPreset(ending: JingleEnding): LibraryPreset {
   const audioUrl = `${import.meta.env.BASE_URL}audio/jingle-endings/${ending.filename}`;

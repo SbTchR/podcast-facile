@@ -1,5 +1,8 @@
 // Audionautix expansion: 20260807-audionautix-expansion-1
+import { CURATED_SOUNDS } from './curatedSounds';
+
 export type LibraryKind = 'music' | 'sfx';
+export type SoundGroup = 'effect' | 'ambience';
 
 export interface LibraryPreset {
   id: string;
@@ -7,6 +10,8 @@ export interface LibraryPreset {
   title: string;
   category: string;
   secondaryCategories?: string[];
+  soundGroup?: SoundGroup;
+  retired?: boolean;
   icon: string;
   duration: number;
   description: string;
@@ -21,7 +26,7 @@ export interface LibraryPreset {
   attribution: string;
   clipStart?: number;
   clipDuration?: number;
-  origin?: 'recording';
+  origin?: 'recording' | 'reconstruction';
 }
 
 export const AUDIO_LIBRARY: LibraryPreset[] = [
@@ -5264,6 +5269,27 @@ export const AUDIO_LIBRARY: LibraryPreset[] = [
   }
 ] as LibraryPreset[];
 
+// Keep former IDs available for saved projects and the transition shortcuts.
+// New choices use a compact local pack, rather than long field recordings.
+for (const preset of AUDIO_LIBRARY) if (preset.kind === 'sfx') preset.retired = true;
+AUDIO_LIBRARY.push(...CURATED_SOUNDS);
+
+export const SOUND_CATEGORIES: Record<SoundGroup, string[]> = {
+  effect: ['Batailles et armes', 'Vie ancienne', 'Chevaux et pas', 'Mer et navigation', 'Transports', 'Actualité et reportage', 'Nature et aventure', 'Animaux', 'Objets et actions', 'Transitions et ponctuation', 'Humour et réactions'],
+  ambience: ['Histoire et batailles', 'Villages et vie ancienne', 'Mer et bateaux', 'Nature', 'Lieux et foule', 'Voyages', 'Industrie et actualité'],
+};
+
+export function availableLibrarySounds(kind: LibraryKind, group: SoundGroup = 'effect'): LibraryPreset[] {
+  const sounds = AUDIO_LIBRARY.filter(preset => !preset.retired && preset.kind === kind && (kind === 'music' || (preset.soundGroup ?? 'effect') === group));
+  if (kind === 'music') return sounds;
+  const categories = SOUND_CATEGORIES[group];
+  return sounds.sort((left, right) => categories.indexOf(left.category) - categories.indexOf(right.category));
+}
+
+export function resolveLibraryAudioUrl(url: string, base = import.meta.env?.BASE_URL ?? '/'): string {
+  return url.startsWith('audio/') ? `${base}${url}` : url;
+}
+
 export const LIBRARY_CATEGORIES: Record<LibraryKind, string[]> = {
   music: ["Époques historiques", "Classique & orchestral", "Jazz, blues & groove", "Folk, country & banjo", "Joyeux & léger", "Épique & action", "Mystère & tension", "Lieux & voyages", "Calme & émotion"],
   sfx: ["Chocs, impacts, transitions", "Guerres & combats", "Sociétés & lieux historiques", "Nature & paysages", "Transports & industrie", "Vie quotidienne & objets", "Voix & foule"],
@@ -5287,10 +5313,10 @@ export const loadLibraryAudio = async (preset: LibraryPreset): Promise<Blob> => 
   const cached = blobCache.get(preset.id);
   if (cached) return cached;
   const request = (async () => {
-    try { return await fetchAudio(preset.audioUrl); }
+    try { return await fetchAudio(resolveLibraryAudioUrl(preset.audioUrl)); }
     catch (firstError) {
       if (preset.fallbackUrl === preset.audioUrl) throw firstError;
-      try { return await fetchAudio(preset.fallbackUrl); }
+      try { return await fetchAudio(resolveLibraryAudioUrl(preset.fallbackUrl)); }
       catch { throw new Error('Impossible de télécharger ce son. Vérifie la connexion internet puis réessaie.'); }
     }
   })();
