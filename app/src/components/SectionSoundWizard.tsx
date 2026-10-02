@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from 'react';
 import type { AudioAsset, PodcastBlock, PodcastProject, SectionAudioLayer } from '../types';
-import { loadLibraryAudio, type LibraryKind, type LibraryPreset } from '../data/audioLibrary';
+import { loadLibraryAudio, type LibraryKind, type LibraryPreset, type SoundGroup } from '../data/audioLibrary';
 import { getTimeline, formatTime } from '../audio/engine';
 import { putSectionLayer, removeSectionLayer, resolveSectionLayers } from '../audio/sectionLayers';
 import { anchorAtTime, editLayerOnTimeline, scopeSection } from '../audio/sectionTimeline';
@@ -13,7 +13,7 @@ import { VoiceSettings } from './VoiceSettings';
 export interface WizardUI {
   Modal: ComponentType<{ title: string; onClose: () => void; wide?: boolean; children: ReactNode }>;
   FilePicker: ComponentType<{ label: string; onFile: (file: File) => void }>;
-  Library: ComponentType<{ kind: LibraryKind; onClose: () => void; onChoose: (preset: LibraryPreset) => Promise<void> }>;
+  Library: ComponentType<{ kind: LibraryKind; initialSoundGroup?: SoundGroup; onClose: () => void; onChoose: (preset: LibraryPreset) => Promise<void> }>;
   Recorder?: ComponentType<{ onReady: (blob: Blob, duration: number) => Promise<void> | void; onBusyChange?: (busy: boolean) => void }>;
   Preview: ComponentType<{ previewId: string; onStart: (signal: AbortSignal) => Promise<PreviewSession>; disabled?: boolean; label?: string }>;
 }
@@ -36,6 +36,7 @@ export function SectionSoundWizard({ project, sectionId, kind, initial, initialV
   const [selectedId, setSelectedId] = useState(initialVoiceId ? undefined : initial?.id ?? layers.find(layer => layer.kind === kind)?.id);
   const [selectedVoiceId, setSelectedVoiceId] = useState(initialVoiceId);
   const [libraryOpen, setLibraryOpen] = useState(false);
+  const [libraryGroup, setLibraryGroup] = useState<SoundGroup>('effect');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const mounted = useRef(true);
@@ -74,11 +75,14 @@ export function SectionSoundWizard({ project, sectionId, kind, initial, initialV
     setAddedAssets(current => [...current.filter(a => a.id !== chosen.id), chosen]);
     const sourceStart = Math.min(preset?.clipStart ?? 0, Math.max(0, chosen.duration - .05));
     const sourceEnd = Math.min(chosen.duration, sourceStart + (preset?.clipDuration ?? chosen.duration));
-    const at = phase === 'music' ? 0 : Math.min(player.position, Math.max(0, duration - .05));
+    const ambience = preset?.soundGroup === 'ambience';
+    const background = phase === 'music' || ambience;
+    const at = background ? 0 : Math.min(player.position, Math.max(0, duration - .05));
     const layer: SectionAudioLayer = {
       id: crypto.randomUUID(), kind: phase, title: chosen.name, assetId: chosen.id, sourceStart, sourceEnd,
-      start: anchorAtTime(timeline, at), end: phase === 'music' ? { edge: 'end' } : undefined,
-      volume: phase === 'music' ? 32 : 55, fadeIn: phase === 'music' ? 'normal' : 'none', fadeOut: phase === 'music' ? 'normal' : 'short', repeat: phase === 'music' && sourceEnd - sourceStart < duration,
+      soundGroup: phase === 'sfx' ? preset?.soundGroup ?? 'effect' : undefined,
+      start: anchorAtTime(timeline, at), end: background ? { edge: 'end' } : undefined,
+      volume: ambience ? 35 : phase === 'music' ? 32 : 55, fadeIn: background ? 'normal' : 'none', fadeOut: background ? 'normal' : 'short', repeat: background && sourceEnd - sourceStart < duration,
     };
     change(layer, null); setSelectedVoiceId(undefined); setSelectedId(layer.id); setLibraryOpen(false);
   };
@@ -110,8 +114,8 @@ export function SectionSoundWizard({ project, sectionId, kind, initial, initialV
   return <>
     <Modal title={section.title} onClose={onClose} wide>
       <div className="part-sound-editor">
-        <nav className="sound-phase-tabs" aria-label="Étapes de l’habillage">{(['music','sfx'] as const).map((item, index) => <button key={item} disabled={loading} className={phase === item ? 'selected' : ''} aria-pressed={phase === item} onClick={() => movePhase(item)}><span>{index + 1}</span>{item === 'music' ? 'Musiques de fond' : 'Bruitages'}</button>)}</nav>
-        <div className="sound-editor-heading"><div className="sound-editor-actions"><button className="secondary-button" disabled={loading} onClick={() => { player.stop(); setLibraryOpen(true); }}>＋ Ajouter {phase === 'music' ? 'une musique' : 'un bruitage'}</button><button className="secondary-button" disabled={duration <= 0 || Boolean(invalid.length) || loading} aria-label={player.status === 'loading' ? 'Annuler le chargement de la partie' : player.status === 'playing' ? 'Mettre la partie en pause' : 'Écouter la partie avec les voix'} onClick={() => void player.toggle()}>{player.status === 'loading' ? 'Chargement…' : player.status === 'playing' ? 'Ⅱ Pause' : '▶ Écouter la partie'}</button><span>{formatTime(player.position)} / {formatTime(duration)}</span></div></div>
+        <nav className="sound-phase-tabs" aria-label="Étapes de l’habillage">{(['music','sfx'] as const).map((item, index) => <button key={item} disabled={loading} className={phase === item ? 'selected' : ''} aria-pressed={phase === item} onClick={() => movePhase(item)}><span>{index + 1}</span>{item === 'music' ? 'Musiques de fond' : 'Ambiances et bruitages'}</button>)}</nav>
+        <div className="sound-editor-heading"><div className="sound-editor-actions"><button className="secondary-button" disabled={loading} onClick={() => { player.stop(); setLibraryGroup('effect'); setLibraryOpen(true); }}>＋ Ajouter {phase === 'music' ? 'une musique' : 'un bruitage'}</button>{phase === 'sfx' && <button className="secondary-button" disabled={loading} onClick={() => { player.stop(); setLibraryGroup('ambience'); setLibraryOpen(true); }}>＋ Ajouter une ambiance</button>}<button className="secondary-button" disabled={duration <= 0 || Boolean(invalid.length) || loading} aria-label={player.status === 'loading' ? 'Annuler le chargement de la partie' : player.status === 'playing' ? 'Mettre la partie en pause' : 'Écouter la partie avec les voix'} onClick={() => void player.toggle()}>{player.status === 'loading' ? 'Chargement…' : player.status === 'playing' ? 'Ⅱ Pause' : '▶ Écouter la partie'}</button><span>{formatTime(player.position)} / {formatTime(duration)}</span></div></div>
         <SectionTimeline project={scoped} selectedId={selectedId} selectedVoiceId={selectedVoiceId} phase={phase} playhead={player.position} onSeek={player.seek} onSelect={select} onSelectVoice={selectVoice} onEdit={edit} />
         {selectedVoice && <VoiceSettings block={selectedVoice} onChange={updateVoice} />}
         {selected && asset && <div className="sound-inspector">
@@ -126,17 +130,17 @@ export function SectionSoundWizard({ project, sectionId, kind, initial, initialV
           </div>
           <details className="sound-excerpt" open><summary>Extrait du fichier</summary><AudioExcerpt asset={asset} start={selected.sourceStart} end={selected.sourceEnd} onChange={excerptChange} compact /></details>
           <div className="sound-options">
-            {selected.kind === 'music' ? <label className="check-row"><input type="checkbox" checked={selected.repeat} onChange={event => update({ repeat: event.target.checked })} /> Répéter l’extrait dans la zone choisie</label> : <label className="check-row"><input type="checkbox" checked={Boolean(selected.pauseBlockId)} onChange={event => event.target.checked ? change(selected, blocks.find(block => block.type === 'voice')?.id ?? blocks[0]?.id ?? null) : change({ ...selected, start: { edge: 'start' }, end: undefined }, null)} /> Créer une pause pour entendre ce bruitage seul</label>}
+            {selected.kind === 'music' || selected.soundGroup === 'ambience' ? <label className="check-row"><input type="checkbox" checked={selected.repeat} onChange={event => update({ repeat: event.target.checked })} /> Répéter l’extrait dans la zone choisie</label> : <label className="check-row"><input type="checkbox" checked={Boolean(selected.pauseBlockId)} onChange={event => event.target.checked ? change(selected, blocks.find(block => block.type === 'voice')?.id ?? blocks[0]?.id ?? null) : change({ ...selected, start: { edge: 'start' }, end: undefined }, null)} /> Créer une pause pour entendre ce bruitage seul</label>}
             <details className="optional-settings"><summary>Fondus <small>facultatif</small></summary><div className="settings-columns">{(['fadeIn','fadeOut'] as const).map(key => <label className="field" key={key}><span>{key === 'fadeIn' ? 'Arrivée du son' : 'Fin du son'}</span><select value={selected[key]} onChange={event => update({ [key]: event.target.value })}><option value="none">Directe</option><option value="short">Fondu court · 0,5 s</option><option value="normal">Fondu doux · 1,5 s</option></select></label>)}</div></details>
           </div>
         </div>}
-        {!selected && !selectedVoice && <p className="sound-editor-empty">{layers.some(layer => layer.kind === phase) ? 'Choisis une piste à modifier.' : phase === 'music' ? 'Ajoute une musique ou passe aux bruitages.' : 'Ajoute un bruitage ou enregistre la partie.'}</p>}
-        <div className="sound-import-actions"><FilePicker label={`Importer ${phase === 'music' ? 'une musique' : 'un bruitage'}`} onFile={file => void importFile(file)} />{phase === 'sfx' && Recorder && <details><summary>Enregistrer mon bruitage</summary><Recorder onBusyChange={busy => { if (busy) player.stop(); setLoading(busy); }} onReady={async (blob, recordedDuration) => addAsset(await onRegisterAsset(blob, 'Mon bruitage enregistré', blob.type, recordedDuration, { source: 'recording' }))} /></details>}</div>
+        {!selected && !selectedVoice && <p className="sound-editor-empty">{layers.some(layer => layer.kind === phase) ? 'Choisis une piste à modifier.' : phase === 'music' ? 'Ajoute une musique ou passe aux ambiances et bruitages.' : 'Ajoute une ambiance ou un bruitage, puis enregistre la partie.'}</p>}
+        <div className="sound-import-actions"><FilePicker label={`Importer ${phase === 'music' ? 'une musique' : 'un son'}`} onFile={file => void importFile(file)} />{phase === 'sfx' && Recorder && <details><summary>Enregistrer mon bruitage</summary><Recorder onBusyChange={busy => { if (busy) player.stop(); setLoading(busy); }} onReady={async (blob, recordedDuration) => addAsset(await onRegisterAsset(blob, 'Mon bruitage enregistré', blob.type, recordedDuration, { source: 'recording' }))} /></details>}</div>
         {(error || player.error) && <p className="error-box" role="alert">{error || player.error}</p>}
         {invalid.length > 0 && <p className="error-box" role="alert">{invalid.length} son{invalid.length > 1 ? 's' : ''} à replacer : clique sur la piste pour corriger son début ou sa fin.</p>}
       </div>
-      <div className="modal-footer"><button className="ghost-button" disabled={loading} onClick={onClose}>Annuler</button><span className="footer-spacer" />{phase === 'music' && !selectedVoice && <button className="ghost-button" disabled={loading} onClick={() => movePhase('sfx')}>Bruitages →</button>}<button className="primary-button" disabled={loading || invalid.length > 0} onClick={() => { player.stop(); onSave(scoped); }}>✓ Enregistrer la partie</button></div>
+      <div className="modal-footer"><button className="ghost-button" disabled={loading} onClick={onClose}>Annuler</button><span className="footer-spacer" />{phase === 'music' && !selectedVoice && <button className="ghost-button" disabled={loading} onClick={() => movePhase('sfx')}>Ambiances et bruitages →</button>}<button className="primary-button" disabled={loading || invalid.length > 0} onClick={() => { player.stop(); onSave(scoped); }}>✓ Enregistrer la partie</button></div>
     </Modal>
-    {libraryOpen && <Library kind={phase} onClose={() => setLibraryOpen(false)} onChoose={chooseLibrary} />}
+    {libraryOpen && <Library kind={phase} initialSoundGroup={libraryGroup} onClose={() => setLibraryOpen(false)} onChoose={chooseLibrary} />}
   </>;
 }

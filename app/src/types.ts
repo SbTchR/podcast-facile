@@ -98,6 +98,7 @@ export interface AudioAnchor {
 export interface SectionAudioLayer {
   id: string;
   kind: 'music' | 'sfx';
+  soundGroup?: 'effect' | 'ambience';
   title: string;
   assetId: string;
   sourceStart: number;

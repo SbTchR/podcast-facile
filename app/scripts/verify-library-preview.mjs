@@ -1,12 +1,8 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
-import { stripTypeScriptTypes } from 'node:module';
-import { loadAudioEngine } from './audio-test-module.mjs';
+import { typescriptModuleUrl, loadAudioEngine } from './audio-test-module.mjs';
 
 const sourceUrl = new URL('../src/audio/libraryPreview.ts', import.meta.url);
-const libraryUrl = new URL('../src/data/audioLibrary.ts', import.meta.url);
-const code = stripTypeScriptTypes(await readFile(sourceUrl, 'utf8')).replace("'../data/audioLibrary'", JSON.stringify(libraryUrl.href));
-const { createLibraryPreviewSession, getLibraryPreviewDuration } = await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`);
+const { createLibraryPreviewSession, getLibraryPreviewDuration } = await import(await typescriptModuleUrl(sourceUrl));
 const { getBlockDuration } = await loadAudioEngine();
 
 globalThis.window = { setTimeout, clearTimeout };

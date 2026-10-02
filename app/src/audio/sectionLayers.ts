@@ -43,7 +43,7 @@ export function describeLayerPlacement(layer: SectionAudioLayer, project: Pick<P
   const title = (id?: string) => project.blocks.find((block) => block.id === id)?.title ?? 'enregistrement supprimé';
   if (layer.pauseBlockId) return `Entre les voix · après ${title(layer.afterBlockId)}`;
   const start = layer.start.blockId ? `${(layer.start.seconds ?? 0) > 0 ? `${layer.start.seconds?.toFixed(1)} s dans` : layer.start.edge === 'end' ? 'Après' : 'Début de'} ${title(layer.start.blockId)}` : 'Début de la partie';
-  if (layer.kind === 'sfx') return start;
+  if (layer.kind === 'sfx' && layer.soundGroup !== 'ambience') return start;
   if (!layer.start.blockId && layer.end?.edge === 'end' && !layer.end.blockId) return 'Toute la partie';
   return `${start} → ${layer.end?.blockId ? `${layer.end.edge === 'start' ? `${layer.end.seconds?.toFixed(1)} s dans` : 'fin de'} ${title(layer.end.blockId)}` : 'fin de la partie'}`;
 }
