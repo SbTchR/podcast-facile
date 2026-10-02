@@ -2,7 +2,7 @@ import { memo, useEffect, useRef, useState } from 'react';
 import type { AudioAsset, PodcastBlock, PodcastProject, SectionAudioLayer } from '../types';
 import { formatTime, getTimeline } from '../audio/engine';
 import { resolveSectionLayers } from '../audio/sectionLayers';
-import { assetWaveform, clampTime } from '../audio/sectionTimeline';
+import { assetWaveform, clampTime, roundTime } from '../audio/sectionTimeline';
 
 const Waveform = memo(function Waveform({ asset, from = 0, to = asset?.duration ?? 0, repeat = false, length }: { asset?: AudioAsset; from?: number; to?: number; repeat?: boolean; length?: number }) {
   const [peaks, setPeaks] = useState<number[]>([]);
@@ -40,7 +40,7 @@ export function SectionTimeline({ project, selectedId, selectedVoiceId, phase, p
   const seek = (event: React.MouseEvent<HTMLElement>) => {
     if (!onSeek) return;
     const rect = event.currentTarget.getBoundingClientRect();
-    onSeek(clampTime((event.clientX - rect.left) / rect.width * duration, 0, Math.max(0, duration - 0.05)));
+    onSeek(clampTime(roundTime((event.clientX - rect.left) / rect.width * duration), 0, Math.max(0, duration - 0.05)));
   };
   const begin = (event: React.PointerEvent<HTMLElement>, layer: SectionAudioLayer, action: 'move' | 'start' | 'end') => {
     const item = resolved.find(candidate => candidate.layer.id === layer.id);
@@ -76,7 +76,12 @@ export function SectionTimeline({ project, selectedId, selectedVoiceId, phase, p
     return items;
   });
   return <div className={`section-timeline ${compact ? 'compact' : ''}`} aria-label={`Trame de ${project.sections[0]?.title ?? 'la partie'}`}>
-    <div className="track-row track-ruler"><span className="track-label">Temps</span><div className="track-rail" onClick={event => onOpenTrack ? onOpenTrack('music') : seek(event)}>{Array.from({ length: tickCount + 1 }, (_, index) => <span key={index} style={{ left: `${index / tickCount * 100}%` }}>{formatTime(index / tickCount * duration)}</span>)}{head}</div></div>
+    <div className="track-row track-ruler"><span className="track-label">Temps</span><div className="track-rail" role={onSeek ? 'slider' : undefined} tabIndex={onSeek ? 0 : undefined} aria-label={onSeek ? 'Repère d’écoute' : undefined} aria-valuemin={onSeek ? 0 : undefined} aria-valuemax={onSeek ? duration : undefined} aria-valuenow={onSeek ? playhead ?? 0 : undefined} aria-valuetext={onSeek ? `${(playhead ?? 0).toFixed(1)} secondes` : undefined} onKeyDown={event => {
+      if (!onSeek || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+      event.preventDefault(); event.stopPropagation();
+      const at = event.key === 'Home' ? 0 : event.key === 'End' ? duration - .1 : (playhead ?? 0) + (event.key === 'ArrowLeft' ? -1 : 1) * (event.shiftKey ? 1 : .1);
+      onSeek(clampTime(roundTime(at), 0, Math.max(0, duration - .05)));
+    }} onClick={event => onOpenTrack ? onOpenTrack('music') : seek(event)}>{Array.from({ length: tickCount + 1 }, (_, index) => <span key={index} style={{ left: `${index / tickCount * 100}%` }}>{formatTime(index / tickCount * duration)}</span>)}{head}</div></div>
     <div className="track-row"><strong className="track-label">Voix</strong><div className="track-rail" onClick={seek}>{timeline.filter(e => e.duration > 0).map(entry => {
       const asset = project.assets.find(item => item.id === entry.block.assetId);
       const voice = entry.block.type === 'voice';

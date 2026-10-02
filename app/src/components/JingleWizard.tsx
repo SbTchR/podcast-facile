@@ -67,7 +67,7 @@ export function JingleWizard({ block, assets, podcastTitle, onBlock, onRegisterA
   const plan = getGuidedJinglePlan(block, assets, bed.duration);
   const activePart: JingleVoicePart | undefined = step === 1 ? titleVersion === 1 ? 'title' : 'title-alt' : step === 2 ? 'intro' : step === 3 ? 'hook' : undefined;
   const defaults: Record<JingleVoicePart, string> = { title: podcastTitle, 'title-alt': podcastTitle, intro: 'Le podcast qui vous fait découvrir le monde.', hook: 'Épisode 1 : les aventures de Christophe Colomb.' };
-  const update = (values: Partial<NonNullable<PodcastBlock['jingle']>>) => onBlock((current) => ({ ...current, jingle: { style: bed.style, musicLevel: 'low', ...current.jingle, production: 'guided-v5', ...values } }));
+  const update = (values: Partial<NonNullable<PodcastBlock['jingle']>>) => onBlock((current) => ({ ...current, jingle: { style: bed.style, musicLevel: 'low', ...current.jingle, production: 'guided-v6', ...values } }));
 
   useEffect(() => {
     let cancelled = false;
@@ -79,7 +79,7 @@ export function JingleWizard({ block, assets, podcastTitle, onBlock, onRegisterA
         if (cancelled) return;
         const asset = existing ?? await live.current.onRegisterAsset(blob!, bed.title, 'audio/mpeg', undefined, { source: 'library', libraryId: bed.id });
         if (cancelled) return;
-        live.current.onBlock((current) => ({ ...current, jingle: { style: bed.style, musicLevel: 'low', ...current.jingle, production: 'guided-v5', bedId: bed.id, musicAssetId: asset.id, signatureFx: false } }));
+        live.current.onBlock((current) => ({ ...current, jingle: { style: bed.style, musicLevel: 'low', ...current.jingle, production: 'guided-v6', bedId: bed.id, musicAssetId: asset.id, signatureFx: false } }));
       } catch (reason) { if (!cancelled) setBedError(reason instanceof Error ? reason.message : 'La musique ne se charge pas.'); }
       finally { if (!cancelled) setLoadingBed(false); }
     })();
@@ -103,7 +103,7 @@ export function JingleWizard({ block, assets, podcastTitle, onBlock, onRegisterA
     if (!mounted.current) return;
     const asset = await onRegisterAsset(blob, `${PART_LABELS[part]} du jingle`, blob.type, analysis.duration, { source });
     if (!mounted.current) return;
-    onBlock((current) => ({ ...current, jingle: { style: bed.style, musicLevel: 'low', ...current.jingle, production: 'guided-v5', takes: { ...current.jingle?.takes, [part]: { assetId: asset.id, sourceStart: analysis.sourceStart, sourceEnd: analysis.sourceEnd } } } }));
+    onBlock((current) => ({ ...current, jingle: { style: bed.style, musicLevel: 'low', ...current.jingle, production: 'guided-v6', takes: { ...current.jingle?.takes, [part]: { assetId: asset.id, sourceStart: analysis.sourceStart, sourceEnd: analysis.sourceEnd } } } }));
   };
   const importTake = async (part: JingleVoicePart, file: File) => {
     stopPreviews(); setBusy(true);
@@ -132,16 +132,16 @@ export function JingleWizard({ block, assets, podcastTitle, onBlock, onRegisterA
         {originalLegacy.current && <p className="jingle-production-note">Ton jingle actuel reste conservé jusqu’à « Enregistrer le jingle ».</p>}
         {upgrading.current && <p className="jingle-production-note">Tes prises sont conservées. Ajoute la deuxième intonation du titre pour essayer le nouveau montage.</p>}
         <div className="jingle-style-grid">{JINGLE_STYLES.map((item) => <button key={item.style} disabled={busy} className={bed.style === item.style ? 'selected' : ''} aria-pressed={bed.style === item.style} onClick={() => { const next = getJingleBed(item.style, undefined, bed.variant); if (next.id === bed.id) return; stopPreviews(); setError(''); update({ style: next.style, musicAssetId: undefined, bedId: next.id }); }}><strong>{item.label}</strong><small>{item.description}</small></button>)}</div>
-        <div className="jingle-duration-choice" role="group" aria-label="Durée du jingle"><strong>Durée du jingle</strong><div>{variants.map((item) => <button key={item.id} disabled={busy} className={bed.id === item.id ? 'selected' : ''} aria-pressed={bed.id === item.id} onClick={() => { if (item.id === bed.id) return; stopPreviews(); setError(''); update({ bedId: item.id, musicAssetId: undefined }); }}><strong>{item.duration} secondes</strong><small>{item.variant === 'standard' ? 'Pour des phrases courtes' : 'Plus de temps pour parler'}</small></button>)}</div></div>
+        <div className="jingle-duration-choice" role="group" aria-label="Durée du jingle"><strong>Durée du jingle</strong><div>{variants.map((item) => <button key={item.id} disabled={busy} className={bed.id === item.id ? 'selected' : ''} aria-pressed={bed.id === item.id} onClick={() => { if (item.id === bed.id) return; stopPreviews(); setError(''); update({ bedId: item.id, musicAssetId: undefined }); }}><strong>{item.duration} secondes</strong><small>{item.variant === 'standard' ? 'Titres et phrases très courts' : 'Conseillé pour parler sans se presser'}</small></button>)}</div></div>
         <div className="jingle-bed-card"><div><strong>🎵 {bed.title}</strong><span>{bed.effect}</span></div>{loadingBed ? <p role="status">Préparation de la musique…</p> : music ? <TakePlayer asset={music} label="Écouter la musique du style" /> : null}<small>{bed.author} · <a href={bed.sourcePage} target="_blank" rel="noreferrer">Source</a> · <a href={bed.licenseUrl} target="_blank" rel="noreferrer">{bed.licenseName}</a></small></div>
-        <p className="jingle-production-note">{seconds(JINGLE_LEAD)} de musique au début et {seconds(JINGLE_TAIL)} à la fin. Le titre revient après la présentation.</p>
+        <p className="jingle-production-note">{seconds(JINGLE_LEAD)} de musique au début et au moins {seconds(JINGLE_TAIL)} à la fin. Entre les phrases, la musique reprend sa place. La deuxième intonation du titre arrive après la présentation.</p>
         {plan.complete && !plan.fits && <p className="missing-audio">Tes prises sont conservées. {bed.variant === 'standard' ? 'Choisis 35 secondes pour leur laisser plus de place, ou raccourcis une phrase.' : 'Raccourcis une phrase pour tenir dans les 35 secondes.'}</p>}
       </>}
       {activePart && <>
         <h3 tabIndex={-1}>{activePart === 'title' || activePart === 'title-alt' ? 'Le même titre, deux intonations' : activePart === 'intro' ? 'Présente ton podcast en une phrase' : 'Annonce le sujet de cet épisode'}</h3>
-        {step === 1 && <div className="title-take-tabs" role="group" aria-label="Intonations du titre">{([1,2] as const).map(version => <button key={version} disabled={busy || (version === 2 && !takeValid('title'))} aria-pressed={titleVersion === version} className={titleVersion === version ? 'selected' : ''} onClick={() => { stopPreviews(); setError(''); setTitleVersion(version); }}><strong>Intonation {version}</strong><small>{version === 1 ? 'Au début et après l’intro' : 'Pour l’écho du titre'}{takeValid(version === 1 ? 'title' : 'title-alt') ? ' · ✓' : ''}</small></button>)}</div>}
-        <p>{activePart === 'title' ? 'Dis le titre avec une première intonation claire et assurée.' : activePart === 'title-alt' ? 'Prononce exactement le même titre avec une autre intonation : plus souriante, étonnée ou enthousiaste. Cette prise servira à l’écho.' : activePart === 'intro' ? 'Explique ce que les auditeurs vont découvrir. Ta voix sera clarifiée, avec une légère réverbération.' : 'Donne le numéro ou le sujet de l’épisode. Ta voix garde la même amélioration naturelle que la présentation.'}</p>
-        <div className={`jingle-budget ${plan.limits[activePart] < 0.5 ? 'over-budget' : ''}`}><strong>Jusqu’à {seconds(plan.limits[activePart])} pour cette phrase</strong><span>Les pauses s’ajustent pour laisser plus de place aux paroles. Tes prises sont conservées si tu changes de durée.</span>{moreTime}</div>
+        {step === 1 && <div className="title-take-tabs" role="group" aria-label="Intonations du titre">{([1,2] as const).map(version => <button key={version} disabled={busy || (version === 2 && !takeValid('title'))} aria-pressed={titleVersion === version} className={titleVersion === version ? 'selected' : ''} onClick={() => { stopPreviews(); setError(''); setTitleVersion(version); }}><strong>Intonation {version}</strong><small>{version === 1 ? 'Au début, puis en écho' : 'Après la présentation'}{takeValid(version === 1 ? 'title' : 'title-alt') ? ' · ✓' : ''}</small></button>)}</div>}
+        <p>{activePart === 'title' ? 'Dis le titre avec une première intonation claire et assurée. Son écho reprend aussitôt après la fin de cette prise.' : activePart === 'title-alt' ? 'Prononce exactement le même titre avec une autre intonation : plus souriante, étonnée ou enthousiaste. Cette prise arrivera après la présentation.' : activePart === 'intro' ? 'Explique ce que les auditeurs vont découvrir. Ta voix sera clarifiée, avec une légère réverbération.' : 'Donne le numéro ou le sujet de l’épisode. Ta voix garde la même amélioration naturelle que la présentation.'}</p>
+        <div className={`jingle-budget ${plan.limits[activePart] < 0.5 ? 'over-budget' : ''}`}><strong>Jusqu’à {seconds(plan.limits[activePart])} pour cette phrase</strong><span>Les remontées musicales sont déjà réservées. Une prise courte laisse plus de temps aux phrases suivantes. Tes prises sont conservées si tu changes de durée.</span>{moreTime}</div>
         <label className="field jingle-script"><span>Texte à prononcer <small>modifiable</small></span><textarea rows={2} value={jingle.scripts?.[activePart === 'title-alt' ? 'title' : activePart] ?? defaults[activePart]} onChange={(event) => update({ scripts: { ...jingle.scripts, [activePart === 'title-alt' ? 'title' : activePart]: event.target.value } })} /><small>Ce texte est un aide-mémoire. Enregistre-le avec ta voix.</small></label>
         {earlierReady && music && !loadingBed && plan.limits[activePart] >= 0.5 ? <Recorder key={activePart} maxSeconds={plan.limits[activePart]} onBusyChange={setBusy} onReady={async (blob) => { try { await keepTake(activePart, blob, 'recording'); } catch (reason) { setError(reason instanceof Error ? reason.message : 'Impossible de garder cette prise.'); throw reason; } }} /> : <p className="missing-audio">{!earlierReady ? `Retourne à la phrase précédente pour la raccourcir${bed.variant === 'standard' ? ', ou passe à 35 secondes' : ''}.` : 'Choisis une musique et attends sa préparation avant d’enregistrer.'}</p>}
         <fieldset className="jingle-import" disabled={busy || !music || loadingBed || !earlierReady}><FilePicker label={`Importer la voix : ${PART_LABELS[activePart].toLocaleLowerCase('fr')}`} onFile={(file) => void importTake(activePart, file)} /></fieldset>
@@ -152,7 +152,18 @@ export function JingleWizard({ block, assets, podcastTitle, onBlock, onRegisterA
       </>}
       {step === 4 && <>
         <h3 tabIndex={-1}>{plan.ready ? 'Ton jingle est prêt à écouter' : 'Termine les prises de voix'}</h3><p>{bed.label} · {bed.title} · {seconds(plan.total)}.</p>
-        <div className="jingle-sequence" aria-label="Ordre du jingle"><span>🎵 Départ<br />{seconds(JINGLE_LEAD)}</span><span>Titre 1<br />Écho : titre 2</span><span>Présentation<br />Voix claire</span><span>Titre 1<br />Puis relance musicale</span><span>Accroche<br />Voix naturelle</span><span>🎵 Fin<br />{seconds(JINGLE_TAIL)}</span></div>
+        <ol className="jingle-sequence" aria-label="Ordre du jingle">
+          <li><strong>Musique d’intro</strong><small>{seconds(JINGLE_LEAD)}</small></li>
+          <li className="spoken"><strong>Titre 1</strong><small>Intonation 1</small></li>
+          <li className="spoken"><strong>Écho du titre 1</strong><small>Juste après, sans pause</small></li>
+          <li><strong>La musique remonte</strong><small>{seconds(plan.musicBreaks?.afterEcho ?? 2)}</small></li>
+          <li className="spoken"><strong>Présentation</strong><small>Voix claire</small></li>
+          <li><strong>La musique remonte</strong><small>{seconds(plan.musicBreaks?.afterIntro ?? 2)}</small></li>
+          <li className="spoken"><strong>Titre 2</strong><small>Intonation 2</small></li>
+          <li><strong>La musique remonte</strong><small>{seconds(plan.musicBreaks?.afterTitle ?? 1.5)}</small></li>
+          <li className="spoken"><strong>Accroche</strong><small>Voix naturelle</small></li>
+          <li><strong>Musique finale</strong><small>{plan.ready ? seconds(plan.total - plan.outroStart) : `Au moins ${seconds(JINGLE_TAIL)}`}</small></li>
+        </ol>
         <Preview previewId={`jingle-${block.id}-${JSON.stringify(jingle)}`} label={`Écouter le jingle complet · ${seconds(plan.total)}`} onStart={() => onPreview(block)} disabled={!plan.ready || busy || !music || loadingBed} />
         <div className="jingle-review-takes">{JINGLE_PARTS.map(part => <button key={part} className={takeValid(part) ? '' : 'over-budget'} onClick={() => { setTitleVersion(part === 'title-alt' ? 2 : 1); moveStep(part === 'title' || part === 'title-alt' ? 1 : part === 'intro' ? 2 : 3); }}><strong>{PART_LABELS[part]} · {seconds(plan.durations[part])}</strong><small>{(jingle.scripts?.[part === 'title-alt' ? 'title' : part] ?? defaults[part]) || 'Modifier cette prise'}</small><span>Réenregistrer →</span></button>)}</div>
         {!plan.ready && <div className="jingle-budget"><p className="missing-audio">Les deux intonations du titre, la présentation et l’accroche doivent tenir dans la musique. Reprends les phrases signalées{bed.variant === 'standard' ? ' ou passe à 35 secondes' : ''}.</p>{moreTime}</div>}

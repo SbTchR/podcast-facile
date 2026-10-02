@@ -47,6 +47,10 @@ grep -q "guided-v3" app/dist/assets/*.js
 grep -q "Voix améliorée" app/dist/assets/*.js
 grep -q "Transcrire cet essai" app/dist/assets/*.js
 grep -q "guided-v5" app/dist/assets/*.js
+grep -q "guided-v6" app/dist/assets/*.js
+grep -q "Écho du titre 1" app/dist/assets/*.js
+grep -q "Scinder au repère" app/dist/assets/*.js
+grep -q "Xenova/whisper-small" app/dist/assets/transcription.worker-*.js
 test -n "$(find app/dist/assets -maxdepth 1 -name 'transcription.worker-*.js' -print -quit)"
 test -n "$(find app/dist/assets -maxdepth 1 -name 'ort-wasm-*.wasm' -print -quit)"
 test -s app/dist/licenses/transcription-notices.txt
@@ -113,7 +117,7 @@ grep -q "jingle-ending-drumroll" app/dist/assets/*.js
 node --input-type=module - <<'JS'
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-for (const folder of ['curated-sounds', 'jingle-endings']) {
+for (const folder of ['curated-sounds', 'jingle-endings', 'podcast-music']) {
   const sources = JSON.parse(readFileSync(`app/public/audio/${folder}/sources.json`, 'utf8'));
   for (const source of sources) {
     const file = readFileSync(`app/dist/audio/${folder}/${source.filename}`);

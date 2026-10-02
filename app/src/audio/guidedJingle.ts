@@ -1,5 +1,5 @@
 import type { AudioAsset, JingleVoicePart, PodcastBlock } from '../types';
-import { getGuidedJinglePlan, getGuidedJingleEndingPlan, JINGLE_PARTS } from './jinglePlan';
+import { getGuidedJinglePlan, getGuidedJingleEndingPlan, JINGLE_PARTS, type GuidedJinglePlan } from './jinglePlan';
 import { STUDIO_STYLES, studioVoiceGain } from './jingleStudio';
 
 type Context = AudioContext | OfflineAudioContext;
@@ -71,6 +71,28 @@ function envelope(gain: GainNode, points: [number, number][], start: number, off
   for (const [at, next] of points) if (at > offset) gain.gain.linearRampToValueAtTime(next, start + at - offset);
 }
 
+/** Keep each voice clear and bring music back in every space between phrases. */
+export function composedJingleMusicEnvelope(plan: GuidedJinglePlan, full: number, under: number): [number, number][] {
+  const points: [number, number][] = [[0, 0], [.16, full]];
+  // Adjacent title/repeat cues share one ducked interval: no music pulse at
+  // the join, and no gain automation that leaks into the preceding voice.
+  const speech: { start: number; end: number }[] = [];
+  for (const cue of plan.voices ?? []) {
+    const previous = speech.at(-1);
+    if (previous && cue.start <= previous.end + .001) previous.end = Math.max(previous.end, cue.start + cue.duration);
+    else speech.push({ start: cue.start, end: cue.start + cue.duration });
+  }
+  speech.forEach((cue, index) => {
+    const arrival = Math.min(.2, (cue.start - (speech[index - 1]?.end ?? 0)) / 2);
+    points.push([cue.start - arrival, full], [cue.start, under], [cue.end, under]);
+    const next = speech[index + 1];
+    if (next) points.push([cue.end + Math.min(.2, (next.start - cue.end) / 2), full]);
+  });
+  const outro = full * 1.35;
+  points.push([plan.outroStart + .32, outro], [plan.total - .6, outro], [plan.total, 0]);
+  return points;
+}
+
 export function scheduleGuidedJingle(context: Context, destination: AudioNode, block: PodcastBlock, assets: AudioAsset[], cache: Map<string, AudioBuffer>, start: number, offset: number): void {
   const plan = getGuidedJinglePlan(block, assets);
   if (!plan.ready || offset >= plan.total) return;
@@ -84,7 +106,10 @@ export function scheduleGuidedJingle(context: Context, destination: AudioNode, b
   const musicGain = context.createGain(); musicGain.connect(destination);
   const speechEnd = plan.titleReturnStart === undefined ? plan.starts.intro + plan.durations.intro : plan.titleReturnStart + plan.durations.title;
   const liftRamp = Math.min(.2, Math.max(0, plan.starts.hook - speechEnd) / 3);
-  envelope(musicGain, [[0, 0], [0.16, full], [plan.starts.title - 0.2, full], [plan.starts.title, under], [speechEnd, under], [speechEnd + liftRamp, full], [plan.starts.hook - liftRamp, full], [plan.starts.hook, under], [plan.outroStart, under], [plan.outroStart + 0.32, outro], [plan.total - 0.6, outro], [plan.total, 0]], start, offset);
+  const musicPoints: [number, number][] = jingle.production === 'guided-v6'
+    ? composedJingleMusicEnvelope(plan, full, under)
+    : [[0, 0], [0.16, full], [plan.starts.title - 0.2, full], [plan.starts.title, under], [speechEnd, under], [speechEnd + liftRamp, full], [plan.starts.hook - liftRamp, full], [plan.starts.hook, under], [plan.outroStart, under], [plan.outroStart + 0.32, outro], [plan.total - 0.6, outro], [plan.total, 0]];
+  envelope(musicGain, musicPoints, start, offset);
   const bed = context.createBufferSource(); bed.buffer = music;
   // The complete music remains the clock, including any optional final sound.
   bed.connect(musicGain); bed.start(start, offset, plan.total - offset);
@@ -105,7 +130,9 @@ export function scheduleGuidedJingle(context: Context, destination: AudioNode, b
     gain.gain.setValueAtTime(level, now);
     source.start(now, take.sourceStart + consumed, duration);
   };
-  if (jingle.production === 'guided-v4' || jingle.production === 'guided-v5') {
+  if (jingle.production === 'guided-v6') {
+    for (const cue of plan.voices!) phrase(cue.part, cue.start, cue.echo);
+  } else if (jingle.production === 'guided-v4' || jingle.production === 'guided-v5') {
     for (const part of JINGLE_PARTS) phrase(part, plan.starts[part], part === 'title-alt');
     phrase('title', plan.titleReturnStart!);
   } else {

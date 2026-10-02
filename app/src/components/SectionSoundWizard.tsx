@@ -9,6 +9,7 @@ import { AudioExcerpt } from './AudioExcerpt';
 import { SectionTimeline } from './SectionTimeline';
 import { useSectionPlayback } from './useSectionPlayback';
 import { VoiceSettings } from './VoiceSettings';
+import { removeVoicePiece, splitVoice, voiceSplitPoint } from '../audio/voiceEditing';
 
 export interface WizardUI {
   Modal: ComponentType<{ title: string; onClose: () => void; wide?: boolean; children: ReactNode }>;
@@ -24,7 +25,7 @@ export function SectionSoundWizard({ project, sectionId, kind, initial, initialV
   onClose: () => void; onSave: (draft: PodcastProject) => void; onRegisterAsset: RegisterAsset; ui: WizardUI;
 }) {
   const [phase, setPhase] = useState(kind);
-  const [draft, setDraft] = useState(() => {
+  const [draft, setDraft] = useState<PodcastProject>(() => {
     const scoped = scopeSection(project, sectionId);
     return { ...scoped, sections: scoped.sections.map(section => ({ ...section, audioLayers: section.audioLayers?.map(layer => ({ ...layer, start: { ...layer.start }, end: layer.end ? { ...layer.end } : undefined })) })), blocks: scoped.blocks.map(block => ({ ...block })) };
   });
@@ -39,6 +40,10 @@ export function SectionSoundWizard({ project, sectionId, kind, initial, initialV
   const [libraryGroup, setLibraryGroup] = useState<SoundGroup>('effect');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [history, setHistory] = useState<{ draft: PodcastProject; voiceId?: string; layerId?: string; phase: 'music' | 'sfx'; position: number }[]>([]);
+  const editorRef = useRef<HTMLDivElement>(null);
+  const transportRef = useRef<HTMLButtonElement>(null);
+  const draftRef = useRef(draft); draftRef.current = draft;
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const player = useSectionPlayback(scoped);
@@ -52,14 +57,55 @@ export function SectionSoundWizard({ project, sectionId, kind, initial, initialV
   const invalid = layers.filter(layer => !resolved.some(item => item.layer.id === layer.id));
   const blocks = scoped.blocks.filter(block => !layers.some(layer => layer.pauseBlockId === block.id));
   const { Modal, FilePicker, Library, Recorder } = ui;
+  const canPlay = duration > 0 && !invalid.length && !loading;
+  const canSplit = selectedVoice && voiceSplitPoint(scoped, selectedVoice.id, player.position) !== undefined;
+  const shortcuts = useRef({ canPlay, libraryOpen, toggle: player.toggle });
+  shortcuts.current = { canPlay, libraryOpen, toggle: player.toggle };
+  useEffect(() => {
+    transportRef.current?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      const current = shortcuts.current;
+      const dialog = editorRef.current?.closest('[data-podcast-dialog]');
+      if (event.code !== 'Space' || event.ctrlKey || event.altKey || event.metaKey || current.libraryOpen || !current.canPlay || document.querySelectorAll('[data-podcast-dialog]').item(document.querySelectorAll('[data-podcast-dialog]').length - 1) !== dialog) return;
+      const target = event.target as HTMLElement | null;
+      // Text entry and native controls keep their usual Space behavior.
+      if (target?.closest('input, textarea, select, button, summary, [contenteditable="true"], [role="textbox"]')) return;
+      event.preventDefault(); event.stopPropagation();
+      if (!event.repeat) void current.toggle();
+    };
+    document.addEventListener('keydown', onKey, true);
+    return () => document.removeEventListener('keydown', onKey, true);
+  }, []);
+  const commit = (next: PodcastProject) => {
+    const snapshot = { draft: draftRef.current, voiceId: selectedVoiceId, layerId: selectedId, phase, position: player.position };
+    setHistory(current => [...current.slice(-39), snapshot]);
+    draftRef.current = next; setDraft(next); setError('');
+  };
+  const undo = () => {
+    const previous = history.at(-1);
+    if (!previous) return;
+    player.seek(previous.position); draftRef.current = previous.draft; setDraft(previous.draft);
+    setSelectedVoiceId(previous.voiceId); setSelectedId(previous.layerId); setPhase(previous.phase); setHistory(current => current.slice(0, -1)); setError('');
+  };
+  const cutVoice = () => {
+    if (!selectedVoice || !canSplit) return;
+    const id = crypto.randomUUID();
+    const next = splitVoice(scoped, selectedVoice.id, player.position, id);
+    player.stop(); commit(next); setSelectedVoiceId(id);
+  };
+  const deleteVoice = () => {
+    if (!selectedVoice) return;
+    const start = timeline.find(entry => entry.block.id === selectedVoice.id)?.start ?? 0;
+    const next = removeVoicePiece(scoped, selectedVoice.id);
+    player.seek(Math.min(start, getTimeline(next).at(-1)?.end ?? 0));
+    commit(next); setSelectedVoiceId(undefined);
+  };
 
   const change = (layer: SectionAudioLayer, pauseAfterId: string | null = layer.afterBlockId ?? null) => {
     player.stop(); setError('');
-    setDraft(current => {
-      const next = { ...current, sections: current.sections.map(s => ({ ...s })), blocks: [...current.blocks] };
-      putSectionLayer(next, sectionId, layer, pauseAfterId);
-      return next;
-    });
+    const current = draftRef.current;
+    const next = { ...current, sections: current.sections.map(s => ({ ...s })), blocks: [...current.blocks] };
+    putSectionLayer(next, sectionId, layer, pauseAfterId); commit(next);
   };
   const update = (values: Partial<SectionAudioLayer>) => { if (selected) change({ ...selected, ...values }); };
   const edit = (layer: SectionAudioLayer, action: 'move' | 'start' | 'end', at: number) => change(editLayerOnTimeline(scoped, layer, action, at), null);
@@ -67,7 +113,8 @@ export function SectionSoundWizard({ project, sectionId, kind, initial, initialV
   const selectVoice = (block: PodcastBlock) => { player.stop(); setSelectedId(undefined); setSelectedVoiceId(block.id); };
   const updateVoice = (values: Partial<PodcastBlock>) => {
     player.stop();
-    setDraft(current => ({ ...current, blocks: current.blocks.map(block => block.id === selectedVoiceId ? { ...block, ...values } : block) }));
+    const current = draftRef.current;
+    commit({ ...current, blocks: current.blocks.map(block => block.id === selectedVoiceId ? { ...block, ...values } : block) });
   };
   const movePhase = (next: 'music' | 'sfx') => { player.stop(); setSelectedVoiceId(undefined); setPhase(next); setSelectedId(layers.find(layer => layer.kind === next)?.id); setError(''); };
   const addAsset = (chosen: AudioAsset, preset?: LibraryPreset) => {
@@ -100,10 +147,9 @@ export function SectionSoundWizard({ project, sectionId, kind, initial, initialV
   const remove = () => {
     if (!selected) return;
     player.stop();
-    setDraft(current => {
-      const next = { ...current, sections: current.sections.map(s => ({ ...s })), blocks: [...current.blocks] };
-      removeSectionLayer(next, sectionId, selected.id); return next;
-    });
+    const current = draftRef.current;
+    const next = { ...current, sections: current.sections.map(s => ({ ...s })), blocks: [...current.blocks] };
+    removeSectionLayer(next, sectionId, selected.id); commit(next);
     setSelectedId(undefined);
   };
   const excerptChange = (sourceStart: number, sourceEnd: number) => {
@@ -113,10 +159,18 @@ export function SectionSoundWizard({ project, sectionId, kind, initial, initialV
 
   return <>
     <Modal title={section.title} onClose={onClose} wide>
-      <div className="part-sound-editor">
+      <div className="part-sound-editor" ref={editorRef}>
         <nav className="sound-phase-tabs" aria-label="Étapes de l’habillage">{(['music','sfx'] as const).map((item, index) => <button key={item} disabled={loading} className={phase === item ? 'selected' : ''} aria-pressed={phase === item} onClick={() => movePhase(item)}><span>{index + 1}</span>{item === 'music' ? 'Musiques de fond' : 'Ambiances et bruitages'}</button>)}</nav>
-        <div className="sound-editor-heading"><div className="sound-editor-actions"><button className="secondary-button" disabled={loading} onClick={() => { player.stop(); setLibraryGroup('effect'); setLibraryOpen(true); }}>＋ Ajouter {phase === 'music' ? 'une musique' : 'un bruitage'}</button>{phase === 'sfx' && <button className="secondary-button" disabled={loading} onClick={() => { player.stop(); setLibraryGroup('ambience'); setLibraryOpen(true); }}>＋ Ajouter une ambiance</button>}<button className="secondary-button" disabled={duration <= 0 || Boolean(invalid.length) || loading} aria-label={player.status === 'loading' ? 'Annuler le chargement de la partie' : player.status === 'playing' ? 'Mettre la partie en pause' : 'Écouter la partie avec les voix'} onClick={() => void player.toggle()}>{player.status === 'loading' ? 'Chargement…' : player.status === 'playing' ? 'Ⅱ Pause' : '▶ Écouter la partie'}</button><span>{formatTime(player.position)} / {formatTime(duration)}</span></div></div>
+        <div className="sound-editor-heading"><div className="sound-editor-actions"><button className="secondary-button" disabled={loading} onClick={() => { player.stop(); setLibraryGroup('effect'); setLibraryOpen(true); }}>＋ Ajouter {phase === 'music' ? 'une musique' : 'un bruitage'}</button>{phase === 'sfx' && <button className="secondary-button" disabled={loading} onClick={() => { player.stop(); setLibraryGroup('ambience'); setLibraryOpen(true); }}>＋ Ajouter une ambiance</button>}</div></div>
+        <div className="section-transport" aria-label="Lecture et découpe de la partie">
+          <button ref={transportRef} className="primary-button compact" disabled={!canPlay} aria-label={player.status === 'loading' ? 'Annuler le chargement de la partie' : player.status === 'playing' ? 'Mettre la partie en pause' : 'Écouter la partie avec les voix'} onClick={() => void player.toggle()}>{player.status === 'loading' ? 'Chargement…' : player.status === 'playing' ? 'Ⅱ Pause' : '▶ Écouter la partie'}</button>
+          <output aria-label="Position de lecture">{player.position.toFixed(1).replace('.', ',')} s / {formatTime(duration)}</output><kbd>Espace</kbd>
+          <span className="transport-spacer" />
+          {selectedVoice && <><button className="secondary-button compact" disabled={!canSplit || loading} onClick={cutVoice} title={canSplit ? 'Créer deux morceaux à la position du repère' : 'Place le repère à l’intérieur de la voix sélectionnée'}>✂ Scinder au repère</button><button className="danger-text" disabled={loading} onClick={deleteVoice}>Supprimer ce morceau</button></>}
+          <button className="ghost-button compact" disabled={!history.length || loading} onClick={undo} aria-label="Annuler la dernière modification">↶ Annuler</button>
+        </div>
         <SectionTimeline project={scoped} selectedId={selectedId} selectedVoiceId={selectedVoiceId} phase={phase} playhead={player.position} onSeek={player.seek} onSelect={select} onSelectVoice={selectVoice} onEdit={edit} />
+        {selectedVoice && <p className="voice-cut-help">Clique sur la règle pour placer une coupe. Deux coupes permettent de supprimer un passage au milieu.</p>}
         {selectedVoice && <VoiceSettings block={selectedVoice} onChange={updateVoice} />}
         {selected && asset && <div className="sound-inspector">
           <div className="setting-title-row"><h4>{selected.title}</h4><button className="danger-text" onClick={remove}>Retirer ce son</button></div>

@@ -31,9 +31,11 @@ node app/scripts/verify-section-playback-order.mjs
 node app/scripts/verify-library-preview.mjs
 node app/scripts/verify-section-layers.mjs
 node app/scripts/verify-section-timeline.mjs
+node app/scripts/verify-voice-editing.mjs
 node app/scripts/verify-guided-jingle.mjs
 node app/scripts/verify-jingle-endings.mjs
 node app/scripts/verify-curated-sounds.mjs
+node app/scripts/verify-podcast-music.mjs
 
 for id in \
   sfx-horse-gallop-pavement \

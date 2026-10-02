@@ -1,29 +1,21 @@
-# Crédits audio — Podcast Facile V3
+# Crédits audio — Podcast Facile
 
-La V3 utilise **45 enregistrements réels** hébergés par Wikimedia Commons :
+La sélection actuelle contient **20 musiques de fond**, **107 bruitages** et **59 ambiances**. Chaque son conserve son auteur, sa page source et sa licence. Les anciennes références restent disponibles pour les projets déjà enregistrés.
 
-- **13 musiques** de Jason Shaw / Audionautix, sous licence CC BY 3.0 ;
-- **32 bruitages et ambiances**, principalement issus de PDSounds.org et placés dans le domaine public, avec quelques fichiers sous CC BY 3.0 ou CC BY-SA 4.0.
+## Musiques de fond
 
-La liste exhaustive, avec le titre, l’auteur, la licence et la page source de chaque fichier, est publiée dans :
+18 nouveautés de [Scott Buckley](https://www.scottbuckley.com.au/library/) et [Kevin MacLeod / Incompetech](https://incompetech.com/music/royalty-free/), sous [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), accompagnent deux favoris conservés : *Medieval Dream* de Frank Schröter (CC BY 4.0) et *Egyptian Crawl* de Jason Shaw / Audionautix (CC BY 3.0).
 
-- [`site/audio-credits.html`](site/audio-credits.html)
-- la fiche de chaque son directement dans la bibliothèque de l’application.
+La direction musicale s’inspire des [collections pour podcasts de Podcast.co](https://www.podcast.co/resources/royalty-free-music) et des arrangements acoustiques minimalistes de [Blue Dot Sessions pour la radio](https://freemusicarchive.org/music/Blue_Dot_Sessions/The_Sweet_Hots). Ces collections servent de références éditoriales ; leurs pistes ne sont pas intégrées au pack.
 
-## Fonctionnement
+Les extraits locaux durent 90 à 120 secondes. La sélection du passage, l’harmonisation du niveau et les microfondus conservent le tempo et la hauteur. Le manifeste [selection.json](app/public/audio/podcast-music/selection.json) décrit la sélection ; [sources.json](app/public/audio/podcast-music/sources.json) contient les sources, auteurs, licences, découpes et empreintes des fichiers originaux et préparés. Le script `app/scripts/prepare-podcast-music.py` reproduit ces fichiers.
 
-Les fichiers audio ne sont pas dupliqués dans le dépôt. L’application télécharge le fichier depuis Wikimedia Commons lors du premier aperçu ou de son ajout au projet. Le fichier est ensuite stocké localement avec le projet afin de permettre le montage et l’export WAV.
+La [licence Pixabay](https://pixabay.com/service/license-summary/) interdit la redistribution du contenu seul : les nouvelles musiques de fond de ce pack utilisent donc des licences Creative Commons adaptées à la redistribution avec attribution. Les arrangements de jingle déjà présents gardent leurs sources et licences propres.
 
-## Principales sources
+## Bruitages, ambiances et jingles
 
-- [Wikimedia Commons](https://commons.wikimedia.org/)
-- [Fichiers de PDSounds.org sur Wikimedia Commons](https://commons.wikimedia.org/wiki/Category:Audio_files_from_PDSounds.org)
-- [Audionautix](https://audionautix.com/)
+Les bruitages et ambiances sont des extraits CC0 de LaSonothèque et Freesound. Les reconstitutions historiques mentionnent les sources de chaque composant. Les manifestes sont dans `app/public/audio/curated-sounds/sources.json`, `app/public/audio/jingle-endings/sources.json` et `app/public/audio/jingles/sources.json`.
 
-## Licences utilisées
+## Attribution lors de la publication
 
-- [Domaine public](https://creativecommons.org/publicdomain/mark/1.0/)
-- [Creative Commons Attribution 3.0](https://creativecommons.org/licenses/by/3.0/)
-- [Creative Commons Attribution-ShareAlike 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
-
-Les obligations d’attribution et de partage à l’identique sont conservées dans les métadonnées affichées par l’application et dans la page exhaustive des crédits.
+La page exhaustive est [app/public/audio-credits.html](app/public/audio-credits.html). Chaque choix possède aussi un lien Source dans l’application. L’écran de téléchargement permet d’obtenir un fichier texte avec les crédits des musiques et sons utilisés, y compris les fonds de partie et les anciens fonds associés aux voix. Ces crédits sont à joindre à la description du podcast publié.

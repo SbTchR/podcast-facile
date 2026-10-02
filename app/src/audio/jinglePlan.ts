@@ -12,7 +12,73 @@ export const JINGLE_ECHO_DELAY = 1.5;
 export const JINGLE_INTRO_GAP = .83;
 export const JINGLE_RETURN_GAP = .3;
 const WEIGHTS: Record<JingleVoicePart, number> = { title: .24, 'title-alt': .16, intro: .34, hook: .26 };
-export const isGuidedJingle = (block: PodcastBlock): block is PodcastBlock & { jingle: NonNullable<PodcastBlock['jingle']> } => block.jingle?.production === 'guided-v3' || block.jingle?.production === 'guided-v4' || block.jingle?.production === 'guided-v5';
+export const JINGLE_ECHO_PAUSE = 0;
+export const JINGLE_AFTER_ECHO = 2;
+export const JINGLE_AFTER_INTRO = 2;
+export const JINGLE_AFTER_SECOND_TITLE = 1.5;
+export const isGuidedJingle = (block: PodcastBlock): block is PodcastBlock & { jingle: NonNullable<PodcastBlock['jingle']> } => block.jingle?.production === 'guided-v3' || block.jingle?.production === 'guided-v4' || block.jingle?.production === 'guided-v5' || block.jingle?.production === 'guided-v6';
+
+export interface JingleVoiceCue {
+  part: JingleVoicePart;
+  start: number;
+  duration: number;
+  echo: boolean;
+}
+
+export interface GuidedJinglePlan {
+  total: number;
+  window: number;
+  used: number;
+  limits: Record<JingleVoicePart, number>;
+  durations: Record<JingleVoicePart, number>;
+  starts: Record<JingleVoicePart, number>;
+  titleReturnStart: number | undefined;
+  complete: boolean;
+  fits: boolean;
+  ready: boolean;
+  outroStart: number;
+  echoStart?: number;
+  voices?: JingleVoiceCue[];
+  musicBreaks?: { afterEcho: number; afterIntro: number; afterTitle: number };
+}
+
+function getComposedPlan(block: PodcastBlock, assets: AudioAsset[], total: number, hasMusic: boolean): GuidedJinglePlan {
+  const durations = Object.fromEntries(JINGLE_PARTS.map(part => [part, jingleTakeDuration(block.jingle?.takes?.[part], assets)])) as Record<JingleVoicePart, number>;
+  // Take 1 is heard twice; take 2 appears only after the presentation.
+  // Reserve every requested music break before allocating recording time.
+  const window = Math.max(0, total - JINGLE_LEAD - JINGLE_TAIL - JINGLE_ECHO_PAUSE - JINGLE_AFTER_ECHO - JINGLE_AFTER_INTRO - JINGLE_AFTER_SECOND_TITLE);
+  const cost = (takes: Record<JingleVoicePart, number>) => 2 * takes.title + takes['title-alt'] + takes.intro + takes.hook;
+  const extended = total >= 30;
+  const reserved: Record<JingleVoicePart, number> = { title: extended ? 2.5 : 1.8, 'title-alt': extended ? 2.5 : 1.8, intro: extended ? 8 : 3.8, hook: extended ? 5 : 2.7 };
+  const used = cost(durations);
+  const limits = Object.fromEntries(JINGLE_PARTS.map(part => {
+    const others = Object.fromEntries(JINGLE_PARTS.map(other => [other, other === part ? 0 : durations[other] || reserved[other]])) as Record<JingleVoicePart, number>;
+    let maximum = Math.max(0, (window - cost(others)) / (part === 'title' ? 2 : 1));
+    if ((part === 'title' || part === 'title-alt') && (!durations.intro || !durations.hook)) {
+      maximum = Math.min(maximum, Math.max(extended ? 4 : 3, durations[part]));
+    }
+    return [part, Math.floor((maximum + 1e-7) * 10) / 10];
+  })) as Record<JingleVoicePart, number>;
+  // Give the presentation a little breathing room. Remaining time belongs to
+  // the musical ending, never to an unexpectedly long pause before the hook.
+  const afterIntro = JINGLE_AFTER_INTRO + Math.min(extended ? 2 : 1, Math.max(0, window - used));
+  const titleStart = JINGLE_LEAD;
+  const echoStart = titleStart + durations.title + JINGLE_ECHO_PAUSE;
+  const introStart = echoStart + durations.title + JINGLE_AFTER_ECHO;
+  const secondTitleStart = introStart + durations.intro + afterIntro;
+  const hookStart = secondTitleStart + durations['title-alt'] + JINGLE_AFTER_SECOND_TITLE;
+  const starts: Record<JingleVoicePart, number> = { title: titleStart, 'title-alt': secondTitleStart, intro: introStart, hook: hookStart };
+  const voices: JingleVoiceCue[] = [
+    { part: 'title', start: titleStart, duration: durations.title, echo: false },
+    { part: 'title', start: echoStart, duration: durations.title, echo: true },
+    { part: 'intro', start: introStart, duration: durations.intro, echo: false },
+    { part: 'title-alt', start: secondTitleStart, duration: durations['title-alt'], echo: false },
+    { part: 'hook', start: hookStart, duration: durations.hook, echo: false },
+  ];
+  const complete = JINGLE_PARTS.every(part => durations[part] >= .15);
+  const fits = used <= window + .001 && total >= 12;
+  return { total, window, used, limits, durations, starts, titleReturnStart: secondTitleStart, complete, fits, ready: hasMusic && complete && fits, outroStart: hookStart + durations.hook, echoStart, voices, musicBreaks: { afterEcho: JINGLE_AFTER_ECHO, afterIntro, afterTitle: JINGLE_AFTER_SECOND_TITLE } };
+}
 
 // Reserve short, audible breaks rather than charging every recording for the
 // longest musical gaps. Restore the more spacious rhythm when the takes allow it.
@@ -66,10 +132,11 @@ export function jingleTakeDuration(take: JingleTake | undefined, assets: AudioAs
   return Math.max(0, Math.min(asset.duration, take.sourceEnd) - Math.max(0, take.sourceStart));
 }
 
-export function getGuidedJinglePlan(block: PodcastBlock, assets: AudioAsset[], fallbackDuration = 0) {
+export function getGuidedJinglePlan(block: PodcastBlock, assets: AudioAsset[], fallbackDuration = 0): GuidedJinglePlan {
   const jingle = block.jingle;
   const music = assets.find((item) => item.id === jingle?.musicAssetId);
   const total = music?.duration ?? fallbackDuration;
+  if (jingle?.production === 'guided-v6') return getComposedPlan(block, assets, total, Boolean(music));
   if (jingle?.production === 'guided-v5') return getFlexiblePlan(block, assets, total, Boolean(music));
   if (jingle?.production === 'guided-v4') {
     const window = Math.max(0, total - JINGLE_LEAD - JINGLE_TAIL - JINGLE_ECHO_DELAY - JINGLE_INTRO_GAP - JINGLE_RETURN_GAP - JINGLE_MUSIC_LIFT);

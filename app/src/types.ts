@@ -15,6 +15,7 @@ export interface VoiceSoundCue {
   sourceStart?: number;
   sourceEnd?: number;
   level: VoiceCueLevel;
+  cutEnd?: boolean;
 }
 
 export interface AudioAsset {
@@ -43,6 +44,7 @@ export interface BackgroundAudio {
   startBeforeSeconds?: 1 | 2 | 3;
   continueAfter: boolean;
   continueAfterSeconds?: 1 | 2 | 3;
+  sourceOffsetSeconds?: number;
 }
 
 export interface PodcastBlock {
@@ -60,6 +62,9 @@ export interface PodcastBlock {
   fadeOut: FadeLevel;
   voiceEffect: VoiceEffect;
   voiceEnhancement?: VoiceEnhancement;
+  /** Inner edit boundaries use direct joins instead of the legacy voice fades. */
+  voiceCutStart?: boolean;
+  voiceCutEnd?: boolean;
   script?: string;
   background?: BackgroundAudio;
   voiceCues?: VoiceSoundCue[];
@@ -77,7 +82,7 @@ export interface PodcastBlock {
     voiceEnhancement?: VoiceEnhancement;
     musicLeadSeconds?: 1 | 2 | 3 | 4;
     musicTailSeconds?: 1 | 2 | 3 | 4;
-    production?: 'studio-v2' | 'guided-v3' | 'guided-v4' | 'guided-v5';
+    production?: 'studio-v2' | 'guided-v3' | 'guided-v4' | 'guided-v5' | 'guided-v6';
     signatureFx?: boolean;
     bedId?: string;
     takes?: Partial<Record<JingleVoicePart, JingleTake>>;

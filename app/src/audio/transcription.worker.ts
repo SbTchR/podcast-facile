@@ -2,6 +2,7 @@ import { env, pipeline, type AutomaticSpeechRecognitionPipeline } from '@hugging
 import wasmUrl from '../../node_modules/@huggingface/transformers/dist/ort-wasm-simd-threaded.jsep.wasm?url';
 import wasmModuleUrl from '../../node_modules/@huggingface/transformers/dist/ort-wasm-simd-threaded.jsep.mjs?url';
 import type { TranscriptLanguage } from './transcription';
+import { TRANSCRIPTION_MODEL } from './transcriptionModels';
 
 env.allowLocalModels = false;
 env.useBrowserCache = true;
@@ -20,6 +21,7 @@ const send = (message: unknown) => self.postMessage(message);
 self.onmessage = async ({ data }: MessageEvent<{ type: string; samples: Float32Array; language: TranscriptLanguage }>) => {
   if (data.type === 'dispose') { await transcriber?.dispose(); transcriber = undefined; send({ type: 'disposed' }); return; }
   if (data.type !== 'transcribe') return;
+  let stage: 'loading' | 'transcribing' = 'loading';
   try {
     if (!transcriber) {
       send({ type: 'progress', progress: { stage: 'loading' } });
@@ -29,8 +31,9 @@ self.onmessage = async ({ data }: MessageEvent<{ type: string; samples: Float32A
       const createAsr = pipeline as (task: 'automatic-speech-recognition', model: string, options: {
         revision: string; device: 'wasm'; dtype: 'q8'; progress_callback: (info: { status: string; file?: string; loaded?: number; total?: number }) => void;
       }) => Promise<AutomaticSpeechRecognitionPipeline>;
-      transcriber = await createAsr('automatic-speech-recognition', 'Xenova/whisper-tiny', {
-        revision: '5332fcc35e32a33b86612b9a57a89be7906102b1', device: 'wasm', dtype: 'q8',
+      const config = TRANSCRIPTION_MODEL;
+      transcriber = await createAsr('automatic-speech-recognition', config.id, {
+        revision: config.revision, device: 'wasm', dtype: 'q8',
         progress_callback: info => {
           if (info.status === 'progress' && info.file && info.loaded !== undefined && info.total !== undefined) {
             files.set(info.file, { loaded: info.loaded, total: info.total });
@@ -41,12 +44,14 @@ self.onmessage = async ({ data }: MessageEvent<{ type: string; samples: Float32A
         },
       });
     }
-    send({ type: 'progress', progress: { stage: 'transcribing' } });
-    const result = await transcriber(data.samples, { language: languages[data.language] ?? 'french', task: 'transcribe', chunk_length_s: 25, stride_length_s: 4, return_timestamps: false });
+    stage = 'transcribing';
+    send({ type: 'progress', progress: { stage } });
+    const result = await transcriber(data.samples, { language: languages[data.language] ?? 'french', task: 'transcribe', chunk_length_s: 30, stride_length_s: 5, return_timestamps: false });
     const text = (Array.isArray(result) ? result.map(item => item.text).join(' ') : result.text).trim();
     if (!text) throw new Error('Aucune parole reconnue. Refais un essai en parlant près du micro.');
     send({ type: 'done', text });
-  } catch {
-    send({ type: 'error', error: 'Impossible de transcrire cet essai. Vérifie la connexion pour le premier téléchargement, puis réessaie.' });
+  } catch (reason) {
+    const error = reason instanceof Error && reason.message.startsWith('Aucune parole') ? reason.message : stage === 'loading' ? 'Impossible de préparer la transcription. Vérifie la connexion pour le premier téléchargement, puis réessaie.' : 'Le calcul de la transcription n’a pas abouti. Ferme quelques onglets, puis réessaie.';
+    send({ type: 'error', error });
   }
 };
