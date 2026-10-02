@@ -2,8 +2,20 @@ export type Screen = 'home' | 'setup' | 'editor' | 'export';
 export type BlockType = 'voice' | 'music' | 'sfx' | 'silence' | 'jingle' | 'transition';
 export type VolumeLevel = 'low' | 'normal' | 'high';
 export type FadeLevel = 'none' | 'short' | 'normal';
-export type VoiceEffect = 'none' | 'phone' | 'echo' | 'deep' | 'high';
-export type TransitionPreset = 'fade' | 'whoosh' | 'bell' | 'radio' | 'page' | 'percussion' | 'rise' | 'mystery';
+export type VoiceEffect = 'none' | 'phone' | 'echo' | 'distant' | 'deep' | 'high' | 'very-high';
+export type VoiceEnhancement = 'natural' | 'magic-boost';
+export type TransitionPreset = 'fade' | 'whoosh' | 'bell' | 'radio' | 'page' | 'percussion' | 'rise' | 'mystery' | 'impact' | 'sparkle' | 'heartbeat' | 'rewind' | 'drop' | 'question' | 'failure' | 'surprise' | 'portal' | 'cinematic';
+export type VoiceCueLevel = 'low' | 'normal' | 'high';
+
+export interface VoiceSoundCue {
+  id: string;
+  assetId: string;
+  at: number;
+  duration: number;
+  sourceStart?: number;
+  sourceEnd?: number;
+  level: VoiceCueLevel;
+}
 
 export interface AudioAsset {
   id: string;
@@ -15,11 +27,22 @@ export interface AudioAsset {
   libraryId?: string;
 }
 
+export type JingleVoicePart = 'title' | 'title-alt' | 'intro' | 'hook';
+export interface JingleTake {
+  assetId: string;
+  sourceStart: number;
+  sourceEnd: number;
+}
+
+// Jingle fades and music sliders: 20260807-jingle-music-mixing-1
 export interface BackgroundAudio {
   assetId: string;
   level: 'very-low' | 'low' | 'present';
+  volume?: number;
   startBefore: boolean;
+  startBeforeSeconds?: 1 | 2 | 3;
   continueAfter: boolean;
+  continueAfterSeconds?: 1 | 2 | 3;
 }
 
 export interface PodcastBlock {
@@ -32,26 +55,70 @@ export interface PodcastBlock {
   trimStart: number;
   trimEnd: number;
   volume: VolumeLevel;
+  musicVolume?: number;
   fadeIn: FadeLevel;
   fadeOut: FadeLevel;
   voiceEffect: VoiceEffect;
+  voiceEnhancement?: VoiceEnhancement;
+  script?: string;
   background?: BackgroundAudio;
+  voiceCues?: VoiceSoundCue[];
   transitionPreset?: TransitionPreset;
+  transitionVolume?: VolumeLevel;
   jingle?: {
     musicAssetId?: string;
     voiceAssetId?: string;
     openingAssetId?: string;
     closingAssetId?: string;
     style: 'dynamic' | 'adventure' | 'mysterious' | 'serious' | 'historical' | 'modern-radio';
-    length: 'short' | 'normal' | 'long';
+    length?: 'short' | 'normal' | 'long';
     musicLevel: 'very-low' | 'low' | 'present';
+    musicVolume?: number;
+    voiceEnhancement?: VoiceEnhancement;
+    musicLeadSeconds?: 1 | 2 | 3 | 4;
+    musicTailSeconds?: 1 | 2 | 3 | 4;
+    production?: 'studio-v2' | 'guided-v3' | 'guided-v4' | 'guided-v5';
+    signatureFx?: boolean;
+    bedId?: string;
+    takes?: Partial<Record<JingleVoicePart, JingleTake>>;
+    scripts?: Partial<Record<JingleVoicePart, string>>;
+    ending?: { assetId: string; presetId: string; volume: number };
   };
+}
+
+export type SectionGuideType = 'intro-jingle' | 'introduction' | 'part' | 'intermediate-jingle' | 'conclusion' | 'final-jingle';
+
+export interface AudioAnchor {
+  edge: 'start' | 'end';
+  blockId?: string;
+  seconds?: number;
+}
+
+/** A sound on top of the narrative. Anchors follow recordings when reordered. */
+export interface SectionAudioLayer {
+  id: string;
+  kind: 'music' | 'sfx';
+  title: string;
+  assetId: string;
+  sourceStart: number;
+  sourceEnd: number;
+  start: AudioAnchor;
+  end?: AudioAnchor;
+  volume: number;
+  fadeIn: FadeLevel;
+  fadeOut: FadeLevel;
+  repeat: boolean;
+  pauseBlockId?: string;
+  afterBlockId?: string;
 }
 
 export interface PodcastSection {
   id: string;
   title: string;
   collapsed: boolean;
+  kind?: 'standard' | 'jingle';
+  guideType?: SectionGuideType;
+  audioLayers?: SectionAudioLayer[];
 }
 
 export interface PodcastProject {
@@ -81,3 +148,5 @@ export interface TemplateDefinition {
   description: string;
   sections: string[];
 }
+
+// Traitement vocal et minutage de jingle : 20260808-vocal-magic-boost-jingle-timing-1

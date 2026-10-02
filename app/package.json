@@ -10,6 +10,7 @@
     "check": "tsc -b"
   },
   "dependencies": {
+    "@huggingface/transformers": "3.8.1",
     "@vitejs/plugin-react": "6.0.3",
     "react": "19.2.7",
     "react-dom": "19.2.7",

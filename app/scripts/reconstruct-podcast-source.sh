@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Complete maintained sources supersede the historical reconstruction fragments.
+# Reapplying those patches would replace the student interface with the older UI.
+if test -s app/src/App.tsx && grep -q '20260930-student-ux-1' app/src/App.tsx; then
+  for source in app/src/styles.css app/src/data/audioLibrary.ts app/src/audio/libraryPreview.ts app/src/useDialog.ts app/src/audio/sectionLayers.ts app/src/audio/jingleStudio.ts app/src/audio/jinglePlan.ts app/src/audio/guidedJingle.ts app/src/data/jingleBeds.ts app/src/components/AudioExcerpt.tsx app/src/components/SectionSoundWizard.tsx app/src/components/SectionAudioOverview.tsx app/src/components/JingleWizard.tsx app/src/components/WizardSteps.tsx; do
+    test -s "$source" || { echo "Source maintenue manquante : $source" >&2; exit 1; }
+  done
+  echo "Sources complètes de l’interface élèves conservées."
+  exit 0
+fi
+
 mkdir -p app/src/data
 cat app-parts/App-00.txt app-parts/App-01.txt app-parts/App-02.txt app-parts/App-03.txt app-parts/App-04.txt app-parts/App-05.txt > app/src/App.tsx
 cat app-parts/styles-00.txt app-parts/styles-01.txt app-parts/styles-02.txt > app/src/styles.css
