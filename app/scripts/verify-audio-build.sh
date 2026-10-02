@@ -108,6 +108,17 @@ grep -q "passer à 35 secondes" app/dist/assets/*.js
 for ending in bell horn ship drumroll bicycle doorbell; do
   test -s "app/dist/audio/jingle-endings/$ending.wav"
 done
-grep -q "Bruitages →" app/dist/assets/*.js
+grep -q "Ambiances et bruitages →" app/dist/assets/*.js
 grep -q "jingle-ending-drumroll" app/dist/assets/*.js
+node --input-type=module - <<'JS'
+import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+for (const folder of ['curated-sounds', 'jingle-endings']) {
+  const sources = JSON.parse(readFileSync(`app/public/audio/${folder}/sources.json`, 'utf8'));
+  for (const source of sources) {
+    const file = readFileSync(`app/dist/audio/${folder}/${source.filename}`);
+    if (createHash('sha256').update(file).digest('hex') !== source.sha256) throw new Error(`Missing or changed published sound: ${source.id}`);
+  }
+}
+JS
 echo "Build audio vérifié."

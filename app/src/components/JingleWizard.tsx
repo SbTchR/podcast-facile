@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ComponentType, type Dispatch, type SetStateAction } from 'react';
 import type { AudioAsset, JingleVoicePart, PodcastBlock } from '../types';
 import { JINGLE_STYLES, getJingleBed, getJingleVariants, loadJingleBed } from '../data/jingleBeds';
-import { JINGLE_ENDINGS, endingPreviewPreset, type JingleEnding } from '../data/jingleEndings';
+import { JINGLE_ENDINGS, JINGLE_CREDIT_ENDINGS, endingPreviewPreset, type JingleEnding } from '../data/jingleEndings';
 import { loadLibraryAudio } from '../data/audioLibrary';
 import { createLibraryPreviewSession } from '../audio/libraryPreview';
 import { analyseJingleRecording, getGuidedJinglePlan, JINGLE_PARTS, JINGLE_LEAD, JINGLE_TAIL } from '../audio/jinglePlan';
@@ -113,7 +113,7 @@ export function JingleWizard({ block, assets, podcastTitle, onBlock, onRegisterA
   const takeValid = (part: JingleVoicePart) => plan.durations[part] >= 0.15 && (plan.complete ? plan.fits : plan.durations[part] <= plan.limits[part] + 0.025);
   const earlierReady = !activePart || JINGLE_PARTS.slice(0, JINGLE_PARTS.indexOf(activePart)).every(takeValid);
   const canContinue = Boolean(music) && !loadingBed && !busy && (!activePart || (takeValid(activePart) && earlierReady));
-  const ending = JINGLE_ENDINGS.find(item => item.id === jingle.ending?.presetId);
+  const ending = JINGLE_CREDIT_ENDINGS.find(item => item.id === jingle.ending?.presetId);
   const chooseEnding = async (item: JingleEnding) => {
     stopPreviews(); setBusy(true); setError('');
     try {

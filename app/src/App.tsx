@@ -10,8 +10,8 @@ import { JingleWizard } from './components/JingleWizard';
 import { VoiceScript } from './components/VoiceScript';
 import { isGuidedJingle } from './audio/jinglePlan';
 import { JINGLE_CREDIT_BEDS } from './data/jingleBeds';
-import { JINGLE_ENDINGS } from './data/jingleEndings';
-import { AUDIO_LIBRARY, LIBRARY_CATEGORIES, loadLibraryAudio, type LibraryKind, type LibraryPreset } from './data/audioLibrary';
+import { JINGLE_CREDIT_ENDINGS } from './data/jingleEndings';
+import { AUDIO_LIBRARY, LIBRARY_CATEGORIES, SOUND_CATEGORIES, availableLibrarySounds, loadLibraryAudio, type LibraryKind, type LibraryPreset, type SoundGroup } from './data/audioLibrary';
 import {
   formatTime,
   getAudioDuration,
@@ -746,7 +746,7 @@ function App() {
         <div className="editor-intro">
           <div>
             <h1>{project.title}</h1>
-            <p>Construis chaque partie avec les voix, puis les musiques de fond et enfin les bruitages.</p>
+            <p>Construis chaque partie avec les voix, puis les musiques de fond et enfin les ambiances et bruitages.</p>
           </div>
         </div>
 
@@ -757,7 +757,7 @@ function App() {
             else setAddSectionOpen(true);
           }}>🎙 Enregistrer une voix</button></div>
           <div><span className="workflow-number">2</span><div><strong>Place les musiques</strong><p>Écoute les fonds avec tes voix.</p></div></div>
-          <div><span className="workflow-number">3</span><div><strong>Ajoute les bruitages</strong><p>Ponctue ton récit sur la trame.</p></div></div>
+          <div><span className="workflow-number">3</span><div><strong>Ajoute les sons</strong><p>Place les ambiances et bruitages sur la trame.</p></div></div>
           <div><span className="workflow-number">4</span><div><strong>Écoute et télécharge</strong><p>Utilise le lecteur, puis « Télécharger ».</p></div></div>
         </div>
 
@@ -1721,19 +1721,21 @@ function TrimControl({ asset, start, end, onChange }: { asset: AudioAsset; start
 }
 
 
-function AudioLibraryModal({ kind, onClose, onChoose }: { kind: LibraryKind; onClose: () => void; onChoose: (preset: LibraryPreset) => Promise<void> }) {
+function AudioLibraryModal({ kind, initialSoundGroup = 'effect', onClose, onChoose }: { kind: LibraryKind; initialSoundGroup?: SoundGroup; onClose: () => void; onChoose: (preset: LibraryPreset) => Promise<void> }) {
   const dialogRef = useDialog(onClose);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('Toutes');
   const [addingId, setAddingId] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [soundGroup, setSoundGroup] = useState(initialSoundGroup);
 
   useEffect(() => { requestExclusivePreview('audio-library-window'); }, []);
 
   const normalize = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('fr');
   const searchWords = normalize(search).trim().split(/\s+/).filter(Boolean);
-  const results = AUDIO_LIBRARY.filter((preset) => {
-    if (preset.kind !== kind) return false;
+  const available = availableLibrarySounds(kind, soundGroup);
+  const categories = kind === 'music' ? LIBRARY_CATEGORIES.music : SOUND_CATEGORIES[soundGroup];
+  const results = available.filter((preset) => {
     if (category !== 'Toutes' && preset.category !== category && !preset.secondaryCategories?.includes(category)) return false;
     const text = normalize([preset.title, preset.description, preset.category, ...(preset.secondaryCategories ?? []), ...preset.tags].join(' '));
     return searchWords.every((word) => text.includes(word));
@@ -1753,19 +1755,20 @@ function AudioLibraryModal({ kind, onClose, onChoose }: { kind: LibraryKind; onC
 
   return (
     <div className="modal-backdrop library-layer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <div ref={dialogRef} data-podcast-dialog tabIndex={-1} className="modal audio-library-modal" role="dialog" aria-modal="true" aria-label={kind === 'music' ? 'Bibliothèque musicale' : 'Bibliothèque de bruitages'}>
-        <div className="modal-header"><div><h2>{kind === 'music' ? 'Bibliothèque musicale' : 'Bibliothèque de bruitages'}</h2><small>{AUDIO_LIBRARY.filter((item) => item.kind === kind).length} sons disponibles</small></div><button onClick={onClose} aria-label="Fermer">×</button></div>
+      <div ref={dialogRef} data-podcast-dialog tabIndex={-1} className="modal audio-library-modal" role="dialog" aria-modal="true" aria-label={kind === 'music' ? 'Bibliothèque musicale' : 'Bibliothèque de sons'}>
+        <div className="modal-header"><div><h2>{kind === 'music' ? 'Bibliothèque musicale' : 'Bibliothèque de sons'}</h2><small>{available.length} {kind === 'music' ? 'musiques' : soundGroup === 'ambience' ? 'ambiances' : 'bruitages'} disponibles</small></div><button onClick={onClose} aria-label="Fermer">×</button></div>
         <div className="library-toolbar">
-          <p className="library-instructions">Écoute un extrait, puis clique sur « Ajouter » pour choisir ton son.</p>
-          <label className="library-search"><span aria-hidden="true">⌕</span><input autoFocus aria-label="Rechercher un son" placeholder={kind === 'music' ? 'Rechercher : médiéval, épique, calme…' : 'Rechercher : cheval, bataille, pluie…'} value={search} onChange={(event) => setSearch(event.target.value)} />{search && <button aria-label="Effacer la recherche" onClick={() => setSearch('')}>×</button>}</label>
-          <label className="library-category-select"><span>Catégorie</span><select value={category} onChange={(event) => setCategory(event.target.value)}><option value="Toutes">Toutes les catégories</option>{LIBRARY_CATEGORIES[kind].map((item) => <option key={item}>{item}</option>)}</select></label>
+          {kind === 'sfx' && <div className="library-sound-tabs" role="tablist" aria-label="Type de son">{(['effect', 'ambience'] as const).map(group => <button key={group} role="tab" id={`sound-tab-${group}`} aria-selected={soundGroup === group} aria-controls="sound-library-results" tabIndex={soundGroup === group ? 0 : -1} disabled={Boolean(addingId)} onClick={() => { requestExclusivePreview('library-group'); setSoundGroup(group); setCategory('Toutes'); setError(''); }} onKeyDown={event => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); const next = group === 'effect' ? 'ambience' : 'effect'; requestExclusivePreview('library-group'); setSoundGroup(next); setCategory('Toutes'); document.getElementById(`sound-tab-${next}`)?.focus(); } }}><span>{group === 'effect' ? '🔔 Bruitages' : '🌿 Ambiances'}</span><small>{availableLibrarySounds('sfx', group).length}</small></button>)}</div>}
+          <p className="library-instructions">{kind === 'music' ? 'Écoute un extrait, puis ajoute la musique de ton choix.' : soundGroup === 'effect' ? 'Des sons courts pour une action, une réaction ou une transition.' : 'Un décor sonore à placer derrière les voix, sur la durée de ton choix.'}</p>
+          <label className="library-search"><span aria-hidden="true">⌕</span><input autoFocus aria-label="Rechercher un son" placeholder={kind === 'music' ? 'Rechercher : médiéval, épique, calme…' : soundGroup === 'ambience' ? 'Rechercher : médiéval, front, forêt…' : 'Rechercher : canon, cheval, cloche…'} value={search} onChange={(event) => setSearch(event.target.value)} />{search && <button aria-label="Effacer la recherche" onClick={() => setSearch('')}>×</button>}</label>
+          <label className="library-category-select"><span>Catégorie</span><select value={category} onChange={(event) => setCategory(event.target.value)}><option value="Toutes">Toutes les catégories</option>{categories.map((item) => <option key={item}>{item}</option>)}</select></label>
         </div>
         <div className="library-results-heading"><strong role="status">{results.length} résultat{results.length > 1 ? 's' : ''}</strong>{(category !== 'Toutes' || search) && <button onClick={() => { setCategory('Toutes'); setSearch(''); }}>Tout afficher</button>}</div>
-        <div className="library-grid">
+        <div className="library-grid" id="sound-library-results" role={kind === 'sfx' ? 'tabpanel' : undefined} aria-labelledby={kind === 'sfx' ? `sound-tab-${soundGroup}` : undefined}>
           {results.map((preset) => (
             <article className="library-card" key={preset.id}>
               <div className="library-card-icon">{preset.icon}</div>
-              <div className="library-card-copy"><span>{preset.category}</span><h3>{preset.title}</h3><p>{preset.description}</p><small>{formatTime(preset.clipDuration ?? preset.duration)}{preset.clipDuration && preset.clipDuration < preset.duration ? ' · extrait conseillé' : ''} · {preset.tags.slice(0, 3).join(' · ')}</small><a className="library-source-link" href={preset.sourcePage} target="_blank" rel="noreferrer" title={`${preset.author} · ${preset.license}`}>ⓘ Source</a></div>
+              <div className="library-card-copy"><span>{preset.category}</span><h3>{preset.title}</h3><p>{preset.description}</p><small>{kind === 'sfx' ? `${(preset.clipDuration ?? preset.duration).toLocaleString('fr', { maximumFractionDigits: 1 })} s` : formatTime(preset.clipDuration ?? preset.duration)}{preset.clipDuration && preset.clipDuration < preset.duration ? ' · extrait conseillé' : ''} · {preset.tags.slice(0, 3).join(' · ')}</small><a className="library-source-link" href={preset.sourcePage} target="_blank" rel="noreferrer" title={`${preset.author} · ${preset.license}`}>ⓘ Source</a></div>
               <div className="library-card-actions"><TimedPreviewButton previewId={`library-${preset.id}`} label={`Écouter · ${Math.ceil(getLibraryPreviewDuration(preset))} s`} onStart={(signal) => createLibraryPreviewSession(preset, signal)} disabled={Boolean(addingId)} compact /><button className="primary-button compact" disabled={Boolean(addingId)} aria-label={`Ajouter ${preset.title}`} onClick={() => void add(preset)}>{addingId === preset.id ? 'Ajout…' : '＋ Ajouter'}</button></div>
             </article>
           ))}
@@ -1825,7 +1828,7 @@ function ExportScreen({ project, duration, rendering, onBack, onListen, onExport
   const warnings: string[] = [];
   if (!project.blocks.some((block) => (block.type === 'voice' && block.assetId) || block.jingle?.voiceAssetId || Object.values(block.jingle?.takes ?? {}).some((take) => take?.assetId))) warnings.push('Le podcast ne contient encore aucun enregistrement vocal.');
   const usedJingleBeds = JINGLE_CREDIT_BEDS.filter((bed) => project.blocks.some((block) => isGuidedJingle(block) && block.jingle.bedId === bed.id && getBlockDuration(block, project.assets) > 0));
-  const usedEndings = JINGLE_ENDINGS.filter(ending => project.blocks.some(block => isGuidedJingle(block) && block.jingle.ending?.presetId === ending.id && getBlockDuration(block, project.assets) > 0));
+  const usedEndings = JINGLE_CREDIT_ENDINGS.filter(ending => project.blocks.some(block => isGuidedJingle(block) && block.jingle.ending?.presetId === ending.id && getBlockDuration(block, project.assets) > 0));
   const usedJingleSounds = [...usedJingleBeds, ...usedEndings];
   const jingleCredits = usedJingleSounds.filter((bed, index) => usedJingleSounds.findIndex((other) => other.sourcePage === bed.sourcePage && other.licenseUrl === bed.licenseUrl && other.changes === bed.changes) === index);
   const creditsText = jingleCredits.map((bed) => `${bed.title} — ${bed.author}\nSource : ${bed.sourcePage}\nLicence ${bed.licenseName} : ${bed.licenseUrl}\n${bed.changes}\n`).join('\n');
@@ -1854,7 +1857,7 @@ function ExportScreen({ project, duration, rendering, onBack, onListen, onExport
 }
 
 function HelpModal({ onClose }: { onClose: () => void }) {
-  return <Modal title="Aide rapide" onClose={onClose}><div className="help-steps"><div><span>1</span><p><strong>Enregistre les voix.</strong><br />Dans chaque partie, ajoute tes voix puis les transitions ou pauses utiles.</p></div><div><span>2</span><p><strong>Place les musiques de fond.</strong><br />Ouvre les pistes de la partie. Ajoute la musique, choisis l’extrait puis déplace et découpe le son en écoutant le mixage avec les voix.</p></div><div><span>3</span><p><strong>Ajoute les bruitages.</strong><br />À l’étape suivante, place les sons courts sur la même trame. Les musiques et bruitages restent facultatifs.</p></div><div><span>4</span><p><strong>Écoute et télécharge.</strong><br />Vérifie la partie ou le podcast complet, puis télécharge le WAV et une sauvegarde .podfacile.</p></div></div><div className="important-note"><strong>Important</strong><p>Les projets enregistrés uniquement dans le navigateur peuvent disparaître si ses données sont effacées. Télécharge régulièrement une sauvegarde .podfacile.</p></div></Modal>;
+  return <Modal title="Aide rapide" onClose={onClose}><div className="help-steps"><div><span>1</span><p><strong>Enregistre les voix.</strong><br />Dans chaque partie, ajoute tes voix puis les transitions ou pauses utiles.</p></div><div><span>2</span><p><strong>Place les musiques de fond.</strong><br />Ouvre les pistes de la partie. Ajoute la musique, choisis l’extrait puis déplace et découpe le son en écoutant le mixage avec les voix.</p></div><div><span>3</span><p><strong>Ajoute les ambiances et bruitages.</strong><br />Choisis une ambiance pour le décor, ou un bruitage court pour une action ou une transition. Place-les sur la trame en écoutant avec les voix.</p></div><div><span>4</span><p><strong>Écoute et télécharge.</strong><br />Vérifie la partie ou le podcast complet, puis télécharge le WAV et une sauvegarde .podfacile.</p></div></div><div className="important-note"><strong>Important</strong><p>Les projets enregistrés uniquement dans le navigateur peuvent disparaître si ses données sont effacées. Télécharge régulièrement une sauvegarde .podfacile.</p></div></Modal>;
 }
 
 function Modal({ title, onClose, wide = false, children }: { title: string; onClose: () => void; wide?: boolean; children: React.ReactNode }) {

@@ -1,4 +1,4 @@
-import { getCachedLibraryAudio, type LibraryPreset } from '../data/audioLibrary';
+import { getCachedLibraryAudio, resolveLibraryAudioUrl, type LibraryPreset } from '../data/audioLibrary';
 
 export interface PreviewSession {
   totalDuration: number;
@@ -14,7 +14,7 @@ export function getLibraryPreviewDuration(preset: LibraryPreset): number {
 export async function createLibraryPreviewSession(preset: LibraryPreset, signal: AbortSignal): Promise<PreviewSession> {
   const cached = getCachedLibraryAudio(preset);
   const objectUrl = cached ? URL.createObjectURL(cached) : undefined;
-  const sources = objectUrl ? [objectUrl] : [...new Set([preset.audioUrl, preset.fallbackUrl])];
+  const sources = objectUrl ? [objectUrl] : [...new Set([preset.audioUrl, preset.fallbackUrl].map(url => resolveLibraryAudioUrl(url)))];
   try {
     for (const source of sources) {
       if (signal.aborted) throw new DOMException('Aperçu annulé.', 'AbortError');
