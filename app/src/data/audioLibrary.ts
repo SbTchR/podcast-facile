@@ -1,5 +1,6 @@
 // Audionautix expansion: 20260807-audionautix-expansion-1
 import { CURATED_SOUNDS } from './curatedSounds';
+import { PODCAST_MUSIC } from './podcastMusic';
 
 export type LibraryKind = 'music' | 'sfx';
 export type SoundGroup = 'effect' | 'ambience';
@@ -5274,6 +5275,15 @@ export const AUDIO_LIBRARY: LibraryPreset[] = [
 for (const preset of AUDIO_LIBRARY) if (preset.kind === 'sfx') preset.retired = true;
 AUDIO_LIBRARY.push(...CURATED_SOUNDS);
 
+// Preserve every former music ID for saved projects; offer the curated beds for new choices.
+for (const preset of AUDIO_LIBRARY) {
+  if (preset.kind !== 'music') continue;
+  const selected = PODCAST_MUSIC.find(music => music.id === preset.id);
+  if (selected) Object.assign(preset, selected);
+  else preset.retired = true;
+}
+AUDIO_LIBRARY.push(...PODCAST_MUSIC.filter(music => !AUDIO_LIBRARY.some(preset => preset.id === music.id)));
+
 export const SOUND_CATEGORIES: Record<SoundGroup, string[]> = {
   effect: ['Batailles et armes', 'Vie ancienne', 'Chevaux et pas', 'Mer et navigation', 'Transports', 'Actualité et reportage', 'Nature et aventure', 'Animaux', 'Objets et actions', 'Transitions et ponctuation', 'Humour et réactions'],
   ambience: ['Histoire et batailles', 'Villages et vie ancienne', 'Mer et bateaux', 'Nature', 'Lieux et foule', 'Voyages', 'Industrie et actualité'],
@@ -5281,7 +5291,7 @@ export const SOUND_CATEGORIES: Record<SoundGroup, string[]> = {
 
 export function availableLibrarySounds(kind: LibraryKind, group: SoundGroup = 'effect'): LibraryPreset[] {
   const sounds = AUDIO_LIBRARY.filter(preset => !preset.retired && preset.kind === kind && (kind === 'music' || (preset.soundGroup ?? 'effect') === group));
-  if (kind === 'music') return sounds;
+  if (kind === 'music') return PODCAST_MUSIC.map(selected => sounds.find(preset => preset.id === selected.id)!);
   const categories = SOUND_CATEGORIES[group];
   return sounds.sort((left, right) => categories.indexOf(left.category) - categories.indexOf(right.category));
 }
@@ -5291,7 +5301,7 @@ export function resolveLibraryAudioUrl(url: string, base = import.meta.env?.BASE
 }
 
 export const LIBRARY_CATEGORIES: Record<LibraryKind, string[]> = {
-  music: ["Époques historiques", "Classique & orchestral", "Jazz, blues & groove", "Folk, country & banjo", "Joyeux & léger", "Épique & action", "Mystère & tension", "Lieux & voyages", "Calme & émotion"],
+  music: ['Jazz & radio', 'Acoustique & voyage', 'Piano & confidences', 'Documentaire & découverte', 'Histoire & civilisations', 'Enquête & mystère'],
   sfx: ["Chocs, impacts, transitions", "Guerres & combats", "Sociétés & lieux historiques", "Nature & paysages", "Transports & industrie", "Vie quotidienne & objets", "Voix & foule"],
 };
 

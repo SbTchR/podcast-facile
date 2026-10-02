@@ -10,7 +10,7 @@ const ambiences = availableLibrarySounds('sfx', 'ambience');
 assert.ok(effects.length >= 100, 'Keep a broad palette of short actions and recognizable effects.');
 assert.ok(ambiences.length >= 55, 'Keep a broad palette of historical scenes and background settings.');
 assert.equal(sources.length, effects.length + ambiences.length, 'Every visible sound has a maintained local source.');
-assert.equal(availableLibrarySounds('music').length, 59, 'Keep the existing podcast music selection.');
+assert.ok(availableLibrarySounds('music').length >= 2, 'Music choices remain separate from the effects and ambiences.');
 assert.equal(new Set(AUDIO_LIBRARY.map(p=>p.id)).size, AUDIO_LIBRARY.length);
 assert.ok(AUDIO_LIBRARY.find(p=>p.id==='sfx-medieval-battle-ambience')?.retired, 'Former IDs remain readable but leave the new picker.');
 assert.ok(!effects.some(p=>p.soundGroup==='ambience') && !ambiences.some(p=>p.soundGroup!=='ambience'));

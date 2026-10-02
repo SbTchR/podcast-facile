@@ -113,7 +113,7 @@ grep -q "jingle-ending-drumroll" app/dist/assets/*.js
 node --input-type=module - <<'JS'
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-for (const folder of ['curated-sounds', 'jingle-endings']) {
+for (const folder of ['curated-sounds', 'jingle-endings', 'podcast-music']) {
   const sources = JSON.parse(readFileSync(`app/public/audio/${folder}/sources.json`, 'utf8'));
   for (const source of sources) {
     const file = readFileSync(`app/dist/audio/${folder}/${source.filename}`);
