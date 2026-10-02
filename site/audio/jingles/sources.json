@@ -1,0 +1,893 @@
+[
+  {
+    "style": "dynamic",
+    "title": "Disco Sting",
+    "file": "dynamic.mp3",
+    "author": "Kevin MacLeod / Incompetech",
+    "source": "https://commons.wikimedia.org/wiki/File:Disco_Sting_(ISRC_USUAN1100363).mp3",
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/c/c9/Disco_Sting_%28ISRC_USUAN1100363%29.mp3",
+    "composerUrl": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Disco%20Sting.mp3",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Adaptation pour jingle : retrait des silences extérieurs, maintien d’une phrase musicale centrale (sauf Historique), fondus courts et niveau ajusté. Mixage avec les voix et variations de volume dans le podcast.",
+    "sha256": "b141ef27ac343781cc60b678c24119fcbd9d8ff0e042559245ea7cdc0dab60b7",
+    "originalSha256": "88dd6ba250a9890f6b0077cd42e6ac250a586d8107b09f27a54bea5466dcba3f",
+    "preparedDuration": 17.08448979591837,
+    "preparation": {
+      "sourceStart": 1.74,
+      "sourceEnd": 13.45,
+      "phraseStart": 5.4763636363636365,
+      "phraseEnd": 7.294545454545454,
+      "repetitions": 3,
+      "crossfadeSeconds": 0.02
+    },
+    "id": "jingle-bed-dynamic-v3.1",
+    "version": 3
+  },
+  {
+    "style": "adventure",
+    "title": "Hero Theme",
+    "file": "adventure.mp3",
+    "author": "Kevin MacLeod / Incompetech",
+    "source": "https://commons.wikimedia.org/wiki/File:Hero_Theme_(ISRC_USUAN1100491).mp3",
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/8/89/Hero_Theme_%28ISRC_USUAN1100491%29.mp3",
+    "composerUrl": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Hero%20Theme.mp3",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Adaptation pour jingle : retrait des silences extérieurs, maintien d’une phrase musicale centrale (sauf Historique), fondus courts et niveau ajusté. Mixage avec les voix et variations de volume dans le podcast.",
+    "sha256": "83e2e14808cb3ddf31e4f635a9f1bfef0a723d6eeccbdc580f0397adc073f247",
+    "originalSha256": "d0594f560de51f1c61a642cf3d9171585c6447264a18732225f55a657604d68e",
+    "preparedDuration": 19.55,
+    "preparation": {
+      "sourceStart": 1.42,
+      "sourceEnd": 13.45,
+      "phraseStart": 4.0,
+      "phraseEnd": 8.0,
+      "repetitions": 2,
+      "crossfadeSeconds": 0.16
+    },
+    "id": "jingle-bed-adventure-v3.1",
+    "version": 3
+  },
+  {
+    "style": "mysterious",
+    "title": "Mystery Sting",
+    "file": "mysterious.mp3",
+    "author": "Kevin MacLeod / Incompetech",
+    "source": "https://commons.wikimedia.org/wiki/File:Mystery_Sting_(ISRC_USUAN1100430).mp3",
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/6/6c/Mystery_Sting_%28ISRC_USUAN1100430%29.mp3",
+    "composerUrl": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Mystery%20Sting.mp3",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Adaptation pour jingle : retrait des silences extérieurs, maintien d’une phrase musicale centrale (sauf Historique), fondus courts et niveau ajusté. Mixage avec les voix et variations de volume dans le podcast.",
+    "sha256": "b20e79bc450d3d15aa517ad7623fe96f5798d208dece72ac2d04dacfd7e39087",
+    "originalSha256": "e0677f794bdf40d21cfccd3adbfad5b02edc751f944ccfac2af0a734463c9f23",
+    "preparedDuration": 17.15,
+    "preparation": {
+      "sourceStart": 0.24,
+      "sourceEnd": 15.49,
+      "phraseStart": 6.0,
+      "phraseEnd": 8.0,
+      "repetitions": 1,
+      "crossfadeSeconds": 0.05
+    },
+    "id": "jingle-bed-mysterious-v3.1",
+    "version": 3
+  },
+  {
+    "style": "modern-radio",
+    "title": "NewsSting",
+    "file": "modern-radio.mp3",
+    "author": "Kevin MacLeod / Incompetech",
+    "source": "https://commons.wikimedia.org/wiki/File:NewsSting_(ISRC_USUAN1100361).mp3",
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/7/7a/NewsSting_%28ISRC_USUAN1100361%29.mp3",
+    "composerUrl": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/NewsSting.mp3",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Adaptation pour jingle : retrait des silences extérieurs, maintien d’une phrase musicale centrale (sauf Historique), fondus courts et niveau ajusté. Mixage avec les voix et variations de volume dans le podcast.",
+    "sha256": "77ff2f0b3267f9dcde2d906e5985c7196bbf7f2fdc97fa7cefa3034d07b00ab4",
+    "originalSha256": "a3160b8ed4540b0b6f92bbd6ee3b8ddb6a567cf6e376379048d4b50a47621b58",
+    "preparedDuration": 19.32,
+    "preparation": {
+      "sourceStart": 0.32,
+      "sourceEnd": 16.5,
+      "phraseStart": 5.220000000000001,
+      "phraseEnd": 6.82,
+      "repetitions": 2,
+      "crossfadeSeconds": 0.02
+    },
+    "id": "jingle-bed-modern-radio-v3.1",
+    "version": 3
+  },
+  {
+    "style": "serious",
+    "title": "Piano Between",
+    "file": "serious.mp3",
+    "author": "Kevin MacLeod / Incompetech",
+    "source": "https://commons.wikimedia.org/wiki/File:Piano_Between_(ISRC_USUAN1100490).mp3",
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/6/6c/Piano_Between_%28ISRC_USUAN1100490%29.mp3",
+    "composerUrl": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Piano%20Between.mp3",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Adaptation pour jingle : retrait des silences extérieurs, maintien d’une phrase musicale centrale (sauf Historique), fondus courts et niveau ajusté. Mixage avec les voix et variations de volume dans le podcast.",
+    "sha256": "2255d7985b92d8935ca0369ac68052e3a2ec71f8a5cf547562a83fc6db81daef",
+    "originalSha256": "859b1466603f75f99eb613e4d7f266a02ff4b30d9a0172f71cc41e3a7aa18935",
+    "preparedDuration": 20.13,
+    "preparation": {
+      "sourceStart": 0.12,
+      "sourceEnd": 16.35,
+      "phraseStart": 4.0,
+      "phraseEnd": 8.0,
+      "repetitions": 1,
+      "crossfadeSeconds": 0.05
+    },
+    "id": "jingle-bed-serious-v3.1",
+    "version": 3
+  },
+  {
+    "style": "historical",
+    "title": "The Curtain Rises",
+    "file": "historical.mp3",
+    "author": "Kevin MacLeod / Incompetech",
+    "source": "https://commons.wikimedia.org/wiki/File:The_Curtain_Rises_(ISRC_USUAN1500011).mp3",
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/6/6e/The_Curtain_Rises_%28ISRC_USUAN1500011%29.mp3",
+    "composerUrl": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/The%20Curtain%20Rises.mp3",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Adaptation pour jingle : retrait des silences extérieurs, maintien d’une phrase musicale centrale (sauf Historique), fondus courts et niveau ajusté. Mixage avec les voix et variations de volume dans le podcast.",
+    "sha256": "f44c356aa5f63e019d6fd2bce41ae1c18c34ef2d678e72d42f88199eb90f9942",
+    "originalSha256": "bfdbe77aaf8a14957f4a66b536213712037ba3108bc40609c55497af03e7e236",
+    "preparedDuration": 22.97,
+    "preparation": {
+      "sourceStart": 0.26,
+      "sourceEnd": 23.23,
+      "phraseStart": 0,
+      "phraseEnd": 0,
+      "repetitions": 0,
+      "crossfadeSeconds": 0
+    },
+    "id": "jingle-bed-historical-v3.1",
+    "version": 3
+  },
+  {
+    "id": "jingle-bed-dynamic-25-v4",
+    "version": 4,
+    "style": "dynamic",
+    "title": "Disco Sting",
+    "file": "dynamic-25.mp3",
+    "variant": "standard",
+    "originalFile": "dynamic.mp3",
+    "author": "Kevin MacLeod / Incompetech",
+    "source": "https://commons.wikimedia.org/wiki/File:Disco_Sting_(ISRC_USUAN1100363).mp3",
+    "composerUrl": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Disco%20Sting.mp3",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Adaptation pour jingle : extrait calibré à 25 ou 35 secondes, phrases musicales prolongées selon le style, niveau et fondus ajustés ; mixage avec les voix du podcast.",
+    "originalSha256": "88dd6ba250a9890f6b0077cd42e6ac250a586d8107b09f27a54bea5466dcba3f",
+    "targetDuration": 25,
+    "preparation": {
+      "sourceStart": 1.74,
+      "sourceEnd": 14.172857142857143,
+      "phraseStart": 5.4763636363636365,
+      "phraseEnd": 7.294545454545454,
+      "repetitions": 7,
+      "crossfadeSeconds": 0.02,
+      "fadeOutSeconds": 0.3
+    },
+    "sha256": "fcd7f95febcf7f7cecc4614d3f4b9c7deb31bdedb8251186ebde0fbd7da915dd",
+    "preparedDuration": 25.0
+  },
+  {
+    "id": "jingle-bed-dynamic-35-v4",
+    "version": 4,
+    "style": "dynamic",
+    "title": "Disco Sting",
+    "file": "dynamic-35.mp3",
+    "variant": "extended",
+    "originalFile": "dynamic.mp3",
+    "author": "Kevin MacLeod / Incompetech",
+    "source": "https://commons.wikimedia.org/wiki/File:Disco_Sting_(ISRC_USUAN1100363).mp3",
+    "composerUrl": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Disco%20Sting.mp3",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Adaptation pour jingle : extrait calibré à 25 ou 35 secondes, phrases musicales prolongées selon le style, niveau et fondus ajustés ; mixage avec les voix du podcast.",
+    "originalSha256": "88dd6ba250a9890f6b0077cd42e6ac250a586d8107b09f27a54bea5466dcba3f",
+    "targetDuration": 35,
+    "preparation": {
+      "sourceStart": 1.74,
+      "sourceEnd": 13.383877551020408,
+      "phraseStart": 5.4763636363636365,
+      "phraseEnd": 7.294545454545454,
+      "repetitions": 13,
+      "crossfadeSeconds": 0.02,
+      "fadeOutSeconds": 0.3
+    },
+    "sha256": "5c0c23aaa5ffe6d52df2a17d6f65def19b8abe03b663954307b07c32a5d4ae17",
+    "preparedDuration": 35.0
+  },
+  {
+    "id": "jingle-bed-adventure-25-v4",
+    "version": 4,
+    "style": "adventure",
+    "title": "Hero Theme",
+    "file": "adventure-25.mp3",
+    "variant": "standard",
+    "originalFile": "adventure.mp3",
+    "author": "Kevin MacLeod / Incompetech",
+    "source": "https://commons.wikimedia.org/wiki/File:Hero_Theme_(ISRC_USUAN1100491).mp3",
+    "composerUrl": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Hero%20Theme.mp3",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Adaptation pour jingle : extrait calibré à 25 ou 35 secondes, phrases musicales prolongées selon le style, niveau et fondus ajustés ; mixage avec les voix du podcast.",
+    "originalSha256": "d0594f560de51f1c61a642cf3d9171585c6447264a18732225f55a657604d68e",
+    "targetDuration": 25,
+    "preparation": {
+      "sourceStart": 1.42,
+      "sourceEnd": 10.82,
+      "phraseStart": 4,
+      "phraseEnd": 8,
+      "repetitions": 4,
+      "crossfadeSeconds": 0.08,
+      "fadeOutSeconds": 0.3
+    },
+    "sha256": "bb614010a883987926c06e9c6b8555abffac3fae831ecd7be7a8b5b568e87bf8",
+    "preparedDuration": 25.0
+  },
+  {
+    "id": "jingle-bed-adventure-35-v4",
+    "version": 4,
+    "style": "adventure",
+    "title": "Hero Theme",
+    "file": "adventure-35.mp3",
+    "variant": "extended",
+    "originalFile": "adventure.mp3",
+    "author": "Kevin MacLeod / Incompetech",
+    "source": "https://commons.wikimedia.org/wiki/File:Hero_Theme_(ISRC_USUAN1100491).mp3",
+    "composerUrl": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Hero%20Theme.mp3",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Adaptation pour jingle : extrait calibré à 25 ou 35 secondes, phrases musicales prolongées selon le style, niveau et fondus ajustés ; mixage avec les voix du podcast.",
+    "originalSha256": "d0594f560de51f1c61a642cf3d9171585c6447264a18732225f55a657604d68e",
+    "targetDuration": 35,
+    "preparation": {
+      "sourceStart": 1.42,
+      "sourceEnd": 12.98,
+      "phraseStart": 4,
+      "phraseEnd": 8,
+      "repetitions": 6,
+      "crossfadeSeconds": 0.08,
+      "fadeOutSeconds": 0.3
+    },
+    "sha256": "42b702eb60bdce4c6d86b7d8dc7cdfb79af5604a42c4a303b3f405f7d5c3ad11",
+    "preparedDuration": 35.0
+  },
+  {
+    "id": "jingle-bed-historical-25-v4",
+    "version": 4,
+    "style": "historical",
+    "title": "The Curtain Rises",
+    "file": "historical-25.mp3",
+    "variant": "standard",
+    "originalFile": "historical.mp3",
+    "author": "Kevin MacLeod / Incompetech",
+    "source": "https://commons.wikimedia.org/wiki/File:The_Curtain_Rises_(ISRC_USUAN1500011).mp3",
+    "composerUrl": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/The%20Curtain%20Rises.mp3",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Adaptation pour jingle : extrait calibré à 25 ou 35 secondes, phrases musicales prolongées selon le style, niveau et fondus ajustés ; mixage avec les voix du podcast.",
+    "originalSha256": "bfdbe77aaf8a14957f4a66b536213712037ba3108bc40609c55497af03e7e236",
+    "targetDuration": 25,
+    "preparation": {
+      "sourceStart": 0.26,
+      "sourceEnd": 23.32,
+      "phraseStart": 6,
+      "phraseEnd": 8,
+      "repetitions": 1,
+      "crossfadeSeconds": 0.03,
+      "fadeOutSeconds": 0.3
+    },
+    "sha256": "b62eac56202e83aca7d289c7c9898478768bb1062a80dff8b68e8d13c37949de",
+    "preparedDuration": 25.0
+  },
+  {
+    "id": "jingle-bed-historical-35-v4",
+    "version": 4,
+    "style": "historical",
+    "title": "The Curtain Rises",
+    "file": "historical-35.mp3",
+    "variant": "extended",
+    "originalFile": "historical.mp3",
+    "author": "Kevin MacLeod / Incompetech",
+    "source": "https://commons.wikimedia.org/wiki/File:The_Curtain_Rises_(ISRC_USUAN1500011).mp3",
+    "composerUrl": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/The%20Curtain%20Rises.mp3",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+    "changes": "Adaptation pour jingle : extrait calibré à 25 ou 35 secondes, phrases musicales prolongées selon le style, niveau et fondus ajustés ; mixage avec les voix du podcast.",
+    "originalSha256": "bfdbe77aaf8a14957f4a66b536213712037ba3108bc40609c55497af03e7e236",
+    "targetDuration": 35,
+    "preparation": {
+      "sourceStart": 0.26,
+      "sourceEnd": 23.47,
+      "phraseStart": 6,
+      "phraseEnd": 8,
+      "repetitions": 6,
+      "crossfadeSeconds": 0.03,
+      "fadeOutSeconds": 0.3
+    },
+    "sha256": "7d87091188fb1c5bd36daa288df985311a2b70b3bfceeb386e0e49e501afafe5",
+    "preparedDuration": 35.0
+  },
+  {
+    "id": "jingle-bed-mysterious-25-v4",
+    "version": 4,
+    "style": "mysterious",
+    "title": "Crypto",
+    "file": "mysterious-25.mp3",
+    "variant": "standard",
+    "originalFile": "Crypto.mp3",
+    "author": "Kevin MacLeod / Incompetech",
+    "source": "https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1600013",
+    "composerUrl": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Crypto.mp3",
+    "license": "CC BY 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+    "changes": "Adaptation pour jingle : extrait calibré à 25 ou 35 secondes, phrases musicales prolongées selon le style, niveau et fondus ajustés ; mixage avec les voix du podcast.",
+    "originalSha256": "f09ba8bff00baca85fcdcde3b7f5d6b34a09c2c0b44b007a9123ee42f7d1bcf2",
+    "targetDuration": 25,
+    "preparation": {
+      "sourceStart": 0,
+      "sourceEnd": 25.0,
+      "phraseStart": 0,
+      "phraseEnd": 0,
+      "repetitions": 0,
+      "crossfadeSeconds": 0,
+      "fadeOutSeconds": 1.0
+    },
+    "sha256": "07daa94bf96d352b2cc21203a0a7a656af371ff5ec2933f20c4ec7d075b36192",
+    "preparedDuration": 25.0
+  },
+  {
+    "id": "jingle-bed-mysterious-35-v4",
+    "version": 4,
+    "style": "mysterious",
+    "title": "Crypto",
+    "file": "mysterious-35.mp3",
+    "variant": "extended",
+    "originalFile": "Crypto.mp3",
+    "author": "Kevin MacLeod / Incompetech",
+    "source": "https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1600013",
+    "composerUrl": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Crypto.mp3",
+    "license": "CC BY 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+    "changes": "Adaptation pour jingle : extrait calibré à 25 ou 35 secondes, phrases musicales prolongées selon le style, niveau et fondus ajustés ; mixage avec les voix du podcast.",
+    "originalSha256": "f09ba8bff00baca85fcdcde3b7f5d6b34a09c2c0b44b007a9123ee42f7d1bcf2",
+    "targetDuration": 35,
+    "preparation": {
+      "sourceStart": 0,
+      "sourceEnd": 35.0,
+      "phraseStart": 0,
+      "phraseEnd": 0,
+      "repetitions": 0,
+      "crossfadeSeconds": 0,
+      "fadeOutSeconds": 1.0
+    },
+    "sha256": "17cb9a744f1bf04d6a915846fdaca70ba329ef424ba8e935882e69f671f4f415",
+    "preparedDuration": 35.0
+  },
+  {
+    "id": "jingle-bed-serious-25-v4",
+    "version": 4,
+    "style": "serious",
+    "title": "Impact Moderato",
+    "file": "serious-25.mp3",
+    "variant": "standard",
+    "originalFile": "Impact Moderato.mp3",
+    "author": "Kevin MacLeod / Incompetech",
+    "source": "https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100618",
+    "composerUrl": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Impact%20Moderato.mp3",
+    "license": "CC BY 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+    "changes": "Adaptation pour jingle : extrait calibré à 25 ou 35 secondes, phrases musicales prolongées selon le style, niveau et fondus ajustés ; mixage avec les voix du podcast.",
+    "originalSha256": "a85d378af027d75014be4a95b43007b19e03b06693c4b4ad72594cf392f4bc1c",
+    "targetDuration": 25,
+    "preparation": {
+      "sourceStart": 1.3,
+      "sourceEnd": 26.3,
+      "phraseStart": 0,
+      "phraseEnd": 0,
+      "repetitions": 0,
+      "crossfadeSeconds": 0,
+      "fadeOutSeconds": 1.0
+    },
+    "sha256": "5859b81a86b2e5e0e8c62ecdfb83c99427a9acacd2ac00e52a6edd861ae733fd",
+    "preparedDuration": 25.0
+  },
+  {
+    "id": "jingle-bed-serious-35-v4",
+    "version": 4,
+    "style": "serious",
+    "title": "Impact Moderato",
+    "file": "serious-35.mp3",
+    "variant": "extended",
+    "originalFile": "Impact Moderato.mp3",
+    "author": "Kevin MacLeod / Incompetech",
+    "source": "https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100618",
+    "composerUrl": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Impact%20Moderato.mp3",
+    "license": "CC BY 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+    "changes": "Adaptation pour jingle : extrait calibré à 25 ou 35 secondes, phrases musicales prolongées selon le style, niveau et fondus ajustés ; mixage avec les voix du podcast.",
+    "originalSha256": "a85d378af027d75014be4a95b43007b19e03b06693c4b4ad72594cf392f4bc1c",
+    "targetDuration": 35,
+    "preparation": {
+      "sourceStart": 1.3,
+      "sourceEnd": 36.3,
+      "phraseStart": 0,
+      "phraseEnd": 0,
+      "repetitions": 0,
+      "crossfadeSeconds": 0,
+      "fadeOutSeconds": 1.0
+    },
+    "sha256": "4980d513454c738194a127f424ccf8ecd5f5b2a83f9a84f75498a2315c45c2b1",
+    "preparedDuration": 35.0
+  },
+  {
+    "id": "jingle-bed-modern-radio-25-v4",
+    "version": 4,
+    "style": "modern-radio",
+    "title": "Funky Chunk",
+    "file": "modern-radio-25.mp3",
+    "variant": "standard",
+    "originalFile": "Funky Chunk.mp3",
+    "author": "Kevin MacLeod / Incompetech",
+    "source": "https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1500054",
+    "composerUrl": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Funky%20Chunk.mp3",
+    "license": "CC BY 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+    "changes": "Adaptation pour jingle : extrait calibré à 25 ou 35 secondes, phrases musicales prolongées selon le style, niveau et fondus ajustés ; mixage avec les voix du podcast.",
+    "originalSha256": "e6203c8c8fddbae0d9790da391a6ea73ef765fc3eec08bd87441e63037dc3c9c",
+    "targetDuration": 25,
+    "preparation": {
+      "sourceStart": 0,
+      "sourceEnd": 25.0,
+      "phraseStart": 0,
+      "phraseEnd": 0,
+      "repetitions": 0,
+      "crossfadeSeconds": 0,
+      "fadeOutSeconds": 1.0
+    },
+    "sha256": "fd3da3b89221be588ffd994e9e4f13ecbe793231bfac529bcf0730ede6e3df46",
+    "preparedDuration": 25.0
+  },
+  {
+    "id": "jingle-bed-modern-radio-35-v4",
+    "version": 4,
+    "style": "modern-radio",
+    "title": "Funky Chunk",
+    "file": "modern-radio-35.mp3",
+    "variant": "extended",
+    "originalFile": "Funky Chunk.mp3",
+    "author": "Kevin MacLeod / Incompetech",
+    "source": "https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1500054",
+    "composerUrl": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Funky%20Chunk.mp3",
+    "license": "CC BY 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+    "changes": "Adaptation pour jingle : extrait calibré à 25 ou 35 secondes, phrases musicales prolongées selon le style, niveau et fondus ajustés ; mixage avec les voix du podcast.",
+    "originalSha256": "e6203c8c8fddbae0d9790da391a6ea73ef765fc3eec08bd87441e63037dc3c9c",
+    "targetDuration": 35,
+    "preparation": {
+      "sourceStart": 0,
+      "sourceEnd": 35.0,
+      "phraseStart": 0,
+      "phraseEnd": 0,
+      "repetitions": 0,
+      "crossfadeSeconds": 0,
+      "fadeOutSeconds": 1.0
+    },
+    "sha256": "dd695a7bcb56ab8d149b066d063402cc16787ca9ea4d2ffc402a88485174603e",
+    "preparedDuration": 35.0
+  },
+  {
+    "style": "dynamic",
+    "title": "Hurry Funk Intro",
+    "file": "dynamic-pixabay-25.mp3",
+    "author": "Diamond_Tunes",
+    "source": "https://pixabay.com/music/upbeat-hurry-funk-intro-326085/",
+    "originalUrl": "https://cdn.pixabay.com/download/audio/2025/04/11/audio_87e608889e.mp3?filename=diamond_tunes-hurry-funk-intro-326085.mp3",
+    "originalFile": "hurry-funk-intro-326085.mp3",
+    "originalSha256": "6ef61904ebd5d5e4c4a4d8acb7d2ad44631ebcf8619a6bac09c30bf2346826fe",
+    "license": "Pixabay Content License",
+    "licenseUrl": "https://pixabay.com/service/license-summary/",
+    "changes": "Arrangement de 25 secondes pour le mixage avec les voix du jingle : extrait avec fin musicale conservée ; raccords, niveau et fin musicale ajustés.",
+    "id": "jingle-bed-dynamic-25-v5",
+    "version": 5,
+    "targetDuration": 25,
+    "preparedDuration": 25.0,
+    "preparation": {
+      "sourceStart": 0,
+      "sourceEnd": 28.656326530612244,
+      "phraseStart": 0,
+      "phraseEnd": 0,
+      "repetitions": 0,
+      "crossfadeSeconds": 0,
+      "fadeOutSeconds": 0.3,
+      "segments": [
+        {
+          "sourceStart": 3.6563265306122448,
+          "sourceEnd": 28.656326530612244,
+          "crossfadeSeconds": 0.0
+        }
+      ]
+    },
+    "sha256": "c50dfb91e399e520a5d6b9fc8063331bbbda20bb57d1322b074d4abd2fa1b0d0"
+  },
+  {
+    "style": "dynamic",
+    "title": "Hurry Funk Intro",
+    "file": "dynamic-pixabay-35.mp3",
+    "author": "Diamond_Tunes",
+    "source": "https://pixabay.com/music/upbeat-hurry-funk-intro-326085/",
+    "originalUrl": "https://cdn.pixabay.com/download/audio/2025/04/11/audio_87e608889e.mp3?filename=diamond_tunes-hurry-funk-intro-326085.mp3",
+    "originalFile": "hurry-funk-intro-326085.mp3",
+    "originalSha256": "6ef61904ebd5d5e4c4a4d8acb7d2ad44631ebcf8619a6bac09c30bf2346826fe",
+    "license": "Pixabay Content License",
+    "licenseUrl": "https://pixabay.com/service/license-summary/",
+    "changes": "Arrangement de 35 secondes pour le mixage avec les voix du jingle : phrases musicales centrales raccourcies ou reprises, sans changement de tempo ni de hauteur ; raccords, niveau et fin musicale ajustés.",
+    "id": "jingle-bed-dynamic-35-v5",
+    "version": 5,
+    "targetDuration": 35,
+    "preparedDuration": 35.0,
+    "preparation": {
+      "sourceStart": 0,
+      "sourceEnd": 27.695374149659862,
+      "phraseStart": 0,
+      "phraseEnd": 0,
+      "repetitions": 0,
+      "crossfadeSeconds": 0,
+      "fadeOutSeconds": 0.3,
+      "segments": [
+        {
+          "sourceStart": 0.0,
+          "sourceEnd": 14.784625850340136,
+          "crossfadeSeconds": 0.0
+        },
+        {
+          "sourceStart": 7.4,
+          "sourceEnd": 14.784625850340136,
+          "crossfadeSeconds": 0.04
+        },
+        {
+          "sourceStart": 14.784625850340136,
+          "sourceEnd": 27.695374149659862,
+          "crossfadeSeconds": 0.04
+        }
+      ]
+    },
+    "sha256": "bc81409b934e91b34e31e197bc46aa645ef31b7e40c18061a00aaa4ae26bd700"
+  },
+  {
+    "style": "adventure",
+    "title": "Spirit Of Adventure Powerful Opening",
+    "file": "adventure-pixabay-25.mp3",
+    "author": "Hot_Dope",
+    "source": "https://pixabay.com/music/main-title-spirit-of-adventure-powerful-opening-146810/",
+    "originalUrl": "https://cdn.pixabay.com/download/audio/2023/04/18/audio_122e1e8fdd.mp3?filename=hot_dope-spirit-of-adventure-powerful-opening-146810.mp3",
+    "originalFile": "spirit-of-adventure-powerful-opening-146810.mp3",
+    "originalSha256": "016b7f39104870fb6771789ce5ec36559942470cb6cf12f63c0f672aceaa4aca",
+    "license": "Pixabay Content License",
+    "licenseUrl": "https://pixabay.com/service/license-summary/",
+    "changes": "Arrangement de 25 secondes pour le mixage avec les voix du jingle : phrases musicales centrales raccourcies ou reprises, sans changement de tempo ni de hauteur ; raccords, niveau et fin musicale ajustés.",
+    "id": "jingle-bed-adventure-25-v5",
+    "version": 5,
+    "targetDuration": 25,
+    "preparedDuration": 25.0,
+    "preparation": {
+      "sourceStart": 0,
+      "sourceEnd": 30.092630385487528,
+      "phraseStart": 0,
+      "phraseEnd": 0,
+      "repetitions": 0,
+      "crossfadeSeconds": 0,
+      "fadeOutSeconds": 0.3,
+      "segments": [
+        {
+          "sourceStart": 0.0,
+          "sourceEnd": 14.020997732426304,
+          "crossfadeSeconds": 0.0
+        },
+        {
+          "sourceStart": 19.07362811791383,
+          "sourceEnd": 30.092630385487528,
+          "crossfadeSeconds": 0.04
+        }
+      ]
+    },
+    "sha256": "ae6d69cad01abc66afbf997fcd45e4ac7e263a8562b30b0aaba2ebe3fc89a7c0"
+  },
+  {
+    "style": "adventure",
+    "title": "Spirit Of Adventure Powerful Opening",
+    "file": "adventure-pixabay-35.mp3",
+    "author": "Hot_Dope",
+    "source": "https://pixabay.com/music/main-title-spirit-of-adventure-powerful-opening-146810/",
+    "originalUrl": "https://cdn.pixabay.com/download/audio/2023/04/18/audio_122e1e8fdd.mp3?filename=hot_dope-spirit-of-adventure-powerful-opening-146810.mp3",
+    "originalFile": "spirit-of-adventure-powerful-opening-146810.mp3",
+    "originalSha256": "016b7f39104870fb6771789ce5ec36559942470cb6cf12f63c0f672aceaa4aca",
+    "license": "Pixabay Content License",
+    "licenseUrl": "https://pixabay.com/service/license-summary/",
+    "changes": "Arrangement de 35 secondes pour le mixage avec les voix du jingle : phrases musicales centrales raccourcies ou reprises, sans changement de tempo ni de hauteur ; raccords, niveau et fin musicale ajustés.",
+    "id": "jingle-bed-adventure-35-v5",
+    "version": 5,
+    "targetDuration": 35,
+    "preparedDuration": 35.0,
+    "preparation": {
+      "sourceStart": 0,
+      "sourceEnd": 30.027369614512473,
+      "phraseStart": 0,
+      "phraseEnd": 0,
+      "repetitions": 0,
+      "crossfadeSeconds": 0,
+      "fadeOutSeconds": 0.3,
+      "segments": [
+        {
+          "sourceStart": 0.0,
+          "sourceEnd": 14.17562358276644,
+          "crossfadeSeconds": 0.0
+        },
+        {
+          "sourceStart": 9.122993197278912,
+          "sourceEnd": 14.17562358276644,
+          "crossfadeSeconds": 0.04
+        },
+        {
+          "sourceStart": 14.17562358276644,
+          "sourceEnd": 30.027369614512473,
+          "crossfadeSeconds": 0.04
+        }
+      ]
+    },
+    "sha256": "fdfbc44497fb761e45f415fc867d45cdf168f4e70ed50b56ae1807d34c099d62"
+  },
+  {
+    "style": "historical",
+    "title": "Short Heroic Orchestral Loop",
+    "file": "historical-pixabay-25.mp3",
+    "author": "NR-Music",
+    "source": "https://pixabay.com/music/adventure-short-heroic-orchestral-loop-541095/",
+    "originalUrl": "https://cdn.pixabay.com/download/audio/2026/06/09/audio_5cb7120e09.mp3?filename=nr-music-short-heroic-orchestral-loop-541095.mp3",
+    "originalFile": "short-heroic-orchestral-loop-541095.mp3",
+    "originalSha256": "d4b124fd2dafb4b97a0b3b6c7e84b8565c9ca10a0f0711d8d4094ecb650085f3",
+    "license": "Pixabay Content License",
+    "licenseUrl": "https://pixabay.com/service/license-summary/",
+    "changes": "Arrangement de 25 secondes pour le mixage avec les voix du jingle : phrases musicales centrales raccourcies ou reprises, sans changement de tempo ni de hauteur ; raccords, niveau et fin musicale ajustés.",
+    "id": "jingle-bed-historical-25-v5",
+    "version": 5,
+    "targetDuration": 25,
+    "preparedDuration": 25.0,
+    "preparation": {
+      "sourceStart": 0,
+      "sourceEnd": 24.03265306122449,
+      "phraseStart": 0,
+      "phraseEnd": 0,
+      "repetitions": 0,
+      "crossfadeSeconds": 0,
+      "fadeOutSeconds": 0.85,
+      "segments": [
+        {
+          "sourceStart": 0.0,
+          "sourceEnd": 24.03265306122449,
+          "crossfadeSeconds": 0.0
+        },
+        {
+          "sourceStart": 12.0,
+          "sourceEnd": 13.00734693877551,
+          "crossfadeSeconds": 0.04
+        }
+      ]
+    },
+    "sha256": "8049122fe9850754798c32bf9bf697c9ca6e5d51606108252c60be5b872f6ff8"
+  },
+  {
+    "style": "historical",
+    "title": "Short Heroic Orchestral Loop",
+    "file": "historical-pixabay-35.mp3",
+    "author": "NR-Music",
+    "source": "https://pixabay.com/music/adventure-short-heroic-orchestral-loop-541095/",
+    "originalUrl": "https://cdn.pixabay.com/download/audio/2026/06/09/audio_5cb7120e09.mp3?filename=nr-music-short-heroic-orchestral-loop-541095.mp3",
+    "originalFile": "short-heroic-orchestral-loop-541095.mp3",
+    "originalSha256": "d4b124fd2dafb4b97a0b3b6c7e84b8565c9ca10a0f0711d8d4094ecb650085f3",
+    "license": "Pixabay Content License",
+    "licenseUrl": "https://pixabay.com/service/license-summary/",
+    "changes": "Arrangement de 35 secondes pour le mixage avec les voix du jingle : phrases musicales centrales raccourcies ou reprises, sans changement de tempo ni de hauteur ; raccords, niveau et fin musicale ajustés.",
+    "id": "jingle-bed-historical-35-v5",
+    "version": 5,
+    "targetDuration": 35,
+    "preparedDuration": 35.0,
+    "preparation": {
+      "sourceStart": 0,
+      "sourceEnd": 24.03265306122449,
+      "phraseStart": 0,
+      "phraseEnd": 0,
+      "repetitions": 0,
+      "crossfadeSeconds": 0,
+      "fadeOutSeconds": 0.85,
+      "segments": [
+        {
+          "sourceStart": 0.0,
+          "sourceEnd": 24.03265306122449,
+          "crossfadeSeconds": 0.0
+        },
+        {
+          "sourceStart": 12.0,
+          "sourceEnd": 23.00734693877551,
+          "crossfadeSeconds": 0.04
+        }
+      ]
+    },
+    "sha256": "ce0a70fa3668735226f7a0793f9de0ce3fa2c7231ffcc3e6ea39eb2b56483276"
+  },
+  {
+    "style": "mysterious",
+    "title": "Cinematic of Emotions - Intro 11",
+    "file": "mysterious-pixabay-25.mp3",
+    "author": "Voidwave",
+    "source": "https://pixabay.com/music/main-title-cinematic-of-emotions-intro-11-272366/",
+    "originalUrl": "https://cdn.pixabay.com/download/audio/2024/12/04/audio_1249f28f09.mp3?filename=voidwave-cinematic-of-emotions-intro-11-272366.mp3",
+    "originalFile": "cinematic-of-emotions-intro-11-272366.mp3",
+    "originalSha256": "d9422cee3da91fab76270ba88fdaba3e12e08fd5528b4e8a166c49c3d1ae3a8c",
+    "license": "Pixabay Content License",
+    "licenseUrl": "https://pixabay.com/service/license-summary/",
+    "changes": "Arrangement de 25 secondes pour le mixage avec les voix du jingle : phrases musicales centrales raccourcies ou reprises, sans changement de tempo ni de hauteur ; raccords, niveau et fin musicale ajustés.",
+    "id": "jingle-bed-mysterious-25-v5",
+    "version": 5,
+    "targetDuration": 25,
+    "preparedDuration": 25.0,
+    "preparation": {
+      "sourceStart": 0,
+      "sourceEnd": 29.54,
+      "phraseStart": 0,
+      "phraseEnd": 0,
+      "repetitions": 0,
+      "crossfadeSeconds": 0,
+      "fadeOutSeconds": 0.4,
+      "segments": [
+        {
+          "sourceStart": 0.0,
+          "sourceEnd": 10.27,
+          "crossfadeSeconds": 0.0
+        },
+        {
+          "sourceStart": 14.77,
+          "sourceEnd": 29.54,
+          "crossfadeSeconds": 0.04
+        }
+      ]
+    },
+    "sha256": "31e407ee6c73a8e68a0f40fb69596ccc0eac7d0996a10ef2819cb7809f6faa62"
+  },
+  {
+    "style": "mysterious",
+    "title": "Cinematic of Emotions - Intro 11",
+    "file": "mysterious-pixabay-35.mp3",
+    "author": "Voidwave",
+    "source": "https://pixabay.com/music/main-title-cinematic-of-emotions-intro-11-272366/",
+    "originalUrl": "https://cdn.pixabay.com/download/audio/2024/12/04/audio_1249f28f09.mp3?filename=voidwave-cinematic-of-emotions-intro-11-272366.mp3",
+    "originalFile": "cinematic-of-emotions-intro-11-272366.mp3",
+    "originalSha256": "d9422cee3da91fab76270ba88fdaba3e12e08fd5528b4e8a166c49c3d1ae3a8c",
+    "license": "Pixabay Content License",
+    "licenseUrl": "https://pixabay.com/service/license-summary/",
+    "changes": "Arrangement de 35 secondes pour le mixage avec les voix du jingle : phrases musicales centrales raccourcies ou reprises, sans changement de tempo ni de hauteur ; raccords, niveau et fin musicale ajustés.",
+    "id": "jingle-bed-mysterious-35-v5",
+    "version": 5,
+    "targetDuration": 35,
+    "preparedDuration": 35.0,
+    "preparation": {
+      "sourceStart": 0,
+      "sourceEnd": 30.58,
+      "phraseStart": 0,
+      "phraseEnd": 0,
+      "repetitions": 0,
+      "crossfadeSeconds": 0,
+      "fadeOutSeconds": 0.3,
+      "segments": [
+        {
+          "sourceStart": 0.0,
+          "sourceEnd": 14.77,
+          "crossfadeSeconds": 0.0
+        },
+        {
+          "sourceStart": 10.27,
+          "sourceEnd": 14.77,
+          "crossfadeSeconds": 0.04
+        },
+        {
+          "sourceStart": 14.77,
+          "sourceEnd": 30.58,
+          "crossfadeSeconds": 0.04
+        }
+      ]
+    },
+    "sha256": "27e4269b2f25dbee3de7e699a71aed1cdd4bb12b5091305dcbe1ea850e6488ab"
+  },
+  {
+    "style": "serious",
+    "title": "Flash News 30 Seconds Buildup",
+    "file": "serious-pixabay-25.mp3",
+    "author": "Sonican",
+    "source": "https://pixabay.com/music/upbeat-flash-news-30-seconds-buildup-431803/",
+    "originalUrl": "https://cdn.pixabay.com/download/audio/2025/11/05/audio_a089884a2d.mp3?filename=sonican-flash-news-30-seconds-buildup-431803.mp3",
+    "originalFile": "flash-news-30-seconds-buildup-431803.mp3",
+    "originalSha256": "addbcb52dcdbb62fea966410aafe2b5a5a6c70c86bdac1ae6776d5799667ab1d",
+    "license": "Pixabay Content License",
+    "licenseUrl": "https://pixabay.com/service/license-summary/",
+    "changes": "Arrangement de 25 secondes pour le mixage avec les voix du jingle : phrases musicales centrales raccourcies ou reprises, sans changement de tempo ni de hauteur ; raccords, niveau et fin musicale ajustés.",
+    "id": "jingle-bed-serious-25-v5",
+    "version": 5,
+    "targetDuration": 25,
+    "preparedDuration": 25.0,
+    "preparation": {
+      "sourceStart": 0,
+      "sourceEnd": 27.943219954648526,
+      "phraseStart": 0,
+      "phraseEnd": 0,
+      "repetitions": 0,
+      "crossfadeSeconds": 0,
+      "fadeOutSeconds": 0.3,
+      "segments": [
+        {
+          "sourceStart": 0.0,
+          "sourceEnd": 13.442993197278911,
+          "crossfadeSeconds": 0.0
+        },
+        {
+          "sourceStart": 16.346213151927437,
+          "sourceEnd": 27.943219954648526,
+          "crossfadeSeconds": 0.04
+        }
+      ]
+    },
+    "sha256": "92e4786620ef9ed2e1658e7f8715edf32d8be547d70d1db47733aebc5d5e32f8"
+  },
+  {
+    "style": "serious",
+    "title": "Flash News 30 Seconds Buildup",
+    "file": "serious-pixabay-35.mp3",
+    "author": "Sonican",
+    "source": "https://pixabay.com/music/upbeat-flash-news-30-seconds-buildup-431803/",
+    "originalUrl": "https://cdn.pixabay.com/download/audio/2025/11/05/audio_a089884a2d.mp3?filename=sonican-flash-news-30-seconds-buildup-431803.mp3",
+    "originalFile": "flash-news-30-seconds-buildup-431803.mp3",
+    "originalSha256": "addbcb52dcdbb62fea966410aafe2b5a5a6c70c86bdac1ae6776d5799667ab1d",
+    "license": "Pixabay Content License",
+    "licenseUrl": "https://pixabay.com/service/license-summary/",
+    "changes": "Arrangement de 35 secondes pour le mixage avec les voix du jingle : phrases musicales centrales raccourcies ou reprises, sans changement de tempo ni de hauteur ; raccords, niveau et fin musicale ajustés.",
+    "id": "jingle-bed-serious-35-v5",
+    "version": 5,
+    "targetDuration": 35,
+    "preparedDuration": 35.0,
+    "preparation": {
+      "sourceStart": 0,
+      "sourceEnd": 27.338072562358278,
+      "phraseStart": 0,
+      "phraseEnd": 0,
+      "repetitions": 0,
+      "crossfadeSeconds": 0,
+      "fadeOutSeconds": 0.3,
+      "segments": [
+        {
+          "sourceStart": 0.0,
+          "sourceEnd": 15.986916099773243,
+          "crossfadeSeconds": 0.0
+        },
+        {
+          "sourceStart": 8.244988662131519,
+          "sourceEnd": 15.986916099773243,
+          "crossfadeSeconds": 0.04
+        },
+        {
+          "sourceStart": 15.986916099773243,
+          "sourceEnd": 27.338072562358278,
+          "crossfadeSeconds": 0.04
+        }
+      ]
+    },
+    "sha256": "64f6ea9cdc5d75aa84e7dc4dd8ad713d4176731cb233499d6936133a52007424"
+  }
+]

@@ -1,0 +1,25 @@
+Podcast Facile — composants de transcription locale
+
+Le module audio/transcription.worker.ts utilise :
+
+Transformers.js 3.8.1 — Hugging Face
+https://github.com/huggingface/transformers.js
+Licence Apache 2.0 : transformers-Apache-2.0.txt
+
+Whisper Tiny multilingue, conversion et quantification ONNX Xenova
+https://huggingface.co/Xenova/whisper-tiny
+Révision : 5332fcc35e32a33b86612b9a57a89be7906102b1
+Licence de cette conversion ONNX : Apache 2.0 (fiche du modèle Xenova).
+Texte : transformers-Apache-2.0.txt
+Modèle original : OpenAI Whisper, https://github.com/openai/whisper
+Les fichiers du modèle sont téléchargés au premier usage dans le cache du navigateur.
+
+ONNX Runtime Web — Microsoft
+https://github.com/microsoft/onnxruntime
+Licence MIT : onnxruntime-MIT.txt
+
+Jinja — Hugging Face
+https://github.com/huggingface/jinja
+Licence MIT : jinja-MIT.txt
+
+Le texte de ces licences accompagne les fichiers distribués de l’application.
