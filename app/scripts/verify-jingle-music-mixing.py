@@ -7,11 +7,13 @@ types = Path("app/src/types.ts").read_text(encoding="utf-8")
 engine = Path("app/src/audio/engine.ts").read_text(encoding="utf-8")
 styles = Path("app/src/styles.css").read_text(encoding="utf-8")
 
+jingle = Path("app/src/components/JingleWizard.tsx").read_text(encoding="utf-8")
+
 checks = {
     "marqueur App": "20260807-jingle-music-mixing-1" in app,
     "curseur musique autonome": 'title="Volume de la musique"' in app and "update('musicVolume', value)" in app,
     "curseur musique de fond": "block.background.volume" in app,
-    "curseur musique jingle": "jingle.musicVolume" in app,
+    "curseur musique jingle": "jingle.musicVolume" in jingle,
     "accessibilité du curseur": 'aria-label={title}' in app,
     "compatibilité des anciens projets": "standaloneMusicFallback" in app and "backgroundMusicFallback" in app,
     "types optionnels": types.count("musicVolume?: number;") == 2 and "volume?: number;" in types,

@@ -28,9 +28,7 @@ assert 'startBeforeSeconds: 2' in app
 assert 'continueAfterSeconds: 2' in app
 assert 'BackgroundTimingControl' in app
 
-jingle_start = app.index('function JingleSettings(')
-jingle_end = app.index('\n\nfunction AudioLibraryModal', jingle_start)
-jingle_editor = app[jingle_start:jingle_end]
+jingle_editor = (ROOT / 'src' / 'components' / 'JingleWizard.tsx').read_text(encoding='utf-8')
 assert 'ChoiceSetting title="Durée"' not in jingle_editor
 assert 'getBlockDuration(block, project.assets)' in engine
 assert 'jingleLeadIn(block) + voice.duration + Math.max(jingleTail(block), closingTail)' in engine

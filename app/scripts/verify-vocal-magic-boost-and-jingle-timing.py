@@ -7,16 +7,19 @@ app = (ROOT / 'src' / 'App.tsx').read_text(encoding='utf-8')
 engine = (ROOT / 'src' / 'audio' / 'engine.ts').read_text(encoding='utf-8')
 types = (ROOT / 'src' / 'types.ts').read_text(encoding='utf-8')
 
+jingle = (ROOT / 'src' / 'components' / 'JingleWizard.tsx').read_text(encoding='utf-8')
+voice_settings = (ROOT / 'src' / 'components' / 'VoiceSettings.tsx').read_text(encoding='utf-8')
+
 checks = {
     'type Magic Boost': "export type VoiceEnhancement = 'natural' | 'magic-boost';" in types,
     'bloc vocal réglable': 'voiceEnhancement?: VoiceEnhancement;' in types,
     'jingle vocal réglable': types.count('voiceEnhancement?: VoiceEnhancement;') == 2,
     'durées de jingle': 'musicLeadSeconds?: 1 | 2 | 3 | 4;' in types and 'musicTailSeconds?: 1 | 2 | 3 | 4;' in types,
-    'contrôle Magic Boost voix': 'Traitement vocal' in app and 'voiceEnhancementLabels' in app,
-    'contrôle Magic Boost jingle': 'Traitement de la voix' in app,
-    'préréglages avant': 'title="Musique avant la voix"' in app,
-    'préréglages après': 'title="Musique après la voix"' in app,
-    'valeurs par défaut': "musicLeadSeconds: 2, musicTailSeconds: 3" in app,
+    'contrôle Magic Boost sur la trame': 'Clarté' in voice_settings and 'magic-boost' in voice_settings and 'voiceEnhancementLabels' not in app,
+    'trois prises guidées': "['Style', 'Titre', 'Intro', 'Accroche', 'Écouter']" in jingle,
+    'départ musical réservé': 'JINGLE_LEAD' in jingle,
+    'fin musicale réservée': 'JINGLE_TAIL' in jingle,
+    'valeurs par défaut': "production: 'guided-v5'" in app,
     'égalisation de la voix': 'warmth.frequency.value = 160;' in engine and 'presence.frequency.value = 2800;' in engine,
     'compression de la voix': 'compressor.threshold.value = -20;' in engine and 'compressor.ratio.value = 3;' in engine,
     'limiteur de la voix': 'limiter.threshold.value = -1.2;' in engine and 'limiter.ratio.value = 20;' in engine,

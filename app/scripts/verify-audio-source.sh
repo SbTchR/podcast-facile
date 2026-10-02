@@ -28,6 +28,11 @@ python3 app/scripts/verify-real-transitions-and-previews.py
 python3 app/scripts/verify-jingle-music-mixing.py
 python3 app/scripts/verify-vocal-magic-boost-and-jingle-timing.py
 node app/scripts/verify-section-playback-order.mjs
+node app/scripts/verify-library-preview.mjs
+node app/scripts/verify-section-layers.mjs
+node app/scripts/verify-section-timeline.mjs
+node app/scripts/verify-guided-jingle.mjs
+node app/scripts/verify-jingle-endings.mjs
 
 for id in \
   sfx-horse-gallop-pavement \
@@ -67,7 +72,7 @@ grep -q "Chocs, impacts, transitions" app/src/data/audioLibrary.ts
 grep -q "distant: 'Caverne'" app/src/App.tsx
 grep -q "Plage du fichier" app/src/App.tsx
 grep -q "Volume de la transition" app/src/App.tsx
-grep -q "removeJingleAsset" app/src/App.tsx
+grep -q "loadJingleBed" app/src/components/JingleWizard.tsx
 
 grep -q "Les sons de la bibliothèque proviennent de sources libres ou sous licence" app/src/App.tsx
 ! grep -q "Les sons intégrés sont produits directement par l’application" app/src/App.tsx

@@ -57,9 +57,11 @@ assert 'cue.sourceEnd ?? legacyEnd' in engine
 
 for style in ['dynamic', 'adventure', 'mysterious', 'serious', 'historical', 'modern-radio']:
     assert f'{style}:' in engine or f"'{style}':" in engine
-assert 'removeJingleAsset' in app
-assert 'jingle-style-description' in app
-assert "historical: 'Historique'" in app
+jingle = (ROOT / 'src' / 'components' / 'JingleWizard.tsx').read_text(encoding='utf-8')
+studio = (ROOT / 'src' / 'audio' / 'jingleStudio.ts').read_text(encoding='utf-8')
+assert 'jingle.takes' in jingle and 'Recommencer' in jingle
+assert 'bed.effect' in jingle and 'loadJingleBed' in jingle
+assert "label: 'Historique'" in studio
 
 items_by_id = {item['id']: item for item in items}
 for item_id in expected_sfx | expected_music:

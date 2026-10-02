@@ -6,7 +6,10 @@ test -s app/dist/audio-credits.html
 test -s app/dist/audio-diagnostics.html
 test -n "$(find app/dist/assets -maxdepth 1 -name '*.js' -print -quit)"
 test -n "$(find app/dist/assets -maxdepth 1 -name '*.css' -print -quit)"
-! grep -R "DecompressionStream\|pako\.ungzip\|\.js\.gz\|structuredClone(" app/dist/index.html app/dist/assets/*.js
+if grep -q "DecompressionStream\|pako\.ungzip\|\.js\.gz\|structuredClone(" app/dist/index.html app/dist/assets/index-*.js; then
+  echo "Le code principal contient une ancienne dépendance de sérialisation." >&2
+  exit 1
+fi
 grep -q '<script type="module"' app/dist/index.html
 grep -q "createMediaStreamDestination" app/dist/assets/*.js
 grep -q "play-and-record" app/dist/assets/*.js
@@ -40,9 +43,16 @@ grep -q "Pop vocal" app/dist/assets/*.js
 grep -q "Volume de la musique" app/dist/assets/*.js
 grep -q "0 % = muet" app/dist/assets/*.js
 grep -q "music-volume-slider" app/dist/assets/*.js app/dist/assets/*.css
-grep -q "Magic Boost" app/dist/assets/*.js
-grep -q "Musique avant la voix" app/dist/assets/*.js
-grep -q "Musique après la voix" app/dist/assets/*.js
+grep -q "guided-v3" app/dist/assets/*.js
+grep -q "Voix améliorée" app/dist/assets/*.js
+grep -q "Transcrire cet essai" app/dist/assets/*.js
+grep -q "guided-v5" app/dist/assets/*.js
+test -n "$(find app/dist/assets -maxdepth 1 -name 'transcription.worker-*.js' -print -quit)"
+test -n "$(find app/dist/assets -maxdepth 1 -name 'ort-wasm-*.wasm' -print -quit)"
+test -s app/dist/licenses/transcription-notices.txt
+grep -q "Une musique pour ton jingle" app/dist/assets/*.js
+grep -q "Présentation" app/dist/assets/*.js
+grep -q "Accroche" app/dist/assets/*.js
 
 for id in \
   sfx-horse-gallop-pavement \
@@ -80,4 +90,24 @@ grep -q "library-source-link" app/dist/assets/*.js app/dist/assets/*.css
 ! grep -q "generated:\|synthesizeGeneratedEffect\|loadGeneratedAudio\|Créé dans l’application\|disponible hors ligne" app/dist/assets/*.js
 ! grep -q "Chocs métalliques / épées" app/dist/assets/*.js
 
+
+for style in dynamic adventure historical mysterious serious modern-radio; do
+  test -s "app/dist/audio/jingles/$style.mp3"
+  test -s "app/dist/audio/jingles/$style-25.mp3"
+  test -s "app/dist/audio/jingles/$style-35.mp3"
+done
+
+for style in dynamic adventure historical mysterious serious; do
+  test -s "app/dist/audio/jingles/$style-pixabay-25.mp3"
+  test -s "app/dist/audio/jingles/$style-pixabay-35.mp3"
+done
+grep -q "Pixabay Content License" app/dist/assets/*.js
+grep -q "Hurry Funk Intro" app/dist/assets/*.js
+grep -q "passer à 35 secondes" app/dist/assets/*.js
+
+for ending in bell horn ship drumroll bicycle doorbell; do
+  test -s "app/dist/audio/jingle-endings/$ending.wav"
+done
+grep -q "Bruitages →" app/dist/assets/*.js
+grep -q "jingle-ending-drumroll" app/dist/assets/*.js
 echo "Build audio vérifié."
