@@ -9,7 +9,7 @@ import { applySectionArrangement } from './audio/sectionTimeline';
 import { JingleWizard } from './components/JingleWizard';
 import { VoiceScript } from './components/VoiceScript';
 import { isGuidedJingle } from './audio/jinglePlan';
-import { JINGLE_CREDIT_BEDS } from './data/jingleBeds';
+import { JINGLE_CREDIT_BEDS, getJingleBed } from './data/jingleBeds';
 import { JINGLE_CREDIT_ENDINGS } from './data/jingleEndings';
 import { AUDIO_LIBRARY, LIBRARY_CATEGORIES, SOUND_CATEGORIES, availableLibrarySounds, loadLibraryAudio, type LibraryKind, type LibraryPreset, type SoundGroup } from './data/audioLibrary';
 import {
@@ -306,7 +306,7 @@ function makeBlock(type: BlockType, sectionId: string): PodcastBlock {
     voiceCues: type === 'voice' ? [] : undefined,
     transitionPreset: undefined,
     transitionVolume: type === 'transition' ? 'normal' : undefined,
-    jingle: type === 'jingle' ? { style: 'modern-radio', musicLevel: 'low', musicVolume: 32, production: 'guided-v5', signatureFx: false } : undefined,
+    jingle: type === 'jingle' ? { style: 'modern-radio', musicLevel: 'low', musicVolume: 32, production: 'guided-v6', bedId: getJingleBed('modern-radio', undefined, 'extended').id, signatureFx: false } : undefined,
   };
 }
 
@@ -746,19 +746,7 @@ function App() {
         <div className="editor-intro">
           <div>
             <h1>{project.title}</h1>
-            <p>Construis chaque partie avec les voix, puis les musiques de fond et enfin les ambiances et bruitages.</p>
           </div>
-        </div>
-
-        <div className="workflow-guide" aria-label="Les étapes de ton podcast">
-          <div className="workflow-start"><span className="workflow-number">1</span><div><strong>Enregistre ta voix</strong><p>Présente ton sujet en quelques phrases.</p></div><button className="primary-button compact" onClick={() => {
-            const section = project.sections.find((item) => item.guideType === 'introduction') ?? project.sections.find((item) => item.kind !== 'jingle');
-            if (section) addVoice(section.id);
-            else setAddSectionOpen(true);
-          }}>🎙 Enregistrer une voix</button></div>
-          <div><span className="workflow-number">2</span><div><strong>Place les musiques</strong><p>Écoute les fonds avec tes voix.</p></div></div>
-          <div><span className="workflow-number">3</span><div><strong>Ajoute les sons</strong><p>Place les ambiances et bruitages sur la trame.</p></div></div>
-          <div><span className="workflow-number">4</span><div><strong>Écoute et télécharge</strong><p>Utilise le lecteur, puis « Télécharger ».</p></div></div>
         </div>
 
         {project.sections.map((section, sectionIndex) => {

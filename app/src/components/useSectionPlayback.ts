@@ -6,6 +6,8 @@ import type { PreviewSession } from '../audio/libraryPreview';
 export function useSectionPlayback(project: PodcastProject) {
   const [position, setPosition] = useState(0);
   const [status, setStatus] = useState<'stopped' | 'loading' | 'playing'>('stopped');
+  const statusRef = useRef(status);
+  const positionRef = useRef(position); positionRef.current = position;
   const [error, setError] = useState('');
   const live = useRef(project); live.current = project;
   const session = useRef<PreviewSession | null>(null);
@@ -17,30 +19,30 @@ export function useSectionPlayback(project: PodcastProject) {
     if (timer.current) window.clearInterval(timer.current);
     timer.current = undefined;
     const playing = session.current; session.current = null;
-    if (playing) { setPosition(playing.getElapsed()); void Promise.resolve(playing.stop()).catch(() => undefined); }
-    setStatus('stopped');
+    if (playing) { positionRef.current = playing.getElapsed(); setPosition(positionRef.current); void Promise.resolve(playing.stop()).catch(() => undefined); }
+    statusRef.current = 'stopped'; setStatus('stopped');
   }, []);
   useEffect(() => {
     const listener = (event: Event) => { if ((event as CustomEvent).detail !== owner.current) stop(); };
     window.addEventListener('podcast-facile-stop-preview', listener);
     return () => { window.removeEventListener('podcast-facile-stop-preview', listener); stop(); };
   }, [stop]);
-  const seek = (at: number) => { stop(); setPosition(at); };
+  const seek = (at: number) => { stop(); positionRef.current = at; setPosition(at); };
   const toggle = async () => {
-    if (status !== 'stopped') { stop(); return; }
+    if (statusRef.current !== 'stopped') { stop(); return; }
     window.dispatchEvent(new CustomEvent('podcast-facile-stop-preview', { detail: owner.current }));
     const token = ++request.current;
-    setError(''); setStatus('loading');
+    setError(''); statusRef.current = 'loading'; setStatus('loading');
     try {
       const duration = getProjectDuration(live.current);
-      const playing = await playProject(live.current, position >= duration - .05 ? 0 : Math.max(0, position));
+      const playing = await playProject(live.current, positionRef.current >= duration - .05 ? 0 : Math.max(0, positionRef.current));
       if (token !== request.current) { await playing.stop(); return; }
-      session.current = playing; setStatus('playing');
+      session.current = playing; statusRef.current = 'playing'; setStatus('playing');
       timer.current = window.setInterval(() => {
         const now = playing.getElapsed(); setPosition(now);
         if (now >= playing.totalDuration - .04) { stop(); setPosition(0); }
       }, 60);
-    } catch (reason) { if (token === request.current) { setStatus('stopped'); setError(reason instanceof Error ? reason.message : 'Impossible de lire cette partie.'); } }
+    } catch (reason) { if (token === request.current) { statusRef.current = 'stopped'; setStatus('stopped'); setError(reason instanceof Error ? reason.message : 'Impossible de lire cette partie.'); } }
   };
   return { position, status, error, stop, seek, toggle };
 }

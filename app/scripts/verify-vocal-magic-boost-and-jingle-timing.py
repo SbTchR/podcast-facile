@@ -19,7 +19,7 @@ checks = {
     'trois prises guidées': "['Style', 'Titre', 'Intro', 'Accroche', 'Écouter']" in jingle,
     'départ musical réservé': 'JINGLE_LEAD' in jingle,
     'fin musicale réservée': 'JINGLE_TAIL' in jingle,
-    'valeurs par défaut': "production: 'guided-v5'" in app,
+    'valeurs par défaut': "production: 'guided-v6'" in app and "getJingleBed('modern-radio', undefined, 'extended').id" in app,
     'égalisation de la voix': 'warmth.frequency.value = 160;' in engine and 'presence.frequency.value = 2800;' in engine,
     'compression de la voix': 'compressor.threshold.value = -20;' in engine and 'compressor.ratio.value = 3;' in engine,
     'limiteur de la voix': 'limiter.threshold.value = -1.2;' in engine and 'limiter.ratio.value = 20;' in engine,

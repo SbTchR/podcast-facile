@@ -407,20 +407,20 @@ async function scheduleVoiceBlock(
       const bgStart = start;
       const voiceStartRelative = Math.max(0, pre - localOffset);
       const voiceRemaining = Math.max(0, coreTimelineDuration - Math.max(0, localOffset - pre));
-      bgGain.gain.setValueAtTime(0.0001, bgStart);
-      bgGain.gain.linearRampToValueAtTime(level * 1.35, bgStart + Math.min(0.5, remainingTotal / 4));
+      bgGain.gain.setValueAtTime(block.voiceCutStart ? level : 0.0001, bgStart);
+      if (!block.voiceCutStart) bgGain.gain.linearRampToValueAtTime(level * 1.35, bgStart + Math.min(0.5, remainingTotal / 4));
       if (voiceRemaining > 0) {
         bgGain.gain.linearRampToValueAtTime(level, bgStart + voiceStartRelative + 0.08);
         bgGain.gain.setValueAtTime(level, bgStart + voiceStartRelative + voiceRemaining);
         if (post > 0) bgGain.gain.linearRampToValueAtTime(level * 1.25, Math.min(bgStart + remainingTotal, bgStart + voiceStartRelative + voiceRemaining + 0.18));
       }
-      bgGain.gain.linearRampToValueAtTime(0.0001, bgStart + remainingTotal);
+      if (!block.voiceCutEnd) bgGain.gain.linearRampToValueAtTime(0.0001, bgStart + remainingTotal);
       const bgBuffer = await decodeAsset(context, background, cache);
       const bgSource = context.createBufferSource();
       bgSource.buffer = bgBuffer;
       bgSource.loop = true;
       bgSource.connect(bgGain);
-      bgSource.start(bgStart, localOffset % bgBuffer.duration);
+      bgSource.start(bgStart, ((block.background.sourceOffsetSeconds ?? 0) + localOffset) % bgBuffer.duration);
       bgSource.stop(bgStart + remainingTotal + 0.03);
     }
   }
@@ -440,8 +440,8 @@ async function scheduleVoiceBlock(
       block.trimStart + consumedVoiceSource,
       voiceDuration,
       voiceVolumeValue(block.volume),
-      block.fadeIn === 'none' ? 'short' : block.fadeIn,
-      block.fadeOut === 'none' ? 'short' : block.fadeOut,
+      block.fadeIn === 'none' && !block.voiceCutStart ? 'short' : block.fadeIn,
+      block.fadeOut === 'none' && !block.voiceCutEnd ? 'short' : block.fadeOut,
       block.voiceEffect,
       block.voiceEnhancement ?? 'magic-boost',
     );
@@ -472,7 +472,7 @@ async function scheduleVoiceBlock(
       cueDuration - consumedCue,
       voiceCueValue(cue.level),
       'none',
-      'short',
+      cue.cutEnd ? 'none' : 'short',
     );
   }
 }

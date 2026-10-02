@@ -6,9 +6,9 @@ Transformers.js 3.8.1 — Hugging Face
 https://github.com/huggingface/transformers.js
 Licence Apache 2.0 : transformers-Apache-2.0.txt
 
-Whisper Tiny multilingue, conversion et quantification ONNX Xenova
-https://huggingface.co/Xenova/whisper-tiny
-Révision : 5332fcc35e32a33b86612b9a57a89be7906102b1
+Whisper Small multilingue, conversion et quantification ONNX Xenova
+https://huggingface.co/Xenova/whisper-small
+Révision : 2d67713f236afa48a18992566e7647f6ca848e13
 Licence de cette conversion ONNX : Apache 2.0 (fiche du modèle Xenova).
 Texte : transformers-Apache-2.0.txt
 Modèle original : OpenAI Whisper, https://github.com/openai/whisper

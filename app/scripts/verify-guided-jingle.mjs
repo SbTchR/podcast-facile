@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { loadAudioEngine, typescriptModuleUrl } from './audio-test-module.mjs';
 const { getBlockDuration } = await loadAudioEngine();
 const { getGuidedJinglePlan, JINGLE_LEAD, JINGLE_TAIL } = await import(await typescriptModuleUrl(new URL('../src/audio/jinglePlan.ts',import.meta.url)));
+const { composedJingleMusicEnvelope } = await import(await typescriptModuleUrl(new URL('../src/audio/guidedJingle.ts',import.meta.url)));
 const { JINGLE_BEDS, JINGLE_STYLES, JINGLE_CREDIT_BEDS, getJingleBed, getJingleVariants } = await import(await typescriptModuleUrl(new URL('../src/data/jingleBeds.ts',import.meta.url)));
 const assets = [{id:'music',duration:16},{id:'title',duration:2},{id:'intro',duration:2.6},{id:'hook',duration:2.3}];
 const block = { type:'jingle',jingle:{production:'guided-v3',musicAssetId:'music',style:'dynamic',takes:{title:{assetId:'title',sourceStart:0,sourceEnd:2},intro:{assetId:'intro',sourceStart:0,sourceEnd:2.6},hook:{assetId:'hook',sourceStart:0,sourceEnd:2.3}}}};
@@ -119,6 +120,68 @@ const overlongAssets=tightAssets.map(asset=>asset.id==='intro'?{...asset,duratio
 const overlong={...tight,jingle:{...tight.jingle,takes:{...tight.jingle.takes,intro:{assetId:'intro',sourceStart:0,sourceEnd:12}}}};
 assert.equal(getBlockDuration(overlong,overlongAssets),0,'Do not truncate an overlong recording.');
 assert.equal(getGuidedJinglePlan(overlong,overlongAssets.map(asset=>asset.id==='music'?{...asset,duration:35}:asset)).ready,true,'Switching to 35 seconds keeps all four takes usable.');
+// The new composition separates every spoken phrase and uses the second take
+// after the presentation, rather than using it as the first title's echo.
+const composed = {...dual,jingle:{...dual.jingle,production:'guided-v6',takes:{}}};
+const sequenceAssets=[{id:'music',duration:25},{id:'title',duration:1.5},{id:'title-alt',duration:1.4},{id:'intro',duration:4},{id:'hook',duration:3}];
+const sequence={...composed,jingle:{...composed.jingle,takes:Object.fromEntries(sequenceAssets.filter(asset=>asset.id!=='music').map(asset=>[asset.id,{assetId:asset.id,sourceStart:0,sourceEnd:asset.duration}]))}};
+const sequencePlan=getGuidedJinglePlan(sequence,sequenceAssets);
+assert.equal(sequencePlan.ready,true);
+assert.equal(getBlockDuration(sequence,sequenceAssets),25);
+assert.deepEqual(sequencePlan.voices.map(cue=>[cue.part,cue.echo]),[['title',false],['title',true],['intro',false],['title-alt',false],['hook',false]],'The echo repeats take 1; take 2 belongs after the presentation.');
+const [firstTitle,echo,presentation,secondTitle,hook]=sequencePlan.voices;
+const close=(actual,expected,message)=>assert.ok(Math.abs(actual-expected)<1e-6,message);
+close(echo.start-firstTitle.start-firstTitle.duration,0,'The echo follows the first title immediately, without overlapping.');
+close(presentation.start-echo.start-echo.duration,2,'Reserve exactly two seconds of music after the echo.');
+assert.ok(secondTitle.start-presentation.start-presentation.duration>=2,'Leave a few seconds of music after the presentation.');
+close(hook.start-secondTitle.start-secondTitle.duration,1.5,'Reserve exactly 1.5 seconds of music after title 2.');
+assert.ok(sequencePlan.total-sequencePlan.outroStart>=JINGLE_TAIL-.001);
+for(let i=1;i<sequencePlan.voices.length;i++) assert.ok(sequencePlan.voices[i].start>=sequencePlan.voices[i-1].start+sequencePlan.voices[i-1].duration,'No spoken phrases overlap.');
+const points=composedJingleMusicEnvelope(sequencePlan,1,.32);
+const levelAt=at=>{
+  for(let i=1;i<points.length;i++) if(at<=points[i][0]) {
+    const [before,from]=points[i-1], [after,to]=points[i];
+    return from+(to-from)*(at-before)/(after-before);
+  }
+  return points.at(-1)[1];
+};
+for(const cue of sequencePlan.voices) close(levelAt(cue.start+cue.duration/2),.32,'Music stays at the selected level throughout each spoken phrase.');
+for(let i=1;i<sequencePlan.voices.length;i++) {
+  const previous=sequencePlan.voices[i-1], next=sequencePlan.voices[i];
+  if (next.start - previous.start - previous.duration > .001) close(levelAt((previous.start+previous.duration+next.start)/2),1,'Music rises in every actual space between voices.');
+  else close(levelAt(next.start),.32,'The title and its adjacent echo share a continuous music level.');
+}
+close(levelAt(sequencePlan.outroStart+1),1.35,'The final music remains stronger than the opening.');
+for(const total of [25,35]) {
+  for(const fraction of [.5,.8,1]) {
+    const available=[{id:'music',duration:total}];
+    const recorded={...composed,jingle:{...composed.jingle,takes:{}}};
+    for(const part of ['title','title-alt','intro','hook']) {
+      const maximum=getGuidedJinglePlan(recorded,available).limits[part];
+      const duration=Math.floor(maximum*fraction*10)/10;
+      assert.ok(duration>=.15,'Every step reserves useful time for all later recordings.');
+      available.push({id:part,duration});
+      recorded.jingle.takes[part]={assetId:part,sourceStart:0,sourceEnd:duration};
+      const after=getGuidedJinglePlan(recorded,available);
+      for(const earlier of Object.keys(recorded.jingle.takes)) assert.ok(after.durations[earlier]<=after.limits[earlier]+.025,'Recording within the displayed budget preserves every earlier take.');
+    }
+    const finished=getGuidedJinglePlan(recorded,available);
+    assert.equal(finished.ready,true,'All displayed limits fit the new composition, even when recorded at their maximum.');
+    assert.ok(finished.total-finished.outroStart>=JINGLE_TAIL-.001);
+    assert.ok(finished.musicBreaks.afterIntro>=2&&finished.musicBreaks.afterIntro<=(total===25?3:4),'Keep the middle music break short; spare time goes to the ending.');
+    for(const part of ['title','title-alt','intro','hook']) {
+      const maximum=finished.limits[part];
+      const replacedAssets=available.map(asset=>asset.id===part?{...asset,duration:maximum}:asset);
+      const replaced={...recorded,jingle:{...recorded.jingle,takes:{...recorded.jingle.takes,[part]:{assetId:part,sourceStart:0,sourceEnd:maximum}}}};
+      assert.equal(getGuidedJinglePlan(replaced,replacedAssets).ready,true,'Replacing a take never truncates the other voices or music breaks.');
+    }
+  }
+}
+const longSequence={...sequence,jingle:{...sequence.jingle,takes:{...sequence.jingle.takes,intro:{assetId:'intro',sourceStart:0,sourceEnd:8}}}};
+const longSequenceAssets=sequenceAssets.map(asset=>asset.id==='intro'?{...asset,duration:8}:asset);
+assert.equal(getGuidedJinglePlan(longSequence,longSequenceAssets).ready,false,'Do not shorten a spoken phrase to force the 25-second arrangement.');
+assert.equal(getGuidedJinglePlan(longSequence,longSequenceAssets.map(asset=>asset.id==='music'?{...asset,duration:35}:asset)).ready,true,'The 35-second option keeps the same voices and the requested music breaks.');
+assert.equal(getBlockDuration(sequence,sequenceAssets.filter(asset=>asset.id!=='title-alt')),0,'The second intonation remains required.');
 const sources=JSON.parse(await readFile(new URL('../public/audio/jingles/sources.json',import.meta.url),'utf8'));
 for(const bed of JINGLE_CREDIT_BEDS){
   const path=new URL(`../public/audio/jingles/${bed.filename}`,import.meta.url);
@@ -134,4 +197,4 @@ for(const bed of JINGLE_CREDIT_BEDS){
 }
 const wizard=await readFile(new URL('../src/components/JingleWizard.tsx',import.meta.url),'utf8');
 assert.ok(!wizard.includes('onOpenLibrary')&&!wizard.includes('closingAssetId'),'Jingle creation must use automatic beds and their musical endings.');
-console.log('Guided jingles: six styles with 25/35-second beds, saved duration choices, adaptive budgets, retained takes, overrun protection, music files and legacy credits verified.');
+console.log('Guided jingles: ordered voices, immediate echo with no music pulse, every musical lift, 25/35-second recording budgets, legacy timing, retained takes, overrun protection, music files and credits verified.');

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { AudioAsset } from '../types';
 import { LocalTranscriber, transcriptionSamples, type TranscriptLanguage, type TranscriptionProgress } from '../audio/transcription';
+import { TRANSCRIPTION_MODEL } from '../audio/transcriptionModels';
 
 export function VoiceScript({ value, onChange, asset, start, end, disabled, onBusyChange }: {
   value: string; onChange: (text: string) => void; asset?: AudioAsset; start?: number; end?: number; disabled?: boolean; onBusyChange: (busy: boolean) => void;
@@ -41,7 +42,7 @@ export function VoiceScript({ value, onChange, asset, start, end, disabled, onBu
   return <div className="voice-script">
     <label className="field"><span>Texte à lire <small>facultatif</small></span><textarea rows={5} value={value} onChange={event => onChange(event.target.value)} placeholder="Écris ton texte ici, ou transcris un premier essai enregistré depuis ta feuille." /></label>
     {asset && <div className="transcript-actions"><button className="secondary-button compact" disabled={disabled || Boolean(progress)} onClick={() => void transcribe()}>Transcrire cet essai</button><label>Langue <select aria-label="Langue de la transcription" disabled={Boolean(progress) || disabled} value={language} onChange={event => setLanguage(event.target.value as TranscriptLanguage)}><option value="fr">Français</option><option value="de">Allemand</option><option value="en">Anglais</option></select></label>{progress && <button className="ghost-button compact" onClick={cancel}>Annuler la transcription</button>}</div>}
-    <p className="voice-script-note">{asset ? 'La voix reste sur cet appareil. Un téléchargement est nécessaire au premier usage de la transcription.' : 'Tu peux aussi lire ta feuille, enregistrer un essai, puis le transcrire ici.'}</p>
+    <p className="voice-script-note">{asset ? `La voix reste sur cet appareil. Premier usage : téléchargement d’environ ${TRANSCRIPTION_MODEL.megabytes} Mo, puis réutilisation depuis le cache.` : 'Tu peux aussi lire ta feuille, enregistrer un essai, puis le transcrire ici.'}</p>
     {progress && <div className="transcript-progress" role="status">{progress.stage === 'loading' ? `Préparation de la transcription${progress.percent === undefined ? '…' : ` · ${progress.percent}%`}` : 'Transcription de ton essai…'}<progress aria-label="Progression de la transcription" max={100} value={progress.stage === 'loading' ? progress.percent : undefined} /></div>}
     {proposal && <div className="transcript-proposal"><label className="field"><span>Texte reconnu dans cet essai</span><textarea rows={4} value={proposal} onChange={event => setProposal(event.target.value)} /></label><button className="secondary-button compact" onClick={() => { onChange(proposal); setProposal(''); }}>Utiliser ce texte à la place</button></div>}
     {finished && !progress && <p className="transcript-result" role="status">Relis le texte, corrige-le, puis enregistre une nouvelle prise. Le texte reste conservé.</p>}
