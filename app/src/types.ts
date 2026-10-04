@@ -53,6 +53,8 @@ export interface BackgroundAudio {
   sourceOffsetSeconds?: number;
 }
 
+export type VoiceSpeaker = 'voice-1' | 'voice-2' | 'both';
+
 export interface PodcastBlock {
   id: string;
   sectionId: string;
@@ -72,6 +74,8 @@ export interface PodcastBlock {
   voiceCutStart?: boolean;
   voiceCutEnd?: boolean;
   script?: string;
+  /** The people speaking in this voice recording; omitted on older projects until assigned. */
+  speaker?: VoiceSpeaker;
   background?: BackgroundAudio;
   voiceCues?: VoiceSoundCue[];
   transitionPreset?: TransitionPreset;

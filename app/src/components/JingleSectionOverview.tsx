@@ -2,14 +2,12 @@ import type { AudioAsset, JingleVoicePart, PodcastBlock } from '../types';
 import { getGuidedJinglePlan } from '../audio/jinglePlan';
 import { RADIO_JINGLE_PARTS, JINGLE_PART_LABELS, isJingleEcho, isJinglePartEnabled, jinglePartScript } from '../audio/jingleParts';
 import { previewRadioJingleTakes } from '../audio/radioJingleVoice';
-import type { PreviewSession } from '../audio/libraryPreview';
 import type { WizardUI } from './SectionSoundWizard';
 import { SectionElementCard } from './SectionElementCard';
 import { JingleTiming } from './JingleTiming';
 
-export function JingleSectionOverview({ block, assets, podcastTitle, onEdit, onToggle, onPreview, Preview }: {
-  block: PodcastBlock; assets: AudioAsset[]; podcastTitle: string; onEdit: (part?: JingleVoicePart) => void; onToggle: (part: JingleVoicePart, included: boolean) => void;
-  onPreview: () => Promise<PreviewSession>; Preview: WizardUI['Preview'];
+export function JingleSectionOverview({ block, assets, podcastTitle, onEdit, onToggle, Preview }: {
+  block: PodcastBlock; assets: AudioAsset[]; podcastTitle: string; onEdit: (part?: JingleVoicePart) => void; onToggle: (part: JingleVoicePart, included: boolean) => void; Preview: WizardUI['Preview'];
 }) {
   const jingle = block.jingle!;
   const plan = getGuidedJinglePlan(block, assets);
@@ -23,6 +21,5 @@ export function JingleSectionOverview({ block, assets, podcastTitle, onEdit, onT
         {take && asset && <Preview previewId={`jingle-part-${block.id}-${part}`} label={`Écouter ${JINGLE_PART_LABELS[part].toLocaleLowerCase('fr')}`} onStart={signal => previewRadioJingleTakes([{ part, take, asset, at: 0 }], jingle.style, signal, jingle.effects)} />}
       </SectionElementCard>;
     })}</div>
-    <div className="narrative-actions"><Preview previewId={`jingle-section-${block.id}`} label="Écouter le jingle" disabled={!plan.ready} onStart={onPreview} /></div>
   </div>;
 }
