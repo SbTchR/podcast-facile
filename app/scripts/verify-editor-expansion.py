@@ -41,10 +41,10 @@ assert 'secondaryCategories?.includes(category)' in app
 transition_members = ['impact', 'sparkle', 'heartbeat', 'rewind', 'drop', 'question', 'failure', 'surprise', 'portal', 'cinematic']
 for preset in transition_members:
     assert f"'{preset}'" in types
-assert 'const TRANSITION_RECORDINGS: TransitionRecording[]' in app
-assert app.count("libraryId: 'sfx-") == 14
+assert "import { TRANSITION_RECORDINGS } from './data/podcastTransitions'" in app
+assert len(json.loads((ROOT / 'public/audio/podcast-transitions/sources.json').read_text())) == 17
 assert "transitionVolume?: VolumeLevel" in types
-assert 'transitionVolumeValue(block.transitionVolume)' in engine
+assert 'transitionVolumeValue(block.transitionVolume, transitionAsset.libraryId)' in engine
 assert 'transitionTone' not in engine
 
 assert "echo: 'Rêve'" in app

@@ -11,7 +11,7 @@ export function getLibraryPreviewDuration(preset: LibraryPreset): number {
 }
 
 // Stream only what playback needs; adding a sound still downloads the complete file.
-export async function createLibraryPreviewSession(preset: LibraryPreset, signal: AbortSignal): Promise<PreviewSession> {
+export async function createLibraryPreviewSession(preset: LibraryPreset, signal: AbortSignal, volume = 1): Promise<PreviewSession> {
   const cached = getCachedLibraryAudio(preset);
   const objectUrl = cached ? URL.createObjectURL(cached) : undefined;
   const sources = objectUrl ? [objectUrl] : [...new Set([preset.audioUrl, preset.fallbackUrl].map(url => resolveLibraryAudioUrl(url)))];
@@ -19,7 +19,7 @@ export async function createLibraryPreviewSession(preset: LibraryPreset, signal:
     for (const source of sources) {
       if (signal.aborted) throw new DOMException('Aperçu annulé.', 'AbortError');
       try {
-        return await startAudio(source, preset, signal, objectUrl);
+        return await startAudio(source, preset, signal, objectUrl, volume);
       } catch (error) {
         if (signal.aborted || (error instanceof DOMException && error.name === 'NotAllowedError')) throw error;
       }
@@ -31,10 +31,11 @@ export async function createLibraryPreviewSession(preset: LibraryPreset, signal:
   }
 }
 
-function startAudio(source: string, preset: LibraryPreset, signal: AbortSignal, objectUrl?: string): Promise<PreviewSession> {
+function startAudio(source: string, preset: LibraryPreset, signal: AbortSignal, objectUrl: string | undefined, volume: number): Promise<PreviewSession> {
   return new Promise((resolve, reject) => {
     const audio = new Audio();
     audio.preload = 'metadata';
+    audio.volume = Math.max(0, Math.min(1, volume));
     audio.setAttribute('playsinline', '');
     let start = Math.max(0, preset.clipStart ?? 0);
     let duration = getLibraryPreviewDuration(preset);

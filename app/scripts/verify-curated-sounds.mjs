@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { typescriptModuleUrl, loadAudioEngine } from './audio-test-module.mjs';
 const { AUDIO_LIBRARY, availableLibrarySounds, SOUND_CATEGORIES, resolveLibraryAudioUrl } = await import(await typescriptModuleUrl(new URL('../src/data/audioLibrary.ts', import.meta.url)));
 const sources = JSON.parse(await readFile(new URL('../public/audio/curated-sounds/sources.json', import.meta.url), 'utf8'));
+sources.push(...JSON.parse(await readFile(new URL('../public/audio/podcast-transitions/sources.json', import.meta.url), 'utf8')));
 const credits = await readFile(new URL('../public/audio-credits.html', import.meta.url), 'utf8');
 const effects = availableLibrarySounds('sfx');
 const ambiences = availableLibrarySounds('sfx', 'ambience');
@@ -24,7 +25,7 @@ assert.equal(effects[0].category, 'Batailles et armes', 'The enlarged historical
 assert.equal(ambiences[0].category, 'Histoire et batailles');
 for (const preset of [...effects, ...ambiences]) {
   const row = sources.find(row=>row.id===preset.id);
-  assert.ok(row && row.originalSha256 && row.sourcePage===preset.sourcePage && credits.includes(preset.sourcePage));
+  assert.ok(row && (row.originalSha256 || row.downloadSha256) && row.sourcePage===preset.sourcePage && credits.includes(preset.sourcePage));
   assert.equal(preset.license, 'CC0');
   assert.ok(SOUND_CATEGORIES[preset.soundGroup].includes(preset.category));
   assert.equal(preset.duration, row.preparedDuration);

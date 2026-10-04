@@ -1,6 +1,7 @@
 // Audionautix expansion: 20260807-audionautix-expansion-1
 import { CURATED_SOUNDS } from './curatedSounds';
 import { PODCAST_MUSIC } from './podcastMusic';
+import { PODCAST_TRANSITIONS } from './podcastTransitions';
 
 export type LibraryKind = 'music' | 'sfx';
 export type SoundGroup = 'effect' | 'ambience';
@@ -5273,7 +5274,7 @@ export const AUDIO_LIBRARY: LibraryPreset[] = [
 // Keep former IDs available for saved projects and the transition shortcuts.
 // New choices use a compact local pack, rather than long field recordings.
 for (const preset of AUDIO_LIBRARY) if (preset.kind === 'sfx') preset.retired = true;
-AUDIO_LIBRARY.push(...CURATED_SOUNDS);
+AUDIO_LIBRARY.push(...CURATED_SOUNDS, ...PODCAST_TRANSITIONS);
 
 // Preserve every former music ID for saved projects; offer the curated beds for new choices.
 for (const preset of AUDIO_LIBRARY) {

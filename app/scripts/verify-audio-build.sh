@@ -36,10 +36,12 @@ grep -q "sfx-medieval-battle-ambience" app/dist/assets/*.js
 grep -q "Enregistrer mon propre bruitage" app/dist/assets/*.js
 grep -q "Commencer avant la voix" app/dist/assets/*.js
 grep -Eq "low.{0,24}\\.08.{0,24}high.{0,24}1\\.05.{0,24}\\.28" app/dist/assets/*.js
-grep -q "Enregistrements réels" app/dist/assets/*.js
+grep -q "Sons courts · CC0" app/dist/assets/*.js
 grep -q "Chargement…" app/dist/assets/*.js
-grep -q "Coups à la porte" app/dist/assets/*.js
-grep -q "Pop vocal" app/dist/assets/*.js
+grep -q "transition-recording-actions" app/dist/assets/*.js app/dist/assets/*.css
+for file in app/public/audio/podcast-transitions/*.mp3; do cmp "$file" "app/dist/audio/podcast-transitions/$(basename "$file")"; done
+grep -q "Balayage rapide" app/dist/assets/*.js
+grep -q "Signature lumineuse" app/dist/assets/*.js
 grep -q "Volume de la musique" app/dist/assets/*.js
 grep -q "0 % = muet" app/dist/assets/*.js
 grep -q "music-volume-slider" app/dist/assets/*.js app/dist/assets/*.css
