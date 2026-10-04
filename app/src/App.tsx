@@ -13,7 +13,8 @@ import { removeSectionLayer, syncLayerPauses } from './audio/sectionLayers';
 import { applySectionArrangement } from './audio/sectionTimeline';
 import { JingleWizard } from './components/JingleWizard';
 import { VoiceScript } from './components/VoiceScript';
-import { isGuidedJingle } from './audio/jinglePlan';
+import { getGuidedJinglePlan, isGuidedJingle } from './audio/jinglePlan';
+import { VOICE_SPEAKER_LABELS, voiceSpeakerClass } from './audio/voiceSpeakers';
 import { JINGLE_CREDIT_BEDS, getJingleBed } from './data/jingleBeds';
 import { JINGLE_CREDIT_ENDINGS } from './data/jingleEndings';
 import { AUDIO_LIBRARY, LIBRARY_CATEGORIES, SOUND_CATEGORIES, availableLibrarySounds, loadLibraryAudio, type LibraryKind, type LibraryPreset, type SoundGroup } from './data/audioLibrary';
@@ -287,6 +288,7 @@ function makeBlock(type: BlockType, sectionId: string): PodcastBlock {
     fadeIn: type === 'voice' ? 'short' : 'normal',
     fadeOut: type === 'voice' ? 'short' : 'normal',
     voiceEffect: 'none',
+    speaker: type === 'voice' ? 'voice-1' : undefined,
     voiceEnhancement: type === 'voice' ? 'magic-boost' : 'natural',
     voiceCues: type === 'voice' ? [] : undefined,
     transitionPreset: undefined,
@@ -995,6 +997,7 @@ function SectionPanel({
   onMoveSection: (direction: -1 | 1) => void; onDeleteSection: () => void; onEdit: (block: PodcastBlock, part?: JingleVoicePart) => void; onDelete: (block: PodcastBlock) => void;
 }) {
   const mainJingle = blocks.find(block => block.type === 'jingle');
+  const jingleReady = mainJingle ? (isGuidedJingle(mainJingle) ? getGuidedJinglePlan(mainJingle, assets).ready : getBlockDuration(mainJingle, assets) > 0) : false;
   return <section className={`podcast-section ${section.kind === 'jingle' ? 'jingle-section' : ''} ${selected ? 'selected-section' : ''}`} data-section-id={section.id} onPointerDown={onSelect} onFocusCapture={onSelect}>
     <div className="podcast-section-header">
       <button className="section-select-button" aria-label={`Sélectionner ${section.title}`} aria-pressed={selected} onClick={onSelect}>{sectionIndex + 1}</button>
@@ -1007,15 +1010,17 @@ function SectionPanel({
       <button className="mini-button danger" onClick={onDeleteSection} title="Supprimer la section">×</button>
     </div>
     <div className="block-stack">
-      <div className="section-edit-action">{section.kind === 'jingle' ? mainJingle && <button className="secondary-button compact" onClick={() => onEdit(mainJingle)}>✎ Editer le jingle</button> : <button className="secondary-button compact" onClick={onEditPart}>✎ Editer la partie</button>}</div>
+      <div className="section-edit-action"><div className="section-primary-actions">
+        {section.kind === 'jingle' ? mainJingle && <><button className="secondary-button compact" onClick={() => onEdit(mainJingle)}>✎ Editer le jingle</button><TimedPreviewButton previewId={`jingle-section-${mainJingle.id}`} label="Écouter le jingle" disabled={!jingleReady} onStart={onPreviewSection} /></> : <><button className="secondary-button compact" onClick={onEditPart}>✎ Editer la partie</button>{duration > 0 && <TimedPreviewButton previewId={`section-${section.id}`} label="Écouter cette partie" onStart={onPreviewSection} />}</>}
+      </div></div>
       {section.kind !== 'jingle' && <SectionAudioOverview project={project} sectionId={section.id} onAdd={onAddLayer} onEdit={onEditLayer} onVoice={onEditVoiceInTimeline} onOpenVoice={onEditPart} />}
       {!blocks.length && <div className="empty-section"><strong>{section.kind === 'jingle' ? 'Prépare une courte signature sonore.' : 'À toi de parler !'}</strong><p>{sectionGuideContent[section.guideType ?? 'part'].prompts[0]}</p></div>}
       {blocks.map(block => {
-        if (block.type === 'jingle' && ['guided-v7', 'guided-v8', 'guided-v9'].includes(block.jingle?.production ?? '') && block.jingle?.takes) return <JingleSectionOverview key={block.id} block={block} assets={assets} podcastTitle={project.title} onEdit={part => onEdit(block, part)} onToggle={(part, included) => onToggleJinglePart(block, part, included)} onPreview={onPreviewSection} Preview={TimedPreviewButton} />;
+        if (block.type === 'jingle' && ['guided-v7', 'guided-v8', 'guided-v9'].includes(block.jingle?.production ?? '') && block.jingle?.takes) return <JingleSectionOverview key={block.id} block={block} assets={assets} podcastTitle={project.title} onEdit={part => onEdit(block, part)} onToggle={(part, included) => onToggleJinglePart(block, part, included)} Preview={TimedPreviewButton} />;
         const layer = section.audioLayers?.find(item => item.pauseBlockId === block.id);
         return <SectionBlockCard key={block.id} block={block} assets={assets} onEdit={() => layer ? onEditLayer(layer) : onEdit(block)} onDelete={() => layer ? onDeleteLayer(layer) : onDelete(block)} onPreview={() => onPreviewBlock(block)} />;
       })}
-      {section.kind !== 'jingle' && <div className="narrative-actions"><button className="primary-button compact" onClick={onAddVoice}>🎙 Enregistrer une voix</button><button className="ghost-button compact" onClick={onAdd}>＋ Transition ou pause</button>{duration > 0 && <TimedPreviewButton previewId={`section-${section.id}`} label="Écouter cette partie" onStart={onPreviewSection} />}</div>}
+      {section.kind !== 'jingle' && <div className="narrative-actions"><button className="primary-button compact" onClick={onAddVoice}>🎙 Enregistrer une voix</button><button className="ghost-button compact" onClick={onAdd}>＋ Transition ou pause</button></div>}
     </div>
   </section>;
 }
@@ -1027,7 +1032,8 @@ function SectionBlockCard({ block, assets, onEdit, onDelete, onPreview }: {
   const unprepared = block.type === 'jingle' && duration === 0;
   const title = block.type === 'silence' && block.title === 'Pause' ? 'Pause/Musique seule' : block.title;
   const label = block.type === 'voice' ? 'cette voix' : block.type === 'silence' ? 'cette pause' : block.type === 'transition' ? 'cette transition' : 'cet élément';
-  return <SectionElementCard className={`block-${block.type}`} icon={blockIcons[block.type]} title={title} detail={unprepared ? 'Facultatif · à préparer' : `${duration.toFixed(1).replace('.', ',')} s${block.voiceEffect !== 'none' ? ' · ' + voiceEffectLabels[block.voiceEffect] : ''}`} onEdit={onEdit} onDelete={onDelete}>
+  const speaker = block.type === 'voice' && block.speaker ? `${VOICE_SPEAKER_LABELS[block.speaker]} · ` : '';
+  return <SectionElementCard className={`block-${block.type} ${block.type === 'voice' ? voiceSpeakerClass(block.speaker) : ''}`} icon={blockIcons[block.type]} title={title} detail={unprepared ? 'Facultatif · à préparer' : `${speaker}${duration.toFixed(1).replace('.', ',')} s${block.voiceEffect !== 'none' ? ' · ' + voiceEffectLabels[block.voiceEffect] : ''}`} onEdit={onEdit} onDelete={onDelete}>
     <TimedPreviewButton previewId={`element-${block.id}`} label={`Écouter ${label}`} disabled={unprepared || duration <= 0} onStart={onPreview} />
   </SectionElementCard>;
 }
@@ -1254,6 +1260,7 @@ function BlockEditorModal({ block: initialBlock, assets, podcastTitle, isNew, in
       <Modal title={`${isNew ? 'Ajouter' : 'Modifier'} : ${blockLabels[block.type]}`} onClose={onClose} wide>
         <div className="editor-modal-body">
           {block.type !== 'jingle' && <label className="field"><span>Nom de l’élément</span><input value={block.title} onChange={(event) => update('title', event.target.value)} /></label>}
+          {block.type === 'voice' && <label className="field voice-speaker-select"><span>Voix dans cet enregistrement</span><select value={block.speaker ?? (isNew ? 'voice-1' : '')} onChange={event => update('speaker', (event.target.value || undefined) as PodcastBlock['speaker'])}><option value="">Non définie</option><option value="voice-1">Voix 1</option><option value="voice-2">Voix 2</option><option value="both">Voix 1 et 2</option></select></label>}
           {block.type === 'voice' && <VoiceScript value={block.script ?? ''} onChange={text => update('script', text)} asset={selectedAsset} start={block.trimStart} end={block.trimEnd || selectedAsset?.duration} disabled={voiceBusy} onBusyChange={setTranscriptionBusy} />}
 
           {requiresAsset && (
