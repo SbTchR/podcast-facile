@@ -126,7 +126,7 @@ export function scheduleGuidedJingle(context: Context, destination: AudioNode, b
     if (duration <= 0) return;
     const source = context.createBufferSource(); source.buffer = buffer;
     const gain = context.createGain(); source.connect(gain);
-    if (radio) connectRadioJingleVoice(context, gain, output, jingle.style, part, jingle.production === 'guided-v8');
+    if (radio) connectRadioJingleVoice(context, gain, output, jingle.style, part, jingle.production === 'guided-v8', jingle.effects?.[part]);
     else if (repeat) connectTitleRepeat(context, gain, output, jingle.style);
     else connectPhrase(context, gain, output, jingle.style, part);
     const now = start + Math.max(0, at - offset);

@@ -17,10 +17,6 @@ export function JingleTiming({ plan, onTake }: { plan: GuidedJinglePlan; onTake:
     <div className="jingle-timing-axis" aria-hidden="true">{ticks.map(at => <span key={at} style={{ left: at / plan.total * 100 + '%' }}>{at}s</span>)}</div>
     <div className="jingle-timing-row"><span>Musique</span><div className="jingle-timing-track">{timing.music.map(segment => <div key={segment.slot} className="jingle-timing-music" style={position(segment.start, segment.duration)} title={MUSIC_LABELS[segment.slot] + ' · ' + seconds(segment.duration)} aria-label={MUSIC_LABELS[segment.slot] + ', ' + seconds(segment.duration)} />)}</div></div>
     {([false, true] as const).map(echo => <div key={String(echo)} className="jingle-timing-row"><span>{echo ? 'Réponses' : 'Phrases'}</span><div className="jingle-timing-track">{plan.voices?.filter(cue => isJingleEcho(cue.part) === echo && cue.duration > 0).map(cue => <button key={cue.part} className={'jingle-timing-voice' + (echo ? ' reply' : '')} style={position(cue.start, cue.duration)} title={JINGLE_PART_LABELS[cue.part] + ' · ' + seconds(cue.start) + ' → ' + seconds(cue.start + cue.duration)} aria-label={'Modifier ' + JINGLE_PART_LABELS[cue.part].toLocaleLowerCase('fr') + ', de ' + seconds(cue.start) + ' à ' + seconds(cue.start + cue.duration)} onClick={() => onTake(cue.part)}><span>{SHORT_LABELS[cue.part]}</span></button>)}</div></div>)}
-    <details className="jingle-timing-help"><summary>Comment est réparti le temps ?</summary>
-      <p>Chaque prise garde sa durée. Les réponses commencent 0,5 seconde avant la fin de leur phrase. L’ouverture et la finale ont 3 à 5 secondes de musique ; chaque passage entre les phrases garde au moins 1,5 seconde.</p>
-      <p>Le temps musical restant est réparti entre les cinq passages. Une longue présentation reçoit davantage de respiration. Avant l’enregistrement, ton texte aide à réserver du temps aux prises suivantes, à environ 140 mots par minute.</p>
-      <table><caption>{timing.provisional ? 'Passages prévus' : 'Passages musicaux de ce jingle'}</caption><thead><tr><th>Passage</th><th>Début</th><th>Durée</th></tr></thead><tbody>{timing.music.map(segment => <tr key={segment.slot}><th scope="row">{MUSIC_LABELS[segment.slot]}</th><td>{seconds(segment.start)}</td><td>{seconds(segment.duration)}</td></tr>)}</tbody></table>
-    </details>
+
   </div>;
 }

@@ -1,4 +1,4 @@
-import type { AudioAsset, JingleTake, JingleVoicePart, PodcastBlock } from '../types';
+import type { AudioAsset, JingleTake, JingleVoicePart, JingleVoiceEffects, PodcastBlock } from '../types';
 import type { PreviewSession } from './libraryPreview';
 import { isJingleEcho } from './jingleParts';
 import { STUDIO_STYLES, studioVoiceGain } from './jingleStudio';
@@ -40,8 +40,61 @@ function addRoom(context: Context, input: AudioNode, output: AudioNode, seconds:
   } else room.connect(wet).connect(output);
 }
 
+export function jingleVoiceEffectDefaults(part: JingleVoicePart): JingleVoiceEffects {
+  return { reverb: isJingleEcho(part) ? 25 : part === 'title' || part === 'title-alt' ? 75 : 10, enhancement: 100, phone: isJingleEcho(part) ? 100 : 0 };
+}
+
+function blend(context: Context, clean: AudioNode, processed: AudioNode, amount: number): AudioNode {
+  const mix = context.createGain();
+  const dry = context.createGain(); dry.gain.value = 1 - amount;
+  const wet = context.createGain(); wet.gain.value = amount;
+  clean.connect(dry).connect(mix); processed.connect(wet).connect(mix);
+  return mix;
+}
+
+/** Independent voice controls: enhancement, telephone coloration and room return. */
+function connectCustomVoice(context: Context, input: AudioNode, output: AudioNode, style: Style, part: JingleVoicePart, values: JingleVoiceEffects): void {
+  const echo = isJingleEcho(part), title = part === 'title' || part === 'title-alt';
+  const defaults = jingleVoiceEffectDefaults(part);
+  const percent = (key: keyof JingleVoiceEffects) => Math.max(0, Math.min(100, Number.isFinite(values[key]) ? values[key] : defaults[key])) / 100;
+  const profile = STUDIO_STYLES[style];
+  const highpass = context.createBiquadFilter(); highpass.type = 'highpass'; highpass.frequency.value = title ? profile.highpass : 90;
+  const presence = context.createBiquadFilter(); presence.type = 'peaking'; presence.frequency.value = 3000; presence.Q.value = .8; presence.gain.value = title ? Math.max(1.5, Math.min(3.5, profile.presence)) : 1.8;
+  const warmth = context.createBiquadFilter(); warmth.type = 'lowshelf'; warmth.frequency.value = 220; warmth.gain.value = title ? profile.warmth : 1;
+  const lowpass = context.createBiquadFilter(); lowpass.type = 'lowpass'; lowpass.frequency.value = title ? Math.max(9000, profile.lowpass) : 16000;
+  const compressor = context.createDynamicsCompressor(); compressor.threshold.value = -22; compressor.knee.value = 9; compressor.ratio.value = title || echo ? 3.5 : 3; compressor.attack.value = .003; compressor.release.value = .12;
+  input.connect(highpass).connect(presence).connect(warmth).connect(lowpass).connect(compressor);
+  const enhanced = blend(context, input, compressor, percent('enhancement'));
+  const phoneHigh = context.createBiquadFilter(); phoneHigh.type = 'highpass'; phoneHigh.frequency.value = 400;
+  const phonePresence = context.createBiquadFilter(); phonePresence.type = 'peaking'; phonePresence.frequency.value = 1600; phonePresence.Q.value = 1.1; phonePresence.gain.value = 3;
+  const saturation = context.createWaveShaper(); const curve = new Float32Array(1024);
+  for (let i = 0; i < curve.length; i++) curve[i] = Math.atan(1.8 * (i * 2 / (curve.length - 1) - 1)) / Math.atan(1.8);
+  saturation.curve = curve; saturation.oversample = '2x';
+  const phoneLow = context.createBiquadFilter(); phoneLow.type = 'lowpass'; phoneLow.frequency.value = 3200;
+  const phoneLow2 = context.createBiquadFilter(); phoneLow2.type = 'lowpass'; phoneLow2.frequency.value = 3400;
+  enhanced.connect(phoneHigh).connect(phonePresence).connect(saturation).connect(phoneLow).connect(phoneLow2);
+  const voice = blend(context, enhanced, phoneLow2, percent('phone'));
+  const destination = context.createGain(); destination.gain.value = echo ? RADIO_REPLY_GAIN : 1; destination.connect(output);
+  const dry = context.createGain(); dry.gain.value = echo ? 1.35 : title ? 1.22 : 1.3; voice.connect(dry).connect(destination);
+  const strength = percent('reverb') / (defaults.reverb / 100);
+  addRoom(context, voice, destination, title ? broadcastRooms[style] : echo ? .65 : .38, (title ? 1.08 : echo ? .18 : .065) * strength, title ? .045 : .012);
+  if (title) for (const [seconds, level] of [[.085, .2], [.145, .12], [.215, .07]]) {
+    const delay = context.createDelay(.3); delay.delayTime.value = seconds;
+    const wet = context.createGain(); wet.gain.value = level * strength;
+    voice.connect(delay).connect(wet).connect(destination);
+  }
+  if (echo) {
+    const slap = context.createDelay(.2); slap.delayTime.value = .095;
+    const feedback = context.createGain(); feedback.gain.value = .18;
+    const wet = context.createGain(); wet.gain.value = .22 * strength;
+    voice.connect(slap); slap.connect(feedback).connect(slap); slap.connect(wet).connect(destination);
+  }
+}
+
 /** Dedicated recordings receive different processing; no voice fades or pitch changes. */
-export function connectRadioJingleVoice(context: Context, input: AudioNode, output: AudioNode, style: Style, part: JingleVoicePart, broadcast = false): void {
+export function connectRadioJingleVoice(context: Context, input: AudioNode, output: AudioNode, style: Style, part: JingleVoicePart, broadcast = false, effects?: JingleVoiceEffects): void {
+  const defaults = jingleVoiceEffectDefaults(part);
+  if (broadcast && effects && (Object.keys(defaults) as (keyof JingleVoiceEffects)[]).some(key => effects[key] !== defaults[key])) { connectCustomVoice(context, input, output, style, part, effects); return; }
   const echo = isJingleEcho(part);
   const title = part === 'title' || part === 'title-alt';
   // Attenuate the whole reply chain, including its resonance and slap.
@@ -91,7 +144,7 @@ export function radioJingleBus(context: Context, destination: AudioNode): AudioN
   return compressor;
 }
 
-export async function previewRadioJingleTakes(takes: { part: JingleVoicePart; asset: AudioAsset; take: JingleTake; at: number }[], style: Style, signal: AbortSignal): Promise<PreviewSession> {
+export async function previewRadioJingleTakes(takes: { part: JingleVoicePart; asset: AudioAsset; take: JingleTake; at: number }[], style: Style, signal: AbortSignal, effects?: Partial<Record<JingleVoicePart, JingleVoiceEffects>>): Promise<PreviewSession> {
   const context = new AudioContext();
   let stopped = false;
   let closing: Promise<void> | undefined;
@@ -122,7 +175,7 @@ export async function previewRadioJingleTakes(takes: { part: JingleVoicePart; as
       const source = context.createBufferSource(); source.buffer = cue.buffer;
       const gain = context.createGain(); gain.gain.value = studioVoiceGain(cue.buffer);
       source.connect(gain);
-      connectRadioJingleVoice(context, gain, bus, style, cue.part, true);
+      connectRadioJingleVoice(context, gain, bus, style, cue.part, true, effects?.[cue.part]);
       source.start(start + cue.at, sourceStart, length);
       const tail = isJingleEcho(cue.part) ? .7 : cue.part === 'title' || cue.part === 'title-alt' ? broadcastRooms[style] + .05 : .4;
       duration = Math.max(duration, cue.at + length + tail);
