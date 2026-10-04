@@ -12,19 +12,29 @@ styles = (ROOT / 'src' / 'styles.css').read_text(encoding='utf-8')
 
 assert '20260722-real-transitions-preview-1' in app
 assert 'TRANSITION_RECORDINGS' in app
-assert app.count("libraryId: 'sfx-") == 14
-assert 'Chaque extrait dure au maximum 4 secondes.' in app
-assert 'Enregistrements réels' in app
+transitions = (ROOT / 'src' / 'data' / 'podcastTransitions.ts').read_text(encoding='utf-8')
+rows = json.loads((ROOT / 'public/audio/podcast-transitions/sources.json').read_text())
+assert len(rows) == 17
+assert len({row['id'] for row in rows}) == 17
+for row in rows:
+    assert row['license'] == 'CC0'
+    assert row['id'] in transitions
+    assert row['preparedDuration'] <= 8
+assert 'transition-card-${preset.id}' in app
+assert 'transition-recording-actions' in app
+assert "block.type !== 'transition' && <TimedPreviewButton" in app
+assert 'Des ponctuations courtes et des zappings radio jusqu’à 8 secondes.' in app
+assert 'Sons courts · CC0' in app
 assert 'transitionLoadingId' in app
-assert "Math.min(4, preset.clipDuration ?? preset.duration" in app
+assert "Math.min(transitionDurationLimit(preset.id), preset.clipDuration ?? preset.duration" in app
 assert "block.type === 'transition' ? Boolean(block.assetId && block.transitionPreset)" in app
 
 assert 'transitionTone' not in engine
 assert 'createOscillator' not in engine
 assert 'Math.random' not in engine
-assert "if (block.type === 'transition') return Math.min(4" in engine
+assert "if (block.type === 'transition') return Math.min(transitionDurationLimit" in engine
 assert "const transitionAsset = assetById(project, block.assetId)" in engine
-assert "transitionVolumeValue(block.transitionVolume)" in engine
+assert "transitionVolumeValue(block.transitionVolume, transitionAsset.libraryId)" in engine
 
 assert 'TimedPreviewButton' in app
 assert 'createLibraryPreviewSession' in app
@@ -64,4 +74,4 @@ for item_id in transition_ids:
 assert by_id['sfx-buzzer-real']['license'] == 'Domaine public'
 assert by_id['sfx-human-whistling']['license'] == 'Domaine public'
 
-print('14 transitions réelles et lecteurs d’aperçu vérifiés.')
+print('17 transitions locales, sources historiques et aperçus sur chaque carte vérifiés.')

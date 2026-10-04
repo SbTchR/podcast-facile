@@ -68,7 +68,7 @@ function jingleTail(block: PodcastBlock): number {
 
 export function getBlockDuration(block: PodcastBlock, assets: AudioAsset[] = []): number {
   if (block.type === 'silence') return Math.max(0.1, block.duration);
-  if (block.type === 'transition') return Math.min(4, Math.max(0.05, block.duration));
+  if (block.type === 'transition') return Math.min(transitionDurationLimit(assets.find(asset => asset.id === block.assetId)?.libraryId), Math.max(0.05, block.duration));
   if (block.type === 'jingle') {
     if (isGuidedJingle(block)) {
       const plan = getGuidedJinglePlan(block, assets);
@@ -173,7 +173,12 @@ function voiceCueValue(level: 'low' | 'normal' | 'high'): number {
   return level === 'low' ? 0.14 : level === 'high' ? 1.0 : 0.48;
 }
 
-function transitionVolumeValue(level: VolumeLevel | undefined): number {
+export function transitionDurationLimit(libraryId?: string): number {
+  return libraryId?.startsWith('sfx-transition-') ? 8 : 4;
+}
+
+export function transitionVolumeValue(level: VolumeLevel | undefined, libraryId?: string): number {
+  if (libraryId?.startsWith('sfx-transition-')) return level === 'low' ? 0.35 : level === 'high' ? 1 : 0.75;
   return level === 'low' ? 0.11 : level === 'high' ? 0.7 : 0.34;
 }
 
@@ -625,7 +630,7 @@ async function scheduleBlock(
     const transitionAsset = assetById(project, block.assetId);
     if (!transitionAsset) return;
     const sourceOffset = block.trimStart + localOffset;
-    const duration = Math.min(4, total - localOffset);
+    const duration = total - localOffset;
     await scheduleAsset(
       context,
       destination,
@@ -634,9 +639,9 @@ async function scheduleBlock(
       start,
       sourceOffset,
       duration,
-      transitionVolumeValue(block.transitionVolume),
+      transitionVolumeValue(block.transitionVolume, transitionAsset.libraryId),
       'none',
-      'short',
+      transitionAsset.libraryId?.startsWith('sfx-transition-') ? 'none' : 'short',
     );
     return;
   }

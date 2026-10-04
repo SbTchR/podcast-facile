@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createLibraryPreviewSession, getLibraryPreviewDuration, type PreviewSession } from './audio/libraryPreview';
+import { TRANSITION_RECORDINGS } from './data/podcastTransitions';
 import { usedLibraryCredits } from './audio/libraryCredits';
 import { useDialog } from './useDialog';
 import { AudioExcerpt } from './components/AudioExcerpt';
@@ -22,6 +23,8 @@ import {
   getTimeline,
   playProject,
   renderProjectToWav,
+  transitionVolumeValue,
+  transitionDurationLimit,
   type PlaybackController,
 } from './audio/engine';
 import { deleteProject, listProjects, loadProject, saveProject } from './storage/db';
@@ -69,30 +72,7 @@ const blockIcons: Record<BlockType, string> = {
   transition: '✨',
 };
 
-type TransitionRecording = {
-  preset: TransitionPreset;
-  libraryId: string;
-  label: string;
-  icon: string;
-  description: string;
-};
-
-const TRANSITION_RECORDINGS: TransitionRecording[] = [
-  { preset: 'impact', libraryId: 'sfx-dull-thud', label: 'Impact sourd', icon: '💥', description: 'Un coup sec pour ponctuer une idée.' },
-  { preset: 'failure', libraryId: 'sfx-buzzer-real', label: 'Buzzer d’échec', icon: '🚫', description: 'Un signal immédiatement reconnaissable.' },
-  { preset: 'question', libraryId: 'sfx-onomatopoeia-question', label: 'Interrogation', icon: '❓', description: 'Une courte réaction vocale interrogative.' },
-  { preset: 'drop', libraryId: 'sfx-pen-drop', label: 'Objet qui tombe', icon: '🖊️', description: 'Un petit objet heurte le sol.' },
-  { preset: 'bell', libraryId: 'sfx-bicycle-bell', label: 'Sonnette', icon: '🔔', description: 'Une sonnette de vélo claire et légère.' },
-  { preset: 'fade', libraryId: 'sfx-door-knocker', label: 'Coups à la porte', icon: '🚪', description: 'Trois coups brefs sur un heurtoir.' },
-  { preset: 'rise', libraryId: 'sfx-human-whistling', label: 'Sifflement', icon: '😗', description: 'Un sifflement humain très court.' },
-  { preset: 'cinematic', libraryId: 'sfx-explosion', label: 'Explosion', icon: '💣', description: 'Une détonation unique et nette.' },
-  { preset: 'portal', libraryId: 'sfx-steamboat-horn', label: 'Corne de bateau', icon: '🛳️', description: 'Un bref appel de bateau à vapeur.' },
-  { preset: 'mystery', libraryId: 'sfx-music-box', label: 'Boîte à musique', icon: '🎠', description: 'Une ponctuation musicale intrigante.' },
-  { preset: 'sparkle', libraryId: 'sfx-onomatopoeia-pop', label: 'Pop vocal', icon: '🫧', description: 'Un petit “pop” produit avec la bouche.' },
-  { preset: 'radio', libraryId: 'sfx-airplane-chime', label: 'Signal sonore', icon: '✈️', description: 'Le carillon bref entendu dans un avion.' },
-  { preset: 'page', libraryId: 'sfx-turn-page', label: 'Page tournée', icon: '📄', description: 'Une vraie page tournée, idéale pour changer de chapitre.' },
-  { preset: 'whoosh', libraryId: 'sfx-car-horn', label: 'Klaxon bref', icon: '🚗', description: 'Un coup de klaxon court et reconnaissable.' },
-];
+type TransitionRecording = (typeof TRANSITION_RECORDINGS)[number];
 
 const voiceEffectLabels: Record<VoiceEffect, string> = {
   none: 'Aucun effet',
@@ -1324,17 +1304,17 @@ function BlockEditorModal({ block: initialBlock, assets, podcastTitle, isNew, in
         { source: 'library', libraryId: preset.id },
       );
       const trimStart = Math.min(asset.duration, Math.max(0, preset.clipStart ?? 0));
-      const clipDuration = Math.min(4, preset.clipDuration ?? preset.duration, Math.max(0.05, asset.duration - trimStart));
+      const clipDuration = Math.min(transitionDurationLimit(preset.id), preset.clipDuration ?? preset.duration, Math.max(0.05, asset.duration - trimStart));
       setBlock((current) => ({
         ...current,
         transitionPreset: recording.preset,
         assetId: asset.id,
-        title: current.title === 'Transition' || current.title.startsWith('Nouvelle') ? recording.label : current.title,
+        title: current.title === 'Transition' || current.title.startsWith('Nouvelle') || TRANSITION_RECORDINGS.some(item => item.label === current.title) ? recording.label : current.title,
         duration: clipDuration,
         trimStart,
         trimEnd: trimStart + clipDuration,
         fadeIn: 'none',
-        fadeOut: 'short',
+        fadeOut: 'none',
       }));
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Impossible de charger cette transition.');
@@ -1396,24 +1376,27 @@ function BlockEditorModal({ block: initialBlock, assets, podcastTitle, isNew, in
 
           {block.type === 'transition' && (
             <div className="setting-group transition-recordings-panel">
-              <div className="setting-title-row"><div><h3>Enregistrement de transition</h3><p>Choisis un son réel, libre et reconnaissable. Chaque extrait dure au maximum 4 secondes.</p></div><span className="recording-badge">Enregistrements réels</span></div>
+              <div className="setting-title-row"><div><h3>Choisir une transition</h3><p>Écoute les sons, puis clique sur celui qui convient à ta rubrique. Des ponctuations courtes et des zappings radio jusqu’à 8 secondes.</p></div><span className="recording-badge">Sons courts · CC0</span></div>
               <div className="transition-recording-grid">
                 {TRANSITION_RECORDINGS.map((recording) => {
                   const preset = AUDIO_LIBRARY.find((candidate) => candidate.id === recording.libraryId);
                   const selected = block.transitionPreset === recording.preset && selectedAsset?.libraryId === recording.libraryId;
                   return (
                     <article key={recording.libraryId} className={`transition-recording-card ${selected ? 'selected' : ''}`}>
-                      <button disabled={Boolean(transitionLoadingId)} onClick={() => void chooseTransitionRecording(recording)}>
+                      <button aria-pressed={selected} disabled={Boolean(transitionLoadingId)} onClick={() => void chooseTransitionRecording(recording)}>
                         <span>{recording.icon}</span><span><strong>{recording.label}</strong><small>{recording.description}</small></span>
-                        <em>{transitionLoadingId === recording.libraryId ? <i className="preview-spinner" /> : selected ? '✓' : formatTime(Math.min(4, preset?.clipDuration ?? preset?.duration ?? 0))}</em>
+                        <em>{transitionLoadingId === recording.libraryId ? <i className="preview-spinner" /> : selected ? '✓' : `${Math.min(transitionDurationLimit(recording.libraryId), preset?.clipDuration ?? preset?.duration ?? 0).toFixed(1).replace('.', ',')} s`}</em>
                       </button>
-                      {preset && <a href={preset.sourcePage} target="_blank" rel="noreferrer" title={`${preset.author} · ${preset.license}`}>ⓘ Source · {preset.license}</a>}
+                      {preset && <div className="transition-recording-actions">
+                        <TimedPreviewButton previewId={`transition-card-${preset.id}`} compact label={`Écouter ${recording.label}`} disabled={Boolean(transitionLoadingId)} onStart={signal => createLibraryPreviewSession(preset, signal, transitionVolumeValue(block.transitionVolume, preset.id))} />
+                        <a href={preset.sourcePage} target="_blank" rel="noreferrer" title={`${preset.author} · ${preset.license}`}>ⓘ Source · {preset.license}</a>
+                      </div>}
                     </article>
                   );
                 })}
               </div>
-              {selectedAsset ? <div className="selected-audio">✓ {selectedAsset.name} · extrait de {formatTime(block.duration)}</div> : <div className="missing-audio">Choisis un enregistrement pour activer l’aperçu et l’ajout.</div>}
-              <ChoiceSetting title="Volume de la transition" value={block.transitionVolume ?? 'normal'} options={[["low", "Discret"], ["normal", "Normal"], ["high", "Fort"]]} onChange={(value) => update('transitionVolume', value as VolumeLevel)} />
+              {selectedAsset ? <div className="selected-audio">✓ {selectedAsset.name} · extrait de {block.duration.toFixed(1).replace('.', ',')} s</div> : <div className="missing-audio">Écoute un aperçu sur chaque carte, puis choisis une transition pour l’ajouter.</div>}
+              <ChoiceSetting title="Volume de la transition" value={block.transitionVolume ?? 'normal'} options={[["low", "Discret"], ["normal", "Normal"], ["high", "Fort"]]} onChange={(value) => { requestExclusivePreview('transition-volume'); update('transitionVolume', value as VolumeLevel); }} />
             </div>
           )}
 
@@ -1461,10 +1444,10 @@ function BlockEditorModal({ block: initialBlock, assets, podcastTitle, isNew, in
           {error && <div className="error-box">{error}</div>}
         </div>
         {block.type !== 'jingle' && <div className="modal-footer">
-          <TimedPreviewButton previewId={`block-editor-${block.id}`} onStart={() => onPreview(block)} disabled={!canSave} />
+          {block.type !== 'transition' && <TimedPreviewButton previewId={`block-editor-${block.id}`} onStart={() => onPreview(block)} disabled={!canSave} />}
           <span className="footer-spacer" />
           <button className="ghost-button" onClick={onClose}>Annuler</button>
-          <button className="primary-button" disabled={!canSave || !block.title.trim() || voiceBusy || transcriptionBusy} onClick={() => onSave(block)}>✓ {isNew ? 'Ajouter' : 'Enregistrer'}</button>
+          <button className="primary-button" disabled={!canSave || !block.title.trim() || voiceBusy || transcriptionBusy || Boolean(transitionLoadingId)} onClick={() => onSave(block)}>✓ {isNew ? 'Ajouter' : 'Enregistrer'}</button>
         </div>}
       </Modal>
       {libraryTarget && <AudioLibraryModal kind={libraryKind} onClose={() => setLibraryTarget(null)} onChoose={chooseLibraryPreset} />}

@@ -47,10 +47,10 @@ Le champ de texte appartient au bloc vocal et reste dans les sauvegardes locales
 
 ## Bibliothèque audio réelle
 
-La bibliothèque propose 218 choix, avec deux onglets distincts pour les sons :
+La bibliothèque propose 235 choix, avec deux onglets distincts pour les sons :
 
 - 52 musiques de fond : 50 nouveautés de Scott Buckley et Kevin MacLeod / Incompetech, plus « Rêve médiéval » et « Égypte ancienne et désert » ;
-- 107 bruitages courts et reconnaissables : canons, fusils, épées, chevaux, objets anciens, navigation, véhicules, reportage, animaux et ponctuations ;
+- 124 bruitages courts et reconnaissables : canons, fusils, épées, chevaux, objets anciens, navigation, véhicules, reportage, animaux et ponctuations ;
 - 59 ambiances : bataille médiévale, bataille navale, marché médiéval, forge, taverne, front de la Seconde Guerre mondiale, voilier, locomotive à vapeur, paysages, foule et industrie ;
 - catégories et recherche adaptées à l’histoire, la géographie et l’actualité ;
 - source, auteur et licence affichés pour chaque fichier dans l’application.
@@ -96,3 +96,14 @@ La régression des aperçus couvre la lecture progressive, les limites d’extra
 - l’export MP3 n’est pas inclus ;
 - la compatibilité des fichiers personnels importés dépend du navigateur ;
 - les projets très longs peuvent dépasser la mémoire disponible sur smartphone.
+
+### Transitions radio et podcast
+
+Le sélecteur propose 17 transitions locales CC0 : balayages, ponctuations musicales, zapping radio, impact, fanfare, carillon, roulement, scratch, buzzer et page tournée. Trois zappings supplémentaires de 6 à 8 secondes complètent le zapping court : tuner analogique, recherche de station et traversée FM. Chaque carte dispose de son aperçu, utilisable avant la sélection et au volume choisi. Les anciens sons restent disponibles pour les projets enregistrés.
+
+Sources, licences, extraits, traitements et empreintes : `app/public/audio/podcast-transitions/sources.json`. Les crêtes sont maîtrisées avant harmonisation du niveau ; les microfondus intégrés préservent les effets brefs.
+
+```sh
+python3 app/scripts/prepare-podcast-transitions.py --jobs 3
+node app/scripts/verify-podcast-transitions.mjs
+```

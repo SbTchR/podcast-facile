@@ -35,6 +35,7 @@ assert.equal(getLibraryPreviewDuration({ ...preset, duration: 1.5, clipDuration:
 const controller = new AbortController();
 const session = await createLibraryPreviewSession(preset, controller.signal);
 const audio = instances.at(-1);
+assert.equal(audio.volume, 1, 'Ordinary library previews retain their listening level.');
 assert.equal(audio.src, preset.audioUrl, 'Preview must stream directly, without waiting for a full Blob.');
 assert.equal(audio.currentTime, 4, 'Suggested excerpt start must be respected.');
 assert.equal(session.totalDuration, 12);
@@ -48,6 +49,10 @@ const fallback = await createLibraryPreviewSession({ ...preset, audioUrl: 'https
 assert.equal(instances.at(-1).src, preset.fallbackUrl);
 assert.ok(instances.at(-2).released, 'Failed primary media must be released before fallback.');
 fallback.stop();
+
+const transition = await createLibraryPreviewSession(preset, new AbortController().signal, .75);
+assert.equal(instances.at(-1).volume, .75, 'Transition previews must use the same gain as the podcast mix.');
+transition.stop();
 
 behavior = 'pending';
 const pendingController = new AbortController();
