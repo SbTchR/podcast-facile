@@ -98,7 +98,8 @@ export function scheduleGuidedJingle(context: Context, destination: AudioNode, b
   const plan = getGuidedJinglePlan(block, assets);
   if (!plan.ready || offset >= plan.total) return;
   const jingle = block.jingle!;
-  const output = jingle.production === 'guided-v7' ? radioJingleBus(context, destination) : destination;
+  const radio = jingle.production === 'guided-v7' || jingle.production === 'guided-v8';
+  const output = radio ? radioJingleBus(context, destination) : destination;
   const music = cache.get(jingle.musicAssetId!);
   if (!music) throw new Error('La musique du jingle est introuvable.');
   const full = musicLevel(music);
@@ -108,7 +109,7 @@ export function scheduleGuidedJingle(context: Context, destination: AudioNode, b
   const musicGain = context.createGain(); musicGain.connect(output);
   const speechEnd = plan.titleReturnStart === undefined ? plan.starts.intro + plan.durations.intro : plan.titleReturnStart + plan.durations.title;
   const liftRamp = Math.min(.2, Math.max(0, plan.starts.hook - speechEnd) / 3);
-  const musicPoints: [number, number][] = jingle.production === 'guided-v6' || jingle.production === 'guided-v7'
+  const musicPoints: [number, number][] = jingle.production === 'guided-v6' || radio
     ? composedJingleMusicEnvelope(plan, full, under)
     : [[0, 0], [0.16, full], [plan.starts.title - 0.2, full], [plan.starts.title, under], [speechEnd, under], [speechEnd + liftRamp, full], [plan.starts.hook - liftRamp, full], [plan.starts.hook, under], [plan.outroStart, under], [plan.outroStart + 0.32, outro], [plan.total - 0.6, outro], [plan.total, 0]];
   envelope(musicGain, musicPoints, start, offset);
@@ -125,7 +126,7 @@ export function scheduleGuidedJingle(context: Context, destination: AudioNode, b
     if (duration <= 0) return;
     const source = context.createBufferSource(); source.buffer = buffer;
     const gain = context.createGain(); source.connect(gain);
-    if (jingle.production === 'guided-v7') connectRadioJingleVoice(context, gain, output, jingle.style, part);
+    if (radio) connectRadioJingleVoice(context, gain, output, jingle.style, part, jingle.production === 'guided-v8');
     else if (repeat) connectTitleRepeat(context, gain, output, jingle.style);
     else connectPhrase(context, gain, output, jingle.style, part);
     const now = start + Math.max(0, at - offset);
@@ -133,7 +134,7 @@ export function scheduleGuidedJingle(context: Context, destination: AudioNode, b
     gain.gain.setValueAtTime(level, now);
     source.start(now, take.sourceStart + consumed, duration);
   };
-  if (jingle.production === 'guided-v6' || jingle.production === 'guided-v7') {
+  if (jingle.production === 'guided-v6' || radio) {
     for (const cue of plan.voices!) phrase(cue.part, cue.start, cue.echo);
   } else if (jingle.production === 'guided-v4' || jingle.production === 'guided-v5') {
     for (const part of JINGLE_PARTS) phrase(part, plan.starts[part], part === 'title-alt');

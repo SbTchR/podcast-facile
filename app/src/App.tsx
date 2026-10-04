@@ -307,7 +307,7 @@ function makeBlock(type: BlockType, sectionId: string): PodcastBlock {
     voiceCues: type === 'voice' ? [] : undefined,
     transitionPreset: undefined,
     transitionVolume: type === 'transition' ? 'normal' : undefined,
-    jingle: type === 'jingle' ? { style: 'modern-radio', musicLevel: 'low', musicVolume: 32, production: 'guided-v7', bedId: getJingleBed('modern-radio', undefined, 'extended').id, signatureFx: false } : undefined,
+    jingle: type === 'jingle' ? { style: 'modern-radio', musicLevel: 'low', musicVolume: 32, production: 'guided-v8', bedId: getJingleBed('modern-radio', undefined, 'extended').id, signatureFx: false } : undefined,
   };
 }
 
