@@ -49,6 +49,8 @@ grep -q "Transcrire cet essai" app/dist/assets/*.js
 grep -q "guided-v5" app/dist/assets/*.js
 grep -q "guided-v6" app/dist/assets/*.js
 grep -q "guided-v7" app/dist/assets/*.js
+grep -q "guided-v8" app/dist/assets/*.js
+grep -q "Comment est réparti le temps" app/dist/assets/*.js
 grep -q "title-alt-echo" app/dist/assets/*.js
 grep -q "Écouter la phrase et la réponse" app/dist/assets/*.js
 grep -q "Écho du titre 1" app/dist/assets/*.js

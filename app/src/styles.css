@@ -997,3 +997,32 @@ details.cue-source-range { display: block; grid-column: 1 / -1; }
 .jingle-ending-grid .preview-control { min-height: 34px; padding: 7px 8px; }
 .sound-inspector .setting-title-row > div { min-width: 0; }
 .sound-inspector h4 { overflow-wrap: anywhere; }
+
+.jingle-timing { padding: 15px 16px 12px; margin: 18px 0; border: 1px solid #d4deec; border-radius: 12px; background: #f8fafc; }
+.jingle-timing-caption { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; color: #254367; font-size: 13px; }
+.jingle-timing-caption span { color: #536783; font-size: 12px; }
+.jingle-timing-axis { position: relative; height: 25px; margin: 10px 0 0 78px; color: #60728d; font-size: 10px; }
+.jingle-timing-axis span { position: absolute; transform: translateX(-50%); }
+.jingle-timing-axis span:first-child { transform: none; }
+.jingle-timing-axis span:last-child { transform: translateX(-100%); }
+.jingle-timing-row { display: grid; grid-template-columns: 70px minmax(0, 1fr); align-items: center; gap: 8px; margin: 6px 0; font-size: 11px; font-weight: 650; color: #536783; }
+.jingle-timing-track { position: relative; height: 32px; overflow: hidden; border-radius: 5px; background: #e9edf4; }
+.jingle-timing-music, .jingle-timing-voice { position: absolute; top: 0; height: 100%; border-radius: 4px; overflow: hidden; }
+.jingle-timing-music { background: #d1eadd; box-shadow: inset 0 0 0 1px #99c8ac; }
+.jingle-timing-voice { border: 1px solid #adc7f6; background: #dce9ff; color: #16468e; padding: 0; min-width: 0; white-space: nowrap; font-size: 10px; font-weight: 750; }
+.jingle-timing-voice.reply { border-color: #efc58f; background: #ffe5bd; color: #85500b; }
+.jingle-timing-voice:focus-visible { outline: 2px solid #245dd8; outline-offset: -2px; }
+.jingle-timing-help { margin-top: 12px; font-size: 12px; color: #52667f; }
+.jingle-timing-help summary { cursor: pointer; font-weight: 650; color: #264a7a; }
+.jingle-timing-help p { font-size: 12px; line-height: 1.5; margin: 10px 0; }
+.jingle-timing-help table { width: 100%; margin: 12px 0 0; font-size: 12px; border-collapse: collapse; }
+.jingle-timing-help caption { text-align: left; font-weight: 750; color: #264a7a; margin-bottom: 8px; }
+.jingle-timing-help th, .jingle-timing-help td { border-bottom: 1px solid #dce4ef; padding: 6px 4px; text-align: left; }
+.jingle-timing-help td { white-space: nowrap; }
+.jingle-text-length-hint { padding: 10px 12px; color: #81531a; background: #fff4df; border-radius: 8px; font-size: 13px !important; }
+@media (max-width: 640px) {
+  .jingle-timing { padding: 12px 10px; }
+  .jingle-timing-row { grid-template-columns: 54px minmax(0, 1fr); gap: 6px; font-size: 10px; }
+  .jingle-timing-axis { margin-left: 60px; }
+  .jingle-timing-voice span { display: none; }
+}

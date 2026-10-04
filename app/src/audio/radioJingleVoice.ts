@@ -6,6 +6,8 @@ import { STUDIO_STYLES, studioVoiceGain } from './jingleStudio';
 type Context = AudioContext | OfflineAudioContext;
 type Style = NonNullable<PodcastBlock['jingle']>['style'];
 const rooms: Record<Style, number> = { dynamic: 1, adventure: 1.25, historical: 1.3, mysterious: 1.4, serious: 1, 'modern-radio': 1.1 };
+const broadcastRooms: Record<Style, number> = { dynamic: 2.7, adventure: 3.2, historical: 3.4, mysterious: 3.6, serious: 2.6, 'modern-radio': 3 };
+export const RADIO_REPLY_GAIN = 10 ** (-12 / 20);
 const impulses = new WeakMap<Context, Map<number, AudioBuffer>>();
 
 function roomImpulse(context: Context, seconds: number): AudioBuffer {
@@ -39,9 +41,12 @@ function addRoom(context: Context, input: AudioNode, output: AudioNode, seconds:
 }
 
 /** Dedicated recordings receive different processing; no voice fades or pitch changes. */
-export function connectRadioJingleVoice(context: Context, input: AudioNode, output: AudioNode, style: Style, part: JingleVoicePart): void {
+export function connectRadioJingleVoice(context: Context, input: AudioNode, output: AudioNode, style: Style, part: JingleVoicePart, broadcast = false): void {
   const echo = isJingleEcho(part);
   const title = part === 'title' || part === 'title-alt';
+  // Attenuate the whole reply chain, including its resonance and slap.
+  const destination = echo && broadcast ? context.createGain() : output;
+  if (destination !== output) { (destination as GainNode).gain.value = RADIO_REPLY_GAIN; destination.connect(output); }
   const profile = STUDIO_STYLES[style];
   const highpass = context.createBiquadFilter(); highpass.type = 'highpass'; highpass.frequency.value = echo ? 400 : title ? profile.highpass : 90;
   const lowpass = context.createBiquadFilter(); lowpass.type = 'lowpass'; lowpass.frequency.value = echo ? 3200 : title ? Math.max(9000, profile.lowpass) : 16000;
@@ -61,14 +66,21 @@ export function connectRadioJingleVoice(context: Context, input: AudioNode, outp
     presence.connect(warmth).connect(lowpass).connect(compressor);
   }
   const dry = context.createGain(); dry.gain.value = echo ? 1.35 : title ? 1.22 : 1.3;
-  compressor.connect(dry).connect(output);
+  compressor.connect(dry).connect(destination);
   if (echo) {
     const slap = context.createDelay(.2); slap.delayTime.value = .095;
     const feedback = context.createGain(); feedback.gain.value = .18;
     const wet = context.createGain(); wet.gain.value = .22;
-    compressor.connect(slap); slap.connect(feedback).connect(slap); slap.connect(wet).connect(output);
-    addRoom(context, compressor, output, .65, .18, .012, true);
-  } else addRoom(context, compressor, output, title ? rooms[style] : .38, title ? .32 : .065, title ? .022 : .012);
+    compressor.connect(slap); slap.connect(feedback).connect(slap); slap.connect(wet).connect(destination);
+    addRoom(context, compressor, destination, .65, .18, .012, true);
+  } else {
+    addRoom(context, compressor, destination, title ? (broadcast ? broadcastRooms[style] : rooms[style]) : .38, title ? (broadcast ? 1.08 : .32) : .065, title ? (broadcast ? .045 : .022) : .012);
+    if (title && broadcast) for (const [seconds, level] of [[.085, .2], [.145, .12], [.215, .07]]) {
+      const reflection = context.createDelay(.3); reflection.delayTime.value = seconds;
+      const levelNode = context.createGain(); levelNode.gain.value = level;
+      compressor.connect(reflection).connect(levelNode).connect(destination);
+    }
+  }
 }
 
 /** Preserve headroom when two different voices overlap over the music. */
@@ -110,9 +122,9 @@ export async function previewRadioJingleTakes(takes: { part: JingleVoicePart; as
       const source = context.createBufferSource(); source.buffer = cue.buffer;
       const gain = context.createGain(); gain.gain.value = studioVoiceGain(cue.buffer);
       source.connect(gain);
-      connectRadioJingleVoice(context, gain, bus, style, cue.part);
+      connectRadioJingleVoice(context, gain, bus, style, cue.part, true);
       source.start(start + cue.at, sourceStart, length);
-      const tail = isJingleEcho(cue.part) ? .7 : cue.part === 'title' || cue.part === 'title-alt' ? rooms[style] + .025 : .4;
+      const tail = isJingleEcho(cue.part) ? .7 : cue.part === 'title' || cue.part === 'title-alt' ? broadcastRooms[style] + .05 : .4;
       duration = Math.max(duration, cue.at + length + tail);
     }
     timer = setTimeout(() => { void stop(); }, (duration + .06) * 1000);

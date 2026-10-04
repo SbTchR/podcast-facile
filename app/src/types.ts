@@ -82,7 +82,7 @@ export interface PodcastBlock {
     voiceEnhancement?: VoiceEnhancement;
     musicLeadSeconds?: 1 | 2 | 3 | 4;
     musicTailSeconds?: 1 | 2 | 3 | 4;
-    production?: 'studio-v2' | 'guided-v3' | 'guided-v4' | 'guided-v5' | 'guided-v6' | 'guided-v7';
+    production?: 'studio-v2' | 'guided-v3' | 'guided-v4' | 'guided-v5' | 'guided-v6' | 'guided-v7' | 'guided-v8';
     signatureFx?: boolean;
     bedId?: string;
     takes?: Partial<Record<JingleVoicePart, JingleTake>>;
