@@ -63,6 +63,8 @@ const prepared = getGuidedJinglePlan(prompt.block, prompt.assets);
 const verbose = getGuidedJinglePlan({ ...prompt.block, jingle: { ...prompt.block.jingle, scripts: { ...prompt.block.jingle.scripts, intro: 'Le podcast qui vous fait voyager à travers toute notre histoire pour découvrir les civilisations et comprendre notre monde.' } } }, prompt.assets);
 assert.ok(verbose.timing.estimates.intro > prepared.timing.estimates.intro);
 assert.ok(verbose.limits.hook < prepared.limits.hook, 'A longer prepared introduction reserves more speaking time.');
+assert.ok(prepared.limits.title >= 5, 'A longer spoken title may fit even when its prepared text is short.');
+assert.ok(prepared.limits.title < prepared.window / 2, 'The first title must leave room for the second version and the sentences.');
 const recorded = fixture(35, [2, .9, 4, .8, 2, .9, 2.4], { intro: 'Bonjour.' });
 close(checkReady(recorded).starts.hook, checkReady({ ...recorded, block: { ...recorded.block, jingle: { ...recorded.block.jingle, scripts: { intro: 'Un texte extrêmement long qui ne remplace jamais la durée réelle de la prise déjà enregistrée et gardée.' } } } }).starts.hook);
 let seed = 16217;

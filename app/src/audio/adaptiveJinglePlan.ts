@@ -30,7 +30,7 @@ function estimateTakes(jingle: NonNullable<PodcastBlock['jingle']>, durations: R
     const reading = words ? words / (echo ? 2.6 : 2.3) + (echo ? .12 : .35) : fallback;
     return [part, Math.max(MINIMUM_WAITING[part], echo ? Math.min(3, reading) : reading)];
   })) as RadioDurations;
-  if (!jingle.scripts?.['title-alt'] && durations.title > 0) estimates['title-alt'] = Math.max(estimates['title-alt'], durations.title);
+  if (durations.title > 0 && jinglePartScript(jingle, '', 'title').trim() === jinglePartScript(jingle, '', 'title-alt').trim()) estimates['title-alt'] = Math.max(estimates['title-alt'], durations.title);
   return estimates;
 }
 
@@ -74,15 +74,20 @@ export function getAdaptiveRadioPlan(jingle: NonNullable<PodcastBlock['jingle']>
     else high = middle;
   }
   const reserved = reserveAt(low);
+  const sameTitle = jinglePartScript(jingle, '', 'title').trim() === jinglePartScript(jingle, '', 'title-alt').trim();
   const limits = Object.fromEntries(RADIO_JINGLE_PARTS.map(part => {
     let low = 0, high = window;
     for (let i = 0; i < 36; i++) {
       const middle = (low + high) / 2;
-      if (radioSpeechDuration({ ...reserved, [part]: middle }) <= window - .04) low = middle;
+      const candidate = { ...reserved, [part]: middle };
+      // Before either version is recorded, leave room for the same title twice.
+      const otherTitle = part === 'title' ? 'title-alt' : part === 'title-alt' ? 'title' : undefined;
+      if (sameTitle && otherTitle && !durations[otherTitle]) candidate[otherTitle] = Math.max(reserved[otherTitle], middle);
+      if (radioSpeechDuration(candidate) <= window - .04) low = middle;
       else high = middle;
     }
-    // Keep responses concise and guide titles by the prepared text, not a fixed cap.
-    const guide = isJingleEcho(part) ? 3 : part === 'title' || part === 'title-alt' ? estimates[part] * 1.6 + .4 : window;
+    // Responses stay short; all main phrases may use their fair available budget.
+    const guide = isJingleEcho(part) ? 3 : window;
     const maximum = Math.max(durations[part], Math.min(low, Math.max(guide, durations[part])));
     return [part, Math.max(durations[part], Math.floor((maximum + 1e-7) * 10) / 10)];
   })) as RadioDurations;
