@@ -28,7 +28,7 @@ export interface AudioAsset {
   libraryId?: string;
 }
 
-export type JingleVoicePart = 'title' | 'title-alt' | 'intro' | 'hook';
+export type JingleVoicePart = 'title' | 'title-echo' | 'title-alt' | 'title-alt-echo' | 'intro' | 'intro-echo' | 'hook';
 export interface JingleTake {
   assetId: string;
   sourceStart: number;
@@ -82,11 +82,13 @@ export interface PodcastBlock {
     voiceEnhancement?: VoiceEnhancement;
     musicLeadSeconds?: 1 | 2 | 3 | 4;
     musicTailSeconds?: 1 | 2 | 3 | 4;
-    production?: 'studio-v2' | 'guided-v3' | 'guided-v4' | 'guided-v5' | 'guided-v6';
+    production?: 'studio-v2' | 'guided-v3' | 'guided-v4' | 'guided-v5' | 'guided-v6' | 'guided-v7';
     signatureFx?: boolean;
     bedId?: string;
     takes?: Partial<Record<JingleVoicePart, JingleTake>>;
     scripts?: Partial<Record<JingleVoicePart, string>>;
+    introVoices?: 'voice-1' | 'duo';
+    hookVoice?: 'voice-1' | 'voice-2';
     ending?: { assetId: string; presetId: string; volume: number };
   };
 }

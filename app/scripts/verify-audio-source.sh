@@ -33,6 +33,7 @@ node app/scripts/verify-section-layers.mjs
 node app/scripts/verify-section-timeline.mjs
 node app/scripts/verify-voice-editing.mjs
 node app/scripts/verify-guided-jingle.mjs
+node app/scripts/verify-radio-jingle.mjs
 node app/scripts/verify-jingle-endings.mjs
 node app/scripts/verify-curated-sounds.mjs
 node app/scripts/verify-podcast-music.mjs
