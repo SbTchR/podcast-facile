@@ -42,7 +42,7 @@ transition_members = ['impact', 'sparkle', 'heartbeat', 'rewind', 'drop', 'quest
 for preset in transition_members:
     assert f"'{preset}'" in types
 assert "import { TRANSITION_RECORDINGS } from './data/podcastTransitions'" in app
-assert len(json.loads((ROOT / 'public/audio/podcast-transitions/sources.json').read_text())) == 17
+assert len(json.loads((ROOT / 'public/audio/podcast-transitions/sources.json').read_text())) == 27
 assert "transitionVolume?: VolumeLevel" in types
 assert 'transitionVolumeValue(block.transitionVolume, transitionAsset.libraryId)' in engine
 assert 'transitionTone' not in engine

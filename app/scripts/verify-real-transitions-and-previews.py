@@ -14,8 +14,8 @@ assert '20260722-real-transitions-preview-1' in app
 assert 'TRANSITION_RECORDINGS' in app
 transitions = (ROOT / 'src' / 'data' / 'podcastTransitions.ts').read_text(encoding='utf-8')
 rows = json.loads((ROOT / 'public/audio/podcast-transitions/sources.json').read_text())
-assert len(rows) == 17
-assert len({row['id'] for row in rows}) == 17
+assert len(rows) == 27
+assert len({row['id'] for row in rows}) == 27
 for row in rows:
     assert row['license'] == 'CC0'
     assert row['id'] in transitions
@@ -74,4 +74,4 @@ for item_id in transition_ids:
 assert by_id['sfx-buzzer-real']['license'] == 'Domaine public'
 assert by_id['sfx-human-whistling']['license'] == 'Domaine public'
 
-print('17 transitions locales, sources historiques et aperçus sur chaque carte vérifiés.')
+print('27 transitions locales, sources historiques et aperçus sur chaque carte vérifiés.')
