@@ -6,7 +6,7 @@ import { loadLibraryAudio } from '../data/audioLibrary';
 import { createLibraryPreviewSession } from '../audio/libraryPreview';
 import { analyseJingleRecording, getGuidedJinglePlan } from '../audio/jinglePlan';
 import type { PreviewSession } from '../audio/libraryPreview';
-import { RADIO_JINGLE_PARTS, JINGLE_PART_LABELS as PART_LABELS, isJingleEcho, isJinglePartEnabled, jinglePartScript, jinglePartSpeaker } from '../audio/jingleParts';
+import { RADIO_JINGLE_PARTS, JINGLE_PART_LABELS as PART_LABELS, isJingleEcho, isJinglePartEnabled, jinglePartSpeaker } from '../audio/jingleParts';
 import { previewRadioJingleTakes, jingleVoiceEffectDefaults } from '../audio/radioJingleVoice';
 import { JingleTiming } from './JingleTiming';
 import { WizardSteps } from './WizardSteps';
@@ -72,7 +72,7 @@ export function JingleWizard({ block, assets, podcastTitle, onBlock, onRegisterA
   const stepParts = STEP_PARTS[step];
   const activePart = stepParts[takeKind === 'echo' && stepParts.length > 1 ? 1 : 0];
   const echo = Boolean(activePart && isJingleEcho(activePart));
-  const script = (part: JingleVoicePart) => jinglePartScript(jingle, podcastTitle, part);
+  const script = (part: JingleVoicePart) => jingle.scripts?.[part] ?? '';
   const speaker = (part: JingleVoicePart) => jinglePartSpeaker(jingle, part);
   const update = (values: Partial<NonNullable<PodcastBlock['jingle']>>) => onBlock((current) => ({ ...current, jingle: { style: bed.style, musicLevel: 'low', ...current.jingle, production: 'guided-v9', ...values } }));
 
@@ -167,7 +167,7 @@ export function JingleWizard({ block, assets, podcastTitle, onBlock, onRegisterA
         <fieldset className="jingle-take-fields" disabled={!included(activePart)}>
         {activePart === 'intro' && <div className="jingle-speaker-choice" role="group" aria-label="Qui dit la présentation ?"><span>Qui parle ?</span>{(['voice-1', 'duo'] as const).map(choice => <button key={choice} disabled={busy} className={(jingle.introVoices ?? 'voice-1') === choice ? 'selected' : ''} aria-pressed={(jingle.introVoices ?? 'voice-1') === choice} onClick={() => update({ introVoices: choice })}>{choice === 'duo' ? 'Voix 1 + voix 2' : 'Voix 1 seule'}</button>)}</div>}
         {activePart === 'hook' && <div className="jingle-speaker-choice" role="group" aria-label="Qui dit l’accroche ?"><span>Qui parle ?</span>{(['voice-1', 'voice-2'] as const).map(choice => <button key={choice} disabled={busy} className={(jingle.hookVoice ?? 'voice-1') === choice ? 'selected' : ''} aria-pressed={(jingle.hookVoice ?? 'voice-1') === choice} onClick={() => update({ hookVoice: choice })}>{choice === 'voice-1' ? 'Voix 1' : 'Voix 2'}</button>)}</div>}
-        <div className="jingle-recording-role"><span className={`jingle-voice-badge ${echo || speaker(activePart) === 'Voix 2' ? 'voice-two' : ''}`}>{speaker(activePart)}</span><small>Prise {RADIO_JINGLE_PARTS.indexOf(activePart as typeof RADIO_JINGLE_PARTS[number]) + 1} sur 7</small></div>
+        <div className="jingle-recording-role"><span className={`jingle-voice-badge ${echo || speaker(activePart) === 'Voix 2' ? 'voice-two' : speaker(activePart) === 'Voix 1 + voix 2' ? 'voice-both' : ''}`}>{speaker(activePart)}</span><small>Prise {RADIO_JINGLE_PARTS.indexOf(activePart as typeof RADIO_JINGLE_PARTS[number]) + 1} sur 7</small></div>
         <p>{echo ? 'Enregistre seulement les 2–3 derniers mots de la phrase.' : activePart === 'title' ? 'Voix 1 : annonce le titre avec énergie.' : activePart === 'title-alt' ? 'Voix 1 : redis le même titre avec une autre intonation.' : activePart === 'intro' ? 'Dites en quelques mots de quoi parle votre podcast.' : `${speaker(activePart)} : donne le numéro ou le sujet de l’épisode.`}</p>
         <div className="jingle-duration-advice"><strong>Conseil : vise environ {seconds(plan.limits[activePart] || 1)}.</strong><span>Tu peux parler plus longtemps ; l’enregistrement ne s’arrête pas automatiquement.</span></div>
         {plan.timing && !jingle.takes?.[activePart] && plan.timing.estimates[activePart] > plan.limits[activePart] + .2 && <p className="jingle-text-length-hint">Ton texte semble plus long que la durée conseillée. {bed.variant === 'standard' ? 'Choisis 35 secondes, ou raccourcis-le un peu.' : 'Lis-le à voix haute pour vérifier sa durée, puis raccourcis-le si besoin.'}</p>}
@@ -196,7 +196,7 @@ export function JingleWizard({ block, assets, podcastTitle, onBlock, onRegisterA
         <h3 tabIndex={-1}>{plan.ready ? 'Ton jingle est prêt à écouter' : plan.complete ? 'Tes phrases ont besoin de plus de temps' : 'Choisis les prises à garder'}</h3><p>{bed.label} · {bed.title} · {seconds(plan.total)}.</p>
         {partChoices}
         {shorterFits && <div className="jingle-shorter-choice"><p>Tes prises tiennent aussi dans 25 secondes, pour un jingle plus rythmé.</p><button className="secondary-button compact" disabled={busy || loadingBed} onClick={() => { stopPreviews(); setError(''); update({ bedId: shorterBed!.id, musicAssetId: undefined }); }}>Passer à 25 secondes en gardant les voix</button></div>}
-        <JingleTiming plan={plan} onTake={showTake} />
+        <JingleTiming plan={plan} onTake={showTake} jingle={jingle} />
         <Preview previewId={`jingle-${block.id}-${JSON.stringify(jingle)}`} label={`Écouter le jingle complet · ${seconds(plan.total)}`} onStart={() => onPreview(block)} disabled={!plan.ready || busy || !music || loadingBed} />
 
         {!plan.ready && <div className="jingle-budget"><p className="missing-audio">{plan.complete ? 'Il manque ' + seconds(timeMissing) + ' pour garder toutes les paroles et les passages musicaux. ' + (bed.variant === 'standard' ? 'Passe à 35 secondes, ou raccourcis une phrase.' : 'Raccourcis une phrase, puis réenregistre-la.') : 'Enregistre les éléments inclus encore manquants, ou désactive-les. Tes prises restent conservées.'}</p>{moreTime}</div>}

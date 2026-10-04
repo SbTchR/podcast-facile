@@ -37,10 +37,11 @@ export function envelopeValue(points: GainPoint[], at: number): number {
 export function sectionMusicEnvelope(item: ResolvedLayer, timeline: TimelineEntry[], full: number, fadeIn: number, fadeOut: number): GainPoint[] {
   const duration = item.end - item.start;
   const under = full * percent(item.layer.volume);
-  const solo = full * percent(Math.max(item.layer.volume, item.layer.pauseVolume ?? item.layer.volume));
+  const pauseVolumeEnabled = item.layer.pauseVolumeEnabled !== false;
+  const solo = full * percent(Math.max(item.layer.volume, item.layer.pauseVolume ?? 75));
   const voicePoints: GainPoint[] = [[0, under]];
   const pauses: { start: number; end: number }[] = [];
-  if (item.layer.pauseVolume !== undefined) for (const entry of timeline) {
+  if (pauseVolumeEnabled) for (const entry of timeline) {
     if (entry.block.sectionId !== item.sectionId || entry.block.type !== 'silence') continue;
     const start = Math.max(item.start, entry.start) - item.start, end = Math.min(item.end, entry.end) - item.start;
     if (end <= start) continue;

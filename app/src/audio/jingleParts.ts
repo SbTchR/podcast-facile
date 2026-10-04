@@ -32,3 +32,8 @@ export function jinglePartSpeaker(jingle: NonNullable<PodcastBlock['jingle']>, p
   if (part === 'hook' && jingle.hookVoice === 'voice-2') return 'Voix 2';
   return 'Voix 1';
 }
+
+export function jinglePartSpeakerClass(jingle: NonNullable<PodcastBlock['jingle']>, part: JingleVoicePart): string {
+  const speaker = jinglePartSpeaker(jingle, part);
+  return speaker === 'Voix 1 + voix 2' ? 'speaker-both' : speaker === 'Voix 2' ? 'speaker-voice-2' : 'speaker-voice-1';
+}

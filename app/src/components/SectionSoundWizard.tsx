@@ -134,7 +134,7 @@ export function SectionSoundWizard({ project, sectionId, kind, initial, initialV
       id: crypto.randomUUID(), kind: phase, title: chosen.name, assetId: chosen.id, sourceStart, sourceEnd,
       soundGroup: phase === 'sfx' ? preset?.soundGroup ?? 'effect' : undefined,
       start: anchorAtTime(timeline, at), end: background ? { edge: 'end' } : undefined,
-      volume: ambience ? 35 : phase === 'music' ? 32 : 55, pauseVolume: phase === 'music' ? 75 : undefined, fadeIn: background ? 'normal' : 'none', fadeOut: background ? 'normal' : 'short', repeat: background && sourceEnd - sourceStart < duration,
+      volume: ambience ? 35 : phase === 'music' ? 32 : 55, pauseVolume: phase === 'music' ? 75 : undefined, pauseVolumeEnabled: phase === 'music' ? true : undefined, fadeIn: background ? 'normal' : 'none', fadeOut: background ? 'normal' : 'short', repeat: background && sourceEnd - sourceStart < duration,
     };
     change(layer, null); setSelectedVoiceId(undefined); setSelectedId(layer.id); setLibraryOpen(false);
   };
@@ -226,11 +226,11 @@ export function SectionSoundWizard({ project, sectionId, kind, initial, initialV
           }}>Placer au repère d’écoute</button>}
           <div className="sound-position-fields">
             {selected.pauseBlockId && <label className="field"><span>Entendre le son seul après</span><select value={selected.afterBlockId} onChange={event => change(selected, event.target.value)}>{blocks.map(block => <option key={block.id} value={block.id}>{block.title}</option>)}</select></label>}
-            <label className="field music-volume-slider"><span>{selected.kind === 'music' ? 'Volume sous les voix' : 'Volume'} · {selected.volume}%</span><input aria-label={selected.kind === 'music' ? 'Volume sous les voix' : 'Volume du son'} type="range" min="0" max="100" value={selected.volume} onChange={event => update({ volume: Number(event.target.value), ...(selected.pauseVolume !== undefined ? { pauseVolume: Math.max(selected.pauseVolume, Number(event.target.value)) } : {}) })} /></label>
+            <label className="field music-volume-slider"><span>{selected.kind === 'music' ? 'Volume sous les voix' : 'Volume'} · {selected.volume}%</span><input aria-label={selected.kind === 'music' ? 'Volume sous les voix' : 'Volume du son'} type="range" min="0" max="100" value={selected.volume} onChange={event => update({ volume: Number(event.target.value), ...(selected.kind === 'music' && selected.pauseVolumeEnabled !== false ? { pauseVolume: Math.max(selected.pauseVolume ?? 75, Number(event.target.value)) } : {}) })} /></label>
           </div>
           {selected.kind === 'music' && <div className="music-pause-level">
-            <label className="check-row"><input type="checkbox" checked={selected.pauseVolume !== undefined} onChange={event => update({ pauseVolume: event.target.checked ? Math.max(75, selected.volume) : undefined })} /> Remonter la musique pendant les pauses</label>
-            {selected.pauseVolume !== undefined && <label className="field music-volume-slider"><span>Volume pendant les pauses · {Math.max(selected.volume, selected.pauseVolume)}%</span><input type="range" aria-label="Volume pendant les pauses" min={selected.volume} max="100" value={Math.max(selected.volume, selected.pauseVolume)} onChange={event => update({ pauseVolume: Number(event.target.value) })} /></label>}
+            <label className="check-row"><input type="checkbox" checked={selected.pauseVolumeEnabled !== false} onChange={event => update({ pauseVolumeEnabled: event.target.checked, ...(event.target.checked ? { pauseVolume: Math.max(75, selected.volume) } : {}) })} /> Remonter la musique pendant les pauses</label>
+            {selected.pauseVolumeEnabled !== false && <label className="field music-volume-slider"><span>Volume pendant les pauses · {Math.max(selected.volume, selected.pauseVolume ?? 75)}%</span><input type="range" aria-label="Volume pendant les pauses" min={selected.volume} max="100" value={Math.max(selected.volume, selected.pauseVolume ?? 75)} onChange={event => update({ pauseVolume: Number(event.target.value) })} /></label>}
           </div>}
           <details className="sound-excerpt" open><summary>Extrait du fichier</summary><AudioExcerpt asset={asset} start={selected.sourceStart} end={selected.sourceEnd} onChange={excerptChange} compact /></details>
           <div className="sound-options">

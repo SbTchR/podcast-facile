@@ -128,6 +128,8 @@ export interface SectionAudioLayer {
   volume: number;
   /** Music level during explicit pauses; undefined keeps a constant level. */
   pauseVolume?: number;
+  /** Missing means the default is enabled; false records an explicit opt-out. */
+  pauseVolumeEnabled?: boolean;
   fadeIn: FadeLevel;
   fadeOut: FadeLevel;
   repeat: boolean;
