@@ -1,10 +1,10 @@
 # Crédits audio — Podcast Facile
 
-La sélection actuelle contient **20 musiques de fond**, **107 bruitages** et **59 ambiances**. Chaque son conserve son auteur, sa page source et sa licence. Les anciennes références restent disponibles pour les projets déjà enregistrés.
+La sélection actuelle contient **32 musiques de fond**, **107 bruitages** et **59 ambiances**. Chaque son conserve son auteur, sa page source et sa licence. Les anciennes références restent disponibles pour les projets déjà enregistrés.
 
 ## Musiques de fond
 
-18 nouveautés de [Scott Buckley](https://www.scottbuckley.com.au/library/) et [Kevin MacLeod / Incompetech](https://incompetech.com/music/royalty-free/), sous [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), accompagnent deux favoris conservés : *Medieval Dream* de Frank Schröter (CC BY 4.0) et *Egyptian Crawl* de Jason Shaw / Audionautix (CC BY 3.0).
+30 nouveautés de [Scott Buckley](https://www.scottbuckley.com.au/library/) et [Kevin MacLeod / Incompetech](https://incompetech.com/music/royalty-free/), sous [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), accompagnent deux favoris conservés : *Medieval Dream* de Frank Schröter (CC BY 4.0) et *Egyptian Crawl* de Jason Shaw / Audionautix (CC BY 3.0). La nouvelle palette ajoute notamment des thèmes de science-fiction, d’exploration spatiale, d’Antiquité, d’action et de fantaisie, ainsi que des fonds funk, swing et bossa plus rythmés.
 
 La direction musicale s’inspire des [collections pour podcasts de Podcast.co](https://www.podcast.co/resources/royalty-free-music) et des arrangements acoustiques minimalistes de [Blue Dot Sessions pour la radio](https://freemusicarchive.org/music/Blue_Dot_Sessions/The_Sweet_Hots). Ces collections servent de références éditoriales ; leurs pistes ne sont pas intégrées au pack.
 

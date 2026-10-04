@@ -5301,7 +5301,7 @@ export function resolveLibraryAudioUrl(url: string, base = import.meta.env?.BASE
 }
 
 export const LIBRARY_CATEGORIES: Record<LibraryKind, string[]> = {
-  music: ['Jazz & radio', 'Acoustique & voyage', 'Piano & confidences', 'Documentaire & découverte', 'Histoire & civilisations', 'Enquête & mystère'],
+  music: ['Jazz & radio', 'Acoustique & voyage', 'Piano & confidences', 'Documentaire & découverte', 'Histoire & civilisations', 'Enquête & mystère', 'Science-fiction & espace', 'Aventure & action', 'Fantaisie & humour', 'Groove & rythmes'],
   sfx: ["Chocs, impacts, transitions", "Guerres & combats", "Sociétés & lieux historiques", "Nature & paysages", "Transports & industrie", "Vie quotidienne & objets", "Voix & foule"],
 };
 
