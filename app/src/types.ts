@@ -120,6 +120,8 @@ export interface SectionAudioLayer {
   start: AudioAnchor;
   end?: AudioAnchor;
   volume: number;
+  /** Music level during explicit pauses; undefined keeps a constant level. */
+  pauseVolume?: number;
   fadeIn: FadeLevel;
   fadeOut: FadeLevel;
   repeat: boolean;

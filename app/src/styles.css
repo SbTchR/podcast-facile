@@ -1068,3 +1068,26 @@ details.cue-source-range { display: block; grid-column: 1 / -1; }
   .section-selection-label { display: none; }
   .section-carousel-toolbar .add-section-button { padding: 0 10px; font-size: .82rem; }
 }
+
+/* Consistent jingle voice cards, visible horizontal navigation and pause mixing. */
+.section-carousel-toolbar { flex-wrap: wrap; }
+.section-carousel-position { display: flex; align-items: center; gap: 12px; flex: 1 0 100%; padding: 0 3px; font-size: .72rem; color: #607089; }
+.section-carousel-position span { flex-shrink: 0; }
+.section-carousel-position input { flex: 1; min-width: 0; margin: 0; accent-color: #2365dc; cursor: ew-resize; }
+.section-carousel-position input:disabled { opacity: .35; cursor: default; }
+.jingle-section-content, .jingle-part-list { display: grid; gap: 9px; min-width: 0; }
+.jingle-part-card { --type-color: var(--voice); display: grid; grid-template-columns: 34px minmax(0,1fr) auto; gap: 7px; align-items: center; border: 1px solid #dfe4ed; border-left: 4px solid var(--voice); border-radius: 12px; padding: 9px; background: #fff; }
+.jingle-part-card.reply { --type-color: #c78028; border-left-color: var(--type-color); }
+.jingle-part-card .block-info strong { font-size: .82rem; }
+.jingle-part-card .block-info small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: .7rem; }
+.jingle-part-edit { border: 0; background: transparent; color: #4d5b72; font-size: .72rem; padding: 6px; border-radius: 7px; }
+.jingle-part-edit:hover { background: #eef1f6; }
+.jingle-part-card > .timed-preview { grid-column: 2 / -1; margin: 0; }
+.jingle-part-card > .timed-preview button { font-size: .72rem; min-height: 30px; padding: 5px; }
+.jingle-timing.compact { padding: 10px 8px; margin: 0; }
+.jingle-timing.compact .jingle-timing-row { grid-template-columns: 48px minmax(0,1fr); gap: 5px; font-size: 9px; }
+.jingle-timing.compact .jingle-timing-axis { margin-left: 53px; }
+.jingle-timing.compact .jingle-timing-track { height: 27px; }
+.jingle-timing.compact .jingle-timing-voice span { display: none; }
+.music-pause-level { margin: 8px 0 16px; }
+.music-pause-level > .check-row { margin-bottom: 10px; }

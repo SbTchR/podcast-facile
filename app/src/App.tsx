@@ -5,6 +5,7 @@ import { useDialog } from './useDialog';
 import { AudioExcerpt } from './components/AudioExcerpt';
 import { SectionSoundWizard } from './components/SectionSoundWizard';
 import { SectionAudioOverview } from './components/SectionAudioOverview';
+import { JingleSectionOverview } from './components/JingleSectionOverview';
 import { syncLayerPauses } from './audio/sectionLayers';
 import { applySectionArrangement } from './audio/sectionTimeline';
 import { JingleWizard } from './components/JingleWizard';
@@ -36,6 +37,7 @@ import type {
   Screen,
   SectionGuideType,
   SectionAudioLayer,
+  JingleVoicePart,
   TransitionPreset,
   VoiceEffect,
   VoiceSoundCue,
@@ -53,7 +55,7 @@ const blockLabels: Record<BlockType, string> = {
   voice: 'Voix',
   music: 'Musique',
   sfx: 'Bruitage',
-  silence: 'Pause',
+  silence: 'Pause/Musique seule',
   jingle: 'Jingle',
   transition: 'Transition',
 };
@@ -294,7 +296,7 @@ function makeBlock(type: BlockType, sectionId: string): PodcastBlock {
     id: crypto.randomUUID(),
     sectionId,
     type,
-    title: type === 'voice' ? 'Nouvelle voix' : type === 'music' ? 'Nouvelle musique' : type === 'sfx' ? 'Nouveau bruitage' : type === 'silence' ? 'Pause' : type === 'jingle' ? 'Mon jingle' : 'Transition',
+    title: type === 'voice' ? 'Nouvelle voix' : type === 'music' ? 'Nouvelle musique' : type === 'sfx' ? 'Nouveau bruitage' : type === 'silence' ? 'Pause/Musique seule' : type === 'jingle' ? 'Mon jingle' : 'Transition',
     duration,
     trimStart: 0,
     trimEnd: duration,
@@ -359,6 +361,20 @@ function App() {
   const [addSectionOpen, setAddSectionOpen] = useState(false);
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
+  const [carouselPosition, setCarouselPosition] = useState(0);
+  const [carouselOverflow, setCarouselOverflow] = useState(0);
+  useEffect(() => {
+    const carousel = carouselRef.current;
+    if (!carousel) return;
+    const update = () => {
+      const overflow = Math.max(0, carousel.scrollWidth - carousel.clientWidth);
+      setCarouselOverflow(overflow);
+      setCarouselPosition(overflow ? Math.max(0, Math.min(100, carousel.scrollLeft / overflow * 100)) : 0);
+    };
+    const observer = new ResizeObserver(update); observer.observe(carousel);
+    carousel.addEventListener('scroll', update, { passive: true }); update();
+    return () => { observer.disconnect(); carousel.removeEventListener('scroll', update); };
+  }, [screen, project?.sections.length]);
   const selectedSection = project?.sections.find(section => section.id === selectedSectionId) ?? project?.sections[0];
   const selectedSectionIndex = project?.sections.findIndex(section => section.id === selectedSection?.id) ?? -1;
   useEffect(() => {
@@ -369,6 +385,7 @@ function App() {
   const [editingLayer, setEditingLayer] = useState<{ sectionId: string; kind: 'music' | 'sfx'; initial?: SectionAudioLayer; initialVoiceId?: string } | null>(null);
   const [editingBlock, setEditingBlock] = useState<PodcastBlock | null>(null);
   const [editingIsNew, setEditingIsNew] = useState(false);
+  const [editingJinglePart, setEditingJinglePart] = useState<JingleVoicePart>();
   const [setupTitle, setSetupTitle] = useState('');
   const [setupAuthor, setSetupAuthor] = useState('');
   const undoRef = useRef<PodcastProject[]>([]);
@@ -764,6 +781,7 @@ function App() {
           <div className="section-carousel-nav"><button className="secondary-button compact" aria-label="Section précédente" disabled={selectedSectionIndex <= 0} onClick={() => setSelectedSectionId(project.sections[selectedSectionIndex - 1].id)}>←</button><button className="secondary-button compact" aria-label="Section suivante" disabled={selectedSectionIndex >= project.sections.length - 1} onClick={() => setSelectedSectionId(project.sections[selectedSectionIndex + 1].id)}>→</button></div>
           <span className="section-selection-label">{selectedSection ? `Après « ${selectedSection.title} »` : 'Ton podcast'}</span>
           <button className="add-section-button" onClick={() => setAddSectionOpen(true)}>＋ Ajouter une section</button>
+          <label className="section-carousel-position"><span>← Défiler →</span><input type="range" aria-label="Défiler parmi les sections" min="0" max="100" step="0.1" disabled={carouselOverflow <= 0} value={carouselPosition} onChange={event => { const value = Number(event.target.value); carouselRef.current?.scrollTo({ left: value / 100 * carouselOverflow }); setCarouselPosition(value); }} /></label>
         </div>
         <div className="section-carousel" ref={carouselRef} role="region" aria-label="Trame du podcast">
         {project.sections.map((section, sectionIndex) => {
@@ -839,7 +857,7 @@ function App() {
                   stopPlayback();
                 });
               }}
-              onEdit={(block) => { setEditingBlock(cloneBlock(block)); setEditingIsNew(false); }}
+              onEdit={(block, part) => { setEditingJinglePart(part); setEditingBlock(cloneBlock(block)); setEditingIsNew(false); }}
               onDuplicate={(block) => applyChange((draft) => {
                 const index = draft.blocks.findIndex((item) => item.id === block.id);
                 const copy = cloneBlock(block);
@@ -914,6 +932,7 @@ function App() {
           podcastTitle={project.title}
           assets={project.assets}
           isNew={editingIsNew}
+          initialJinglePart={editingIsNew ? undefined : editingJinglePart}
           onClose={closeBlockEditor}
           onSave={saveBlock}
           onRegisterAsset={registerAsset}
@@ -1048,7 +1067,7 @@ function SectionPanel({
   section: PodcastSection; sectionIndex: number; sectionCount: number; blocks: PodcastBlock[]; assets: AudioAsset[]; duration: number; activeBlockId: string | null; playbackStatus: 'stopped' | 'loading' | 'playing' | 'paused';
   project: PodcastProject; onAddLayer: (kind: 'music' | 'sfx') => void; onEditLayer: (layer: SectionAudioLayer) => void; onEditVoiceInTimeline: (block: PodcastBlock) => void; onPreviewSection: () => Promise<PreviewSession>;
   onRename: (title: string) => void; selected: boolean; onSelect: () => void; onHelp: () => void; onAdd: () => void; onAddVoice: () => void; onMoveSection: (direction: -1 | 1) => void; onDeleteSection: () => void;
-  onPlay: (block: PodcastBlock) => void; onEdit: (block: PodcastBlock) => void; onDuplicate: (block: PodcastBlock) => void; onDelete: (block: PodcastBlock) => void;
+  onPlay: (block: PodcastBlock) => void; onEdit: (block: PodcastBlock, part?: JingleVoicePart) => void; onDuplicate: (block: PodcastBlock) => void; onDelete: (block: PodcastBlock) => void;
   onMove: (block: PodcastBlock, direction: -1 | 1) => void; onDropBlock: (draggedId: string, beforeId?: string) => void;
 }) {
   const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -1069,7 +1088,7 @@ function SectionPanel({
         <div className="block-stack">
           {section.kind !== 'jingle' && <h3 className="narrative-heading"><span className="stage-number">1</span> Voix, transitions et pauses</h3>}
           {blocks.length === 0 && <div className="empty-section"><strong>{section.kind === 'jingle' ? 'Prépare une courte signature sonore.' : 'À toi de parler !'}</strong><p>{sectionGuideContent[section.guideType ?? 'part'].prompts[0]}</p></div>}
-          {blocks.map((block) => managedPauses.has(block.id) ? <div className="sound-gap-row" key={block.id}>🔊 Bruitage seul · {getBlockDuration(block, assets).toFixed(1)} s <small>À modifier dans l’habillage sonore</small></div> : (
+          {blocks.map((block) => block.type === 'jingle' && (block.jingle?.production === 'guided-v7' || block.jingle?.production === 'guided-v8') && block.jingle.takes ? <JingleSectionOverview key={block.id} block={block} assets={assets} podcastTitle={project.title} onEdit={part => onEdit(block, part)} onPreview={onPreviewSection} Preview={TimedPreviewButton} /> : managedPauses.has(block.id) ? <div className="sound-gap-row" key={block.id}>🔊 Bruitage seul · {getBlockDuration(block, assets).toFixed(1)} s <small>À modifier dans l’habillage sonore</small></div> : (
             <BlockCard
               key={block.id}
               block={block}
@@ -1104,10 +1123,10 @@ function BlockCard({ block, assets, active, playbackStatus, canMoveUp, canMoveDo
     <article className={`block-card block-${block.type} ${active ? 'active' : ''}`} draggable onDragStart={onDragStart} onDragOver={(event) => event.preventDefault()} onDrop={onDropBefore}>
       <div className="drag-handle" title="Glisser pour déplacer">⋮⋮</div>
       <div className="block-icon" aria-hidden="true">{blockIcons[block.type]}</div>
-      <div className="block-info"><span className="block-type-label">{blockLabels[block.type]}</span><strong>{block.title}</strong><small>{unpreparedJingle ? 'Facultatif · à préparer ou à supprimer' : formatTime(getBlockDuration(block, assets))}{block.background ? ' · musique de fond' : ''}{block.voiceCues?.length ? ` · ${block.voiceCues.length} bruitage${block.voiceCues.length > 1 ? 's' : ''} synchronisé${block.voiceCues.length > 1 ? 's' : ''}` : ''}{block.voiceEffect !== 'none' ? ` · ${voiceEffectLabels[block.voiceEffect]}` : ''}</small></div>
+      <div className="block-info"><span className="block-type-label">{blockLabels[block.type]}</span><strong>{block.type === 'silence' && block.title === 'Pause' ? 'Pause/Musique seule' : block.title}</strong><small>{unpreparedJingle ? 'Facultatif · à préparer ou à supprimer' : formatTime(getBlockDuration(block, assets))}{block.background ? ' · musique de fond' : ''}{block.voiceCues?.length ? ` · ${block.voiceCues.length} bruitage${block.voiceCues.length > 1 ? 's' : ''} synchronisé${block.voiceCues.length > 1 ? 's' : ''}` : ''}{block.voiceEffect !== 'none' ? ` · ${voiceEffectLabels[block.voiceEffect]}` : ''}</small></div>
       <button className="round-play" disabled={unpreparedJingle} title={unpreparedJingle ? 'Prépare ce jingle pour l’écouter' : undefined} onClick={onPlay} aria-label={`${active && playbackStatus === 'playing' ? 'Mettre en pause' : 'Lire'} ${block.title}`} aria-busy={active && playbackStatus === 'loading'}>{active && playbackStatus === 'loading' ? <i className="preview-spinner" /> : active && playbackStatus === 'playing' ? 'Ⅱ' : '▶'}</button>
       <div className="block-actions">
-        <button onClick={onEdit}>✎ <span>{unpreparedJingle ? 'Préparer le jingle' : block.type === 'voice' ? 'Réenregistrer' : 'Modifier'}</span></button>
+        <button onClick={onEdit}>✎ <span>{unpreparedJingle ? 'Préparer le jingle' : 'Modifier'}</span></button>
         {block.type !== 'jingle' && <button onClick={onDuplicate}>⧉ <span>Dupliquer</span></button>}
         <button className="danger" onClick={onDelete}>🗑 <span>Supprimer</span></button>
       </div>
@@ -1166,7 +1185,7 @@ function BackgroundTimingControl({ label, checked, seconds, onChecked, onSeconds
 function AddBlockModal({ onClose, onChoose }: { onClose: () => void; onChoose: (type: BlockType) => void }) {
   const choices: { type: BlockType; title: string; description: string }[] = [
     { type: 'transition', title: 'Ajouter une transition', description: 'Un court son pour passer à la suite' },
-    { type: 'silence', title: 'Ajouter une pause', description: 'De 0,5 à 10 secondes' },
+    { type: 'silence', title: 'Ajouter une pause/musique seule', description: 'Laisse passer la musique sans voix · de 0,5 à 10 secondes' },
   ];
   return (
     <Modal title="Ajouter à la suite des voix" onClose={onClose} wide>
@@ -1179,8 +1198,8 @@ function AddBlockModal({ onClose, onChoose }: { onClose: () => void; onChoose: (
   );
 }
 
-function BlockEditorModal({ block: initialBlock, assets, podcastTitle, isNew, onClose, onSave, onRegisterAsset, onPreview }: {
-  block: PodcastBlock; assets: AudioAsset[]; podcastTitle: string; isNew: boolean; onClose: () => void; onSave: (block: PodcastBlock) => void;
+function BlockEditorModal({ block: initialBlock, assets, podcastTitle, isNew, initialJinglePart, onClose, onSave, onRegisterAsset, onPreview }: {
+  initialJinglePart?: JingleVoicePart; block: PodcastBlock; assets: AudioAsset[]; podcastTitle: string; isNew: boolean; onClose: () => void; onSave: (block: PodcastBlock) => void;
   onRegisterAsset: (blob: Blob, name: string, mimeType?: string, knownDuration?: number, metadata?: Pick<AudioAsset, 'source' | 'libraryId'>) => Promise<AudioAsset>;
   onPreview: (block: PodcastBlock) => Promise<PreviewSession>;
 }) {
@@ -1399,7 +1418,7 @@ function BlockEditorModal({ block: initialBlock, assets, podcastTitle, isNew, on
           )}
 
           {block.type === 'jingle' && (
-            <JingleWizard block={block} assets={assets} podcastTitle={podcastTitle} onBlock={setBlock} onRegisterAsset={onRegisterAsset} onPreview={onPreview} onSave={onSave} onClose={onClose} isNew={isNew} FilePicker={FilePicker} Preview={TimedPreviewButton} Recorder={Recorder} />
+            <JingleWizard initialPart={initialJinglePart} block={block} assets={assets} podcastTitle={podcastTitle} onBlock={setBlock} onRegisterAsset={onRegisterAsset} onPreview={onPreview} onSave={onSave} onClose={onClose} isNew={isNew} FilePicker={FilePicker} Preview={TimedPreviewButton} Recorder={Recorder} />
           )}
 
           {(block.type === 'music' || block.type === 'sfx') && (
