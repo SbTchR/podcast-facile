@@ -29,6 +29,12 @@ export interface AudioAsset {
 }
 
 export type JingleVoicePart = 'title' | 'title-echo' | 'title-alt' | 'title-alt-echo' | 'intro' | 'intro-echo' | 'hook';
+export interface JingleVoiceEffects {
+  reverb: number;
+  enhancement: number;
+  phone: number;
+}
+
 export interface JingleTake {
   assetId: string;
   sourceStart: number;
@@ -87,6 +93,7 @@ export interface PodcastBlock {
     bedId?: string;
     takes?: Partial<Record<JingleVoicePart, JingleTake>>;
     scripts?: Partial<Record<JingleVoicePart, string>>;
+    effects?: Partial<Record<JingleVoicePart, JingleVoiceEffects>>;
     introVoices?: 'voice-1' | 'duo';
     hookVoice?: 'voice-1' | 'voice-2';
     ending?: { assetId: string; presetId: string; volume: number };

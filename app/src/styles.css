@@ -1026,3 +1026,45 @@ details.cue-source-range { display: block; grid-column: 1 / -1; }
   .jingle-timing-axis { margin-left: 60px; }
   .jingle-timing-voice span { display: none; }
 }
+
+/* Horizontal podcast construction and optional per-take jingle controls. */
+.editor-main { width: min(1540px, calc(100% - 40px)); }
+.section-carousel-toolbar { position: sticky; top: 76px; z-index: 15; display: flex; align-items: center; gap: 12px; padding: 12px; margin-bottom: 16px; border: 1px solid #d6ddea; border-radius: 13px; background: rgba(255,255,255,.97); box-shadow: 0 4px 16px #2435500a; }
+.section-carousel-nav { display: flex; gap: 6px; flex-shrink: 0; }
+.section-carousel-toolbar .add-section-button { width: auto; flex-shrink: 0; padding: 0 16px; margin: 0 0 0 auto; }
+.section-selection-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .82rem; color: #617089; }
+.section-carousel { display: flex; gap: 16px; align-items: flex-start; overflow-x: auto; scroll-snap-type: x proximity; padding: 4px 4px 20px; scrollbar-color: #aebbd1 #edf1f7; }
+.section-carousel > .podcast-section { flex: 0 0 clamp(350px, calc((100vw - 96px) / 3), 490px); min-width: 0; scroll-snap-align: start; margin-bottom: 0; }
+.section-carousel .selected-section { border-color: #4275da; box-shadow: 0 0 0 2px #4275da28; }
+.section-carousel .podcast-section-header { grid-template-columns: 25px minmax(0,1fr) 27px 27px 27px 27px; gap: 3px; padding: 9px 8px; }
+.section-carousel .section-kind-badge, .section-carousel .section-duration { display: none; }
+.section-select-button { width: 25px; min-height: 28px; padding: 0; border: 0; border-radius: 8px; background: #e9edf5; color: #52627d; font-size: .75rem; font-weight: 800; }
+.selected-section .section-select-button { background: #2365dc; color: white; }
+.section-carousel .section-title-input { font-size: .9rem; padding: 7px 4px; }
+.section-carousel .block-card { grid-template-columns: 16px 34px minmax(0,1fr) 36px; gap: 7px; padding: 9px 8px; }
+.section-carousel .block-icon { width: 34px; height: 34px; font-size: 1.1rem; }
+.section-carousel .block-info { display: block; }
+.section-carousel .block-info > * { display: block; }
+.section-carousel .block-info strong { font-size: .87rem; margin: 3px 0; }
+.section-carousel .block-info small { font-size: .7rem; }
+.section-carousel .round-play { width: 34px; height: 34px; }
+.section-carousel .block-actions { grid-column: 2 / -1; grid-row: 2; flex-wrap: wrap; padding-right: 45px; gap: 0; }
+.section-carousel .block-actions button { padding: 0 5px; font-size: .7rem; }
+.section-carousel .block-actions button span { display: inline; }
+.section-carousel .move-buttons { grid-column: 4; grid-row: 2; align-self: start; }
+.section-carousel .narrative-heading { font-size: .82rem; }
+.section-carousel .narrative-actions { gap: 6px; }
+.section-carousel .narrative-actions > button { padding: 8px; font-size: .73rem; }
+.section-carousel .narrative-actions > .timed-preview { flex-basis: 100%; margin-left: 0; }
+.jingle-voice-settings { margin: 12px 0; color: #65728a; font-size: .8rem; }
+.jingle-voice-settings summary { cursor: pointer; padding: 6px 0; }
+.jingle-voice-settings summary small { margin-left: 8px; font-weight: 400; opacity: .7; }
+.jingle-voice-settings fieldset { border: 0; padding: 12px; margin: 6px 0; background: #f8f9fc; border-radius: 10px; }
+.jingle-voice-settings .field { margin: 0 0 12px; }
+@media (max-width: 700px) {
+  .editor-main { width: calc(100% - 18px); }
+  .section-carousel > .podcast-section { flex-basis: calc(100vw - 44px); }
+  .section-carousel-toolbar { top: 115px; gap: 8px; padding: 8px; }
+  .section-selection-label { display: none; }
+  .section-carousel-toolbar .add-section-button { padding: 0 10px; font-size: .82rem; }
+}

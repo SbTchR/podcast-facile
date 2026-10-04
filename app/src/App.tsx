@@ -151,7 +151,7 @@ function cloneBlock(block: PodcastBlock): PodcastBlock {
   return {
     ...block,
     background: block.background ? { ...block.background } : undefined,
-    jingle: block.jingle ? { ...block.jingle, takes: block.jingle.takes ? Object.fromEntries(Object.entries(block.jingle.takes).map(([part, take]) => [part, take ? { ...take } : undefined])) : undefined, scripts: block.jingle.scripts ? { ...block.jingle.scripts } : undefined } : undefined,
+    jingle: block.jingle ? { ...block.jingle, takes: block.jingle.takes ? Object.fromEntries(Object.entries(block.jingle.takes).map(([part, take]) => [part, take ? { ...take } : undefined])) : undefined, scripts: block.jingle.scripts ? { ...block.jingle.scripts } : undefined, effects: block.jingle.effects ? Object.fromEntries(Object.entries(block.jingle.effects).map(([part, values]) => [part, values ? { ...values } : undefined])) : undefined } : undefined,
     voiceCues: block.voiceCues?.map((cue) => ({ ...cue })),
   };
 }
@@ -357,6 +357,14 @@ function App() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [sectionHelp, setSectionHelp] = useState<PodcastSection | null>(null);
   const [addSectionOpen, setAddSectionOpen] = useState(false);
+  const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const selectedSection = project?.sections.find(section => section.id === selectedSectionId) ?? project?.sections[0];
+  const selectedSectionIndex = project?.sections.findIndex(section => section.id === selectedSection?.id) ?? -1;
+  useEffect(() => {
+    const card = Array.from(carouselRef.current?.children ?? []).find(child => (child as HTMLElement).dataset.sectionId === selectedSection?.id);
+    card?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+  }, [selectedSection?.id, project?.sections.length]);
   const [addSectionId, setAddSectionId] = useState<string | null>(null);
   const [editingLayer, setEditingLayer] = useState<{ sectionId: string; kind: 'music' | 'sfx'; initial?: SectionAudioLayer; initialVoiceId?: string } | null>(null);
   const [editingBlock, setEditingBlock] = useState<PodcastBlock | null>(null);
@@ -606,10 +614,12 @@ function App() {
     if (!project) return;
     const created = makeGuidedSection(guideType, project.sections);
     applyChange((draft) => {
-      draft.sections.push(created.section);
+      const index = draft.sections.findIndex(section => section.id === selectedSection?.id);
+      draft.sections.splice(index < 0 ? draft.sections.length : index + 1, 0, created.section);
       if (created.block) draft.blocks.push(created.block);
     });
     setAddSectionOpen(false);
+    setSelectedSectionId(created.section.id);
     if (created.block) {
       setEditingBlock(created.block);
       setEditingIsNew(true);
@@ -750,6 +760,12 @@ function App() {
           </div>
         </div>
 
+        <div className="section-carousel-toolbar">
+          <div className="section-carousel-nav"><button className="secondary-button compact" aria-label="Section précédente" disabled={selectedSectionIndex <= 0} onClick={() => setSelectedSectionId(project.sections[selectedSectionIndex - 1].id)}>←</button><button className="secondary-button compact" aria-label="Section suivante" disabled={selectedSectionIndex >= project.sections.length - 1} onClick={() => setSelectedSectionId(project.sections[selectedSectionIndex + 1].id)}>→</button></div>
+          <span className="section-selection-label">{selectedSection ? `Après « ${selectedSection.title} »` : 'Ton podcast'}</span>
+          <button className="add-section-button" onClick={() => setAddSectionOpen(true)}>＋ Ajouter une section</button>
+        </div>
+        <div className="section-carousel" ref={carouselRef} role="region" aria-label="Trame du podcast">
         {project.sections.map((section, sectionIndex) => {
           const blocks = project.blocks.filter((block) => block.sectionId === section.id);
           const duration = blocks.reduce((sum, block) => sum + getBlockDuration(block, project.assets), 0);
@@ -770,7 +786,8 @@ function App() {
               activeBlockId={activeBlockId}
               playbackStatus={playbackStatus}
               onRename={(title) => applyChange((draft) => { const item = draft.sections.find((candidate) => candidate.id === section.id); if (item) item.title = title; })}
-              onToggle={() => applyChange((draft) => { const item = draft.sections.find((candidate) => candidate.id === section.id); if (item) item.collapsed = !item.collapsed; })}
+              selected={selectedSection?.id === section.id}
+              onSelect={() => setSelectedSectionId(section.id)}
               onHelp={() => setSectionHelp(section)}
               onAdd={() => setAddSectionId(section.id)}
               onAddVoice={() => addVoice(section.id)}
@@ -862,8 +879,6 @@ function App() {
           );
         })}
 
-        <div className="section-add-actions">
-          <button className="add-section-button" onClick={() => setAddSectionOpen(true)}>＋ Ajouter une section</button>
         </div>
       </main>
 
@@ -1028,11 +1043,11 @@ function EditorTopbar({ project, duration, saveState, canUndo, canRedo, onHome, 
 
 function SectionPanel({
   section, sectionIndex, sectionCount, blocks, assets, duration, activeBlockId, playbackStatus, project, onAddLayer, onEditLayer, onEditVoiceInTimeline, onPreviewSection,
-  onRename, onToggle, onHelp, onAdd, onAddVoice, onMoveSection, onDeleteSection, onPlay, onEdit, onDuplicate, onDelete, onMove, onDropBlock,
+  onRename, selected, onSelect, onHelp, onAdd, onAddVoice, onMoveSection, onDeleteSection, onPlay, onEdit, onDuplicate, onDelete, onMove, onDropBlock,
 }: {
   section: PodcastSection; sectionIndex: number; sectionCount: number; blocks: PodcastBlock[]; assets: AudioAsset[]; duration: number; activeBlockId: string | null; playbackStatus: 'stopped' | 'loading' | 'playing' | 'paused';
   project: PodcastProject; onAddLayer: (kind: 'music' | 'sfx') => void; onEditLayer: (layer: SectionAudioLayer) => void; onEditVoiceInTimeline: (block: PodcastBlock) => void; onPreviewSection: () => Promise<PreviewSession>;
-  onRename: (title: string) => void; onToggle: () => void; onHelp: () => void; onAdd: () => void; onAddVoice: () => void; onMoveSection: (direction: -1 | 1) => void; onDeleteSection: () => void;
+  onRename: (title: string) => void; selected: boolean; onSelect: () => void; onHelp: () => void; onAdd: () => void; onAddVoice: () => void; onMoveSection: (direction: -1 | 1) => void; onDeleteSection: () => void;
   onPlay: (block: PodcastBlock) => void; onEdit: (block: PodcastBlock) => void; onDuplicate: (block: PodcastBlock) => void; onDelete: (block: PodcastBlock) => void;
   onMove: (block: PodcastBlock, direction: -1 | 1) => void; onDropBlock: (draggedId: string, beforeId?: string) => void;
 }) {
@@ -1040,18 +1055,17 @@ function SectionPanel({
   const managedPauses = new Set(section.audioLayers?.map((layer) => layer.pauseBlockId));
   const narrativeBlocks = blocks.filter((block) => !managedPauses.has(block.id));
   return (
-    <section className={`podcast-section ${section.kind === 'jingle' ? 'jingle-section' : ''}`} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); if (section.kind === 'jingle') return; const id = event.dataTransfer.getData('text/plain') || draggedId; if (id) onDropBlock(id); setDraggedId(null); }}>
+    <section className={`podcast-section ${section.kind === 'jingle' ? 'jingle-section' : ''} ${selected ? 'selected-section' : ''}`} data-section-id={section.id} onPointerDown={onSelect} onFocusCapture={onSelect} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); if (section.kind === 'jingle') return; const id = event.dataTransfer.getData('text/plain') || draggedId; if (id) onDropBlock(id); setDraggedId(null); }}>
       <div className="podcast-section-header">
-        <button className="collapse-button" onClick={onToggle} aria-expanded={!section.collapsed} aria-label={`${section.collapsed ? 'Déplier' : 'Replier'} ${section.title}`}>{section.collapsed ? '▸' : '▾'}</button>
+        <button className="section-select-button" aria-label={`Sélectionner ${section.title}`} aria-pressed={selected} onClick={onSelect}>{sectionIndex + 1}</button>
         <input className="section-title-input" value={section.title} onChange={(event) => onRename(event.target.value)} aria-label="Nom de la section" />
         <button className="section-help-button" onClick={onHelp} title="Conseils et exemples pour cette section" aria-label={`Aide pour ${section.title}`}>?</button>
         {section.kind === 'jingle' && <span className="section-kind-badge">Jingle</span>}
         <span className="section-duration">{formatTime(duration)}</span>
-        <button className="mini-button" disabled={sectionIndex === 0} onClick={() => onMoveSection(-1)} title="Monter la section">↑</button>
-        <button className="mini-button" disabled={sectionIndex === sectionCount - 1} onClick={() => onMoveSection(1)} title="Descendre la section">↓</button>
+        <button className="mini-button" disabled={sectionIndex === 0} onClick={() => onMoveSection(-1)} title="Déplacer la section vers la gauche">←</button>
+        <button className="mini-button" disabled={sectionIndex === sectionCount - 1} onClick={() => onMoveSection(1)} title="Déplacer la section vers la droite">→</button>
         <button className="mini-button danger" onClick={onDeleteSection} title="Supprimer la section">×</button>
       </div>
-      {!section.collapsed && (
         <div className="block-stack">
           {section.kind !== 'jingle' && <h3 className="narrative-heading"><span className="stage-number">1</span> Voix, transitions et pauses</h3>}
           {blocks.length === 0 && <div className="empty-section"><strong>{section.kind === 'jingle' ? 'Prépare une courte signature sonore.' : 'À toi de parler !'}</strong><p>{sectionGuideContent[section.guideType ?? 'part'].prompts[0]}</p></div>}
@@ -1076,7 +1090,6 @@ function SectionPanel({
           ))}
           {section.kind !== 'jingle' && <><div className="narrative-actions"><button className="primary-button compact" onClick={onAddVoice}>🎙 Enregistrer une voix</button><button className="ghost-button compact" onClick={onAdd}>＋ Transition ou pause</button>{duration > 0 && <TimedPreviewButton previewId={`section-${section.id}`} label="Écouter cette partie" onStart={onPreviewSection} />}</div><SectionAudioOverview project={project} sectionId={section.id} onAdd={onAddLayer} onEdit={onEditLayer} onVoice={onEditVoiceInTimeline} /></>}
         </div>
-      )}
     </section>
   );
 }
@@ -1578,7 +1591,7 @@ function VoiceCueEditor({ asset, trimStart, trimEnd, cues, assets, onCues, onAdd
   );
 }
 
-function Recorder({ onReady, onBusyChange, maxSeconds }: { onReady: (blob: Blob, duration: number) => Promise<void> | void; onBusyChange?: (busy: boolean) => void; maxSeconds?: number }) {
+function Recorder({ onReady, onBusyChange, maxSeconds, showHint = true }: { onReady: (blob: Blob, duration: number) => Promise<void> | void; onBusyChange?: (busy: boolean) => void; maxSeconds?: number; showHint?: boolean }) {
   const [state, setState] = useState<'idle' | 'countdown' | 'recording' | 'paused' | 'processing'>('idle');
   const [seconds, setSeconds] = useState(0);
   const [countdown, setCountdown] = useState(true);
@@ -1688,7 +1701,7 @@ function Recorder({ onReady, onBusyChange, maxSeconds }: { onReady: (blob: Blob,
         <div><strong>{state === 'idle' ? 'Prêt à enregistrer' : state === 'countdown' ? `Départ dans ${count}` : state === 'processing' ? 'Traitement…' : state === 'paused' ? 'En pause' : 'Enregistrement en cours'}</strong><span>{maxSeconds ? `${Math.max(0, maxSeconds - seconds).toFixed(1).replace('.', ',')} s restantes` : formatTime(seconds)}</span></div>
       </div>
       {maxSeconds && <progress className="jingle-record-progress" aria-label="Temps d’enregistrement utilisé" max={maxSeconds} value={Math.min(seconds, maxSeconds)} />}
-      {state === 'idle' && <p className="recorder-hint">Autorise le microphone si le navigateur le demande. Parle, puis clique sur « Terminer » pour garder ta voix.{maxSeconds ? ' Le micro s’arrête automatiquement à la limite indiquée.' : ''}</p>}
+      {showHint && state === 'idle' && <p className="recorder-hint">Autorise le microphone si le navigateur le demande. Parle, puis clique sur « Terminer » pour garder ta voix.{maxSeconds ? ' Le micro s’arrête automatiquement à la limite indiquée.' : ''}</p>}
       <div className="recorder-actions">
         {state === 'idle' && <button className="record-button" onClick={() => void start()}>● Enregistrer</button>}
         {(state === 'recording' || state === 'paused') && <button className="secondary-button compact" onClick={pause}>{state === 'recording' ? 'Ⅱ Pause' : '▶ Reprendre'}</button>}
