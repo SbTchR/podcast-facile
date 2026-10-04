@@ -53,9 +53,10 @@ def levels(samples):
 
 
 def recipe(row):
-    return digest(json.dumps({key: row[key] for key in
-                             ['downloadUrl', 'startSeconds', 'maxSeconds']} | {'version': VERSION},
-                            sort_keys=True).encode())
+    settings = {key: row[key] for key in ['downloadUrl', 'startSeconds', 'maxSeconds']}
+    if 'peakCompression' in row:
+        settings['peakCompression'] = row['peakCompression']
+    return digest(json.dumps(settings | {'version': VERSION}, sort_keys=True).encode())
 
 
 def prepare(row, force):
@@ -92,12 +93,14 @@ def prepare(row, force):
     # Tame isolated peaks in paper/percussion before normalizing the audible body.
     compressed = db(peak / rms) > 14
     if compressed:
-        threshold = max(.001, min(1, rms * 2))
+        compression = row.get('peakCompression', {'thresholdRmsMultiple': 2, 'ratio': 4})
+        threshold = max(.001, min(1, rms * compression['thresholdRmsMultiple']))
+        ratio = compression['ratio']
         if sys.byteorder != 'little':
             samples.byteswap()
         data = subprocess.run(['ffmpeg', '-v', 'error', '-f', 'f32le', '-ar', str(RATE),
                                '-ac', '2', '-i', '-', '-af',
-                               f'acompressor=threshold={threshold}:ratio=4:attack=0.1:release=40:detection=peak',
+                               f'acompressor=threshold={threshold}:ratio={ratio}:attack=0.1:release=40:detection=peak',
                                '-f', 'f32le', '-'], input=samples.tobytes(),
                               check=True, capture_output=True).stdout
         samples = array.array('f')

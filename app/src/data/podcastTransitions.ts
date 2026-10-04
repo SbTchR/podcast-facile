@@ -232,6 +232,33 @@ export const PODCAST_TRANSITIONS: LibraryPreset[] = [
     "attribution": "Impact de rubrique — qubodup / Freesound — CC0. Extrait court, silences retirés, niveau harmonisé, fondus de 5/65 ms, MP3 stéréo 192 kbit/s."
   },
   {
+    "id": "sfx-transition-boom",
+    "title": "Boom dramatique",
+    "icon": "💥",
+    "description": "Un impact grave avec résonance pour souligner une révélation.",
+    "tags": [
+      "transition",
+      "podcast",
+      "boom",
+      "impact",
+      "révélation",
+      "formats courts"
+    ],
+    "sourcePage": "https://freesound.org/people/rhapsodize/sounds/255111/",
+    "author": "rhapsodize",
+    "license": "CC0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "kind": "sfx",
+    "category": "Transitions et ponctuation",
+    "soundGroup": "effect",
+    "filename": "sfx-transition-boom.mp3",
+    "duration": 4.0,
+    "audioUrl": "audio/podcast-transitions/sfx-transition-boom.mp3",
+    "fallbackUrl": "audio/podcast-transitions/sfx-transition-boom.mp3",
+    "origin": "recording",
+    "attribution": "Boom dramatique — rhapsodize / Freesound — CC0. Extrait court, silences retirés, niveau harmonisé, fondus de 5/65 ms, MP3 stéréo 192 kbit/s."
+  },
+  {
     "id": "sfx-transition-portal",
     "title": "Ta-da !",
     "icon": "🎺",
@@ -257,6 +284,60 @@ export const PODCAST_TRANSITIONS: LibraryPreset[] = [
     "attribution": "Ta-da ! — plasterbrain / Freesound — CC0. Extrait court, silences retirés, niveau harmonisé, fondus de 5/65 ms, MP3 stéréo 192 kbit/s."
   },
   {
+    "id": "sfx-transition-pop",
+    "title": "Pop d’apparition",
+    "icon": "💬",
+    "description": "Un pop net pour faire surgir une idée ou ponctuer une phrase.",
+    "tags": [
+      "transition",
+      "podcast",
+      "pop",
+      "apparition",
+      "formats courts",
+      "réaction"
+    ],
+    "sourcePage": "https://freesound.org/people/Sadiquecat/sounds/824189/",
+    "author": "Sadiquecat",
+    "license": "CC0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "kind": "sfx",
+    "category": "Transitions et ponctuation",
+    "soundGroup": "effect",
+    "filename": "sfx-transition-pop.mp3",
+    "duration": 0.24,
+    "audioUrl": "audio/podcast-transitions/sfx-transition-pop.mp3",
+    "fallbackUrl": "audio/podcast-transitions/sfx-transition-pop.mp3",
+    "origin": "recording",
+    "attribution": "Pop d’apparition — Sadiquecat / Freesound — CC0. Extrait court, silences retirés, niveau harmonisé, fondus de 5/65 ms, MP3 stéréo 192 kbit/s."
+  },
+  {
+    "id": "sfx-transition-boing",
+    "title": "Boing cartoon",
+    "icon": "🌀",
+    "description": "Un rebond comique reconnaissable pour une surprise ou un clin d’œil.",
+    "tags": [
+      "transition",
+      "podcast",
+      "boing",
+      "cartoon",
+      "humour",
+      "réaction"
+    ],
+    "sourcePage": "https://freesound.org/people/reelworldstudio/sounds/161122/",
+    "author": "reelworldstudio",
+    "license": "CC0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "kind": "sfx",
+    "category": "Transitions et ponctuation",
+    "soundGroup": "effect",
+    "filename": "sfx-transition-boing.mp3",
+    "duration": 1.05,
+    "audioUrl": "audio/podcast-transitions/sfx-transition-boing.mp3",
+    "fallbackUrl": "audio/podcast-transitions/sfx-transition-boing.mp3",
+    "origin": "recording",
+    "attribution": "Boing cartoon — reelworldstudio / Freesound — CC0. Extrait court, silences retirés, niveau harmonisé, fondus de 5/65 ms, MP3 stéréo 192 kbit/s."
+  },
+  {
     "id": "sfx-transition-sparkle",
     "title": "Carillon scintillant",
     "icon": "✨",
@@ -280,6 +361,33 @@ export const PODCAST_TRANSITIONS: LibraryPreset[] = [
     "fallbackUrl": "audio/podcast-transitions/sfx-transition-sparkle.mp3",
     "origin": "recording",
     "attribution": "Carillon scintillant — Joseph SARDIN / LaSonothèque — CC0. Extrait court, silences retirés, niveau harmonisé, fondus de 5/65 ms, MP3 stéréo 192 kbit/s."
+  },
+  {
+    "id": "sfx-transition-ding",
+    "title": "Ding de révélation",
+    "icon": "🔔",
+    "description": "Une clochette claire pour une bonne réponse ou une idée qui arrive.",
+    "tags": [
+      "transition",
+      "podcast",
+      "ding",
+      "clochette",
+      "révélation",
+      "bonne réponse"
+    ],
+    "sourcePage": "https://freesound.org/people/samplecat/sounds/11587/",
+    "author": "samplecat",
+    "license": "CC0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "kind": "sfx",
+    "category": "Transitions et ponctuation",
+    "soundGroup": "effect",
+    "filename": "sfx-transition-ding.mp3",
+    "duration": 2.18,
+    "audioUrl": "audio/podcast-transitions/sfx-transition-ding.mp3",
+    "fallbackUrl": "audio/podcast-transitions/sfx-transition-ding.mp3",
+    "origin": "recording",
+    "attribution": "Ding de révélation — samplecat / Freesound — CC0. Extrait court, silences retirés, niveau harmonisé, fondus de 5/65 ms, MP3 stéréo 192 kbit/s."
   },
   {
     "id": "sfx-transition-mystery",
@@ -357,6 +465,33 @@ export const PODCAST_TRANSITIONS: LibraryPreset[] = [
     "attribution": "Scratch vinyle — Joseph SARDIN / LaSonothèque — CC0. Extrait court, silences retirés, niveau harmonisé, fondus de 5/65 ms, MP3 stéréo 192 kbit/s."
   },
   {
+    "id": "sfx-transition-glitch",
+    "title": "Glitch numérique",
+    "icon": "⚡",
+    "description": "Une coupure électronique saccadée pour changer de sujet avec énergie.",
+    "tags": [
+      "transition",
+      "podcast",
+      "glitch",
+      "numérique",
+      "formats courts",
+      "coupure"
+    ],
+    "sourcePage": "https://freesound.org/people/AmicaSys/sounds/332711/",
+    "author": "AmicaSys",
+    "license": "CC0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "kind": "sfx",
+    "category": "Transitions et ponctuation",
+    "soundGroup": "effect",
+    "filename": "sfx-transition-glitch.mp3",
+    "duration": 2.0,
+    "audioUrl": "audio/podcast-transitions/sfx-transition-glitch.mp3",
+    "fallbackUrl": "audio/podcast-transitions/sfx-transition-glitch.mp3",
+    "origin": "recording",
+    "attribution": "Glitch numérique — AmicaSys / Freesound — CC0. Extrait court, silences retirés, niveau harmonisé, fondus de 5/65 ms, MP3 stéréo 192 kbit/s."
+  },
+  {
     "id": "sfx-transition-failure",
     "title": "Buzzer de quiz",
     "icon": "🚫",
@@ -380,6 +515,60 @@ export const PODCAST_TRANSITIONS: LibraryPreset[] = [
     "fallbackUrl": "audio/podcast-transitions/sfx-transition-failure.mp3",
     "origin": "recording",
     "attribution": "Buzzer de quiz — Joseph SARDIN / LaSonothèque — CC0. Extrait court, silences retirés, niveau harmonisé, fondus de 5/65 ms, MP3 stéréo 192 kbit/s."
+  },
+  {
+    "id": "sfx-transition-buzzer-show",
+    "title": "Buzzer · jeu télévisé",
+    "icon": "🚨",
+    "description": "Un buzzer franc et prolongé pour une mauvaise réponse ou une interruption.",
+    "tags": [
+      "transition",
+      "podcast",
+      "buzzer",
+      "quiz",
+      "jeu",
+      "erreur"
+    ],
+    "sourcePage": "https://freesound.org/people/Philip_Daniels/sounds/259290/",
+    "author": "Philip_Daniels",
+    "license": "CC0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "kind": "sfx",
+    "category": "Transitions et ponctuation",
+    "soundGroup": "effect",
+    "filename": "sfx-transition-buzzer-show.mp3",
+    "duration": 1.1887,
+    "audioUrl": "audio/podcast-transitions/sfx-transition-buzzer-show.mp3",
+    "fallbackUrl": "audio/podcast-transitions/sfx-transition-buzzer-show.mp3",
+    "origin": "recording",
+    "attribution": "Buzzer · jeu télévisé — Philip_Daniels / Freesound — CC0. Extrait court, silences retirés, niveau harmonisé, fondus de 5/65 ms, MP3 stéréo 192 kbit/s."
+  },
+  {
+    "id": "sfx-transition-buzzer-arcade",
+    "title": "Buzzer · arcade",
+    "icon": "🎮",
+    "description": "Une série de buzzers électroniques pour un échec ou une chute humoristique.",
+    "tags": [
+      "transition",
+      "podcast",
+      "buzzer",
+      "arcade",
+      "quiz",
+      "humour"
+    ],
+    "sourcePage": "https://freesound.org/people/Breviceps/sounds/493163/",
+    "author": "Breviceps",
+    "license": "CC0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "kind": "sfx",
+    "category": "Transitions et ponctuation",
+    "soundGroup": "effect",
+    "filename": "sfx-transition-buzzer-arcade.mp3",
+    "duration": 2.76,
+    "audioUrl": "audio/podcast-transitions/sfx-transition-buzzer-arcade.mp3",
+    "fallbackUrl": "audio/podcast-transitions/sfx-transition-buzzer-arcade.mp3",
+    "origin": "recording",
+    "attribution": "Buzzer · arcade — Breviceps / Freesound — CC0. Extrait court, silences retirés, niveau harmonisé, fondus de 5/65 ms, MP3 stéréo 192 kbit/s."
   },
   {
     "id": "sfx-transition-bell",
@@ -430,6 +619,87 @@ export const PODCAST_TRANSITIONS: LibraryPreset[] = [
     "fallbackUrl": "audio/podcast-transitions/sfx-transition-page.mp3",
     "origin": "recording",
     "attribution": "Page tournée — DavidGreck / LaSonothèque — CC0. Extrait court, silences retirés, niveau harmonisé, fondus de 5/65 ms, MP3 stéréo 192 kbit/s."
+  },
+  {
+    "id": "sfx-transition-page-slow",
+    "title": "Page tournée · grand livre",
+    "icon": "📖",
+    "description": "Une grande page tournée lentement, pour ouvrir un nouveau chapitre.",
+    "tags": [
+      "transition",
+      "podcast",
+      "page",
+      "livre",
+      "papier",
+      "chapitre"
+    ],
+    "sourcePage": "https://lasonotheque.org/grande-page-qui-tourne-1-s0362.html",
+    "author": "DenisChardonnet",
+    "license": "CC0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "kind": "sfx",
+    "category": "Transitions et ponctuation",
+    "soundGroup": "effect",
+    "filename": "sfx-transition-page-slow.mp3",
+    "duration": 1.8024,
+    "audioUrl": "audio/podcast-transitions/sfx-transition-page-slow.mp3",
+    "fallbackUrl": "audio/podcast-transitions/sfx-transition-page-slow.mp3",
+    "origin": "recording",
+    "attribution": "Page tournée · grand livre — DenisChardonnet / LaSonothèque — CC0. Extrait court, silences retirés, niveau harmonisé, fondus de 5/65 ms, MP3 stéréo 192 kbit/s."
+  },
+  {
+    "id": "sfx-transition-page-paper",
+    "title": "Page tournée · papier épais",
+    "icon": "📄",
+    "description": "Un froissement de page ample, avec une texture de papier bien présente.",
+    "tags": [
+      "transition",
+      "podcast",
+      "page",
+      "papier",
+      "livre",
+      "chapitre"
+    ],
+    "sourcePage": "https://lasonotheque.org/grande-page-qui-tourne-2-s0363.html",
+    "author": "DenisChardonnet",
+    "license": "CC0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "kind": "sfx",
+    "category": "Transitions et ponctuation",
+    "soundGroup": "effect",
+    "filename": "sfx-transition-page-paper.mp3",
+    "duration": 1.489,
+    "audioUrl": "audio/podcast-transitions/sfx-transition-page-paper.mp3",
+    "fallbackUrl": "audio/podcast-transitions/sfx-transition-page-paper.mp3",
+    "origin": "recording",
+    "attribution": "Page tournée · papier épais — DenisChardonnet / LaSonothèque — CC0. Extrait court, silences retirés, niveau harmonisé, fondus de 5/65 ms, MP3 stéréo 192 kbit/s."
+  },
+  {
+    "id": "sfx-transition-page-flip",
+    "title": "Feuilletage · plusieurs pages",
+    "icon": "📚",
+    "description": "Plusieurs pages qui se suivent pour passer à un dossier ou une chronique.",
+    "tags": [
+      "transition",
+      "podcast",
+      "pages",
+      "feuilletage",
+      "livre",
+      "dossier"
+    ],
+    "sourcePage": "https://lasonotheque.org/pages-qu-on-tourne-s0493.html",
+    "author": "Joseph SARDIN",
+    "license": "CC0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "kind": "sfx",
+    "category": "Transitions et ponctuation",
+    "soundGroup": "effect",
+    "filename": "sfx-transition-page-flip.mp3",
+    "duration": 6.33,
+    "audioUrl": "audio/podcast-transitions/sfx-transition-page-flip.mp3",
+    "fallbackUrl": "audio/podcast-transitions/sfx-transition-page-flip.mp3",
+    "origin": "recording",
+    "attribution": "Feuilletage · plusieurs pages — Joseph SARDIN / LaSonothèque — CC0. Extrait court, silences retirés, niveau harmonisé, fondus de 5/65 ms, MP3 stéréo 192 kbit/s."
   }
 ];
 
@@ -498,6 +768,13 @@ export const TRANSITION_RECORDINGS: { preset: TransitionPreset; libraryId: strin
     "description": "Un accent grave et net pour marquer un changement de sujet."
   },
   {
+    "preset": "impact",
+    "libraryId": "sfx-transition-boom",
+    "label": "Boom dramatique",
+    "icon": "💥",
+    "description": "Un impact grave avec résonance pour souligner une révélation."
+  },
+  {
     "preset": "portal",
     "libraryId": "sfx-transition-portal",
     "label": "Ta-da !",
@@ -505,11 +782,32 @@ export const TRANSITION_RECORDINGS: { preset: TransitionPreset; libraryId: strin
     "description": "Une courte fanfare pour annoncer une découverte ou un résultat."
   },
   {
+    "preset": "surprise",
+    "libraryId": "sfx-transition-pop",
+    "label": "Pop d’apparition",
+    "icon": "💬",
+    "description": "Un pop net pour faire surgir une idée ou ponctuer une phrase."
+  },
+  {
+    "preset": "surprise",
+    "libraryId": "sfx-transition-boing",
+    "label": "Boing cartoon",
+    "icon": "🌀",
+    "description": "Un rebond comique reconnaissable pour une surprise ou un clin d’œil."
+  },
+  {
     "preset": "sparkle",
     "libraryId": "sfx-transition-sparkle",
     "label": "Carillon scintillant",
     "icon": "✨",
     "description": "Des notes cristallines pour une transition légère."
+  },
+  {
+    "preset": "bell",
+    "libraryId": "sfx-transition-ding",
+    "label": "Ding de révélation",
+    "icon": "🔔",
+    "description": "Une clochette claire pour une bonne réponse ou une idée qui arrive."
   },
   {
     "preset": "mystery",
@@ -533,11 +831,32 @@ export const TRANSITION_RECORDINGS: { preset: TransitionPreset; libraryId: strin
     "description": "Un arrêt de disque pour une rupture, une surprise ou un retour en arrière."
   },
   {
+    "preset": "rewind",
+    "libraryId": "sfx-transition-glitch",
+    "label": "Glitch numérique",
+    "icon": "⚡",
+    "description": "Une coupure électronique saccadée pour changer de sujet avec énergie."
+  },
+  {
     "preset": "failure",
     "libraryId": "sfx-transition-failure",
     "label": "Buzzer de quiz",
     "icon": "🚫",
     "description": "Un signal clair pour une réponse fausse ou une contradiction."
+  },
+  {
+    "preset": "failure",
+    "libraryId": "sfx-transition-buzzer-show",
+    "label": "Buzzer · jeu télévisé",
+    "icon": "🚨",
+    "description": "Un buzzer franc et prolongé pour une mauvaise réponse ou une interruption."
+  },
+  {
+    "preset": "failure",
+    "libraryId": "sfx-transition-buzzer-arcade",
+    "label": "Buzzer · arcade",
+    "icon": "🎮",
+    "description": "Une série de buzzers électroniques pour un échec ou une chute humoristique."
   },
   {
     "preset": "bell",
@@ -552,5 +871,26 @@ export const TRANSITION_RECORDINGS: { preset: TransitionPreset; libraryId: strin
     "label": "Page tournée",
     "icon": "📖",
     "description": "Un froissement de page pour changer de chapitre ou poursuivre un récit."
+  },
+  {
+    "preset": "page",
+    "libraryId": "sfx-transition-page-slow",
+    "label": "Page tournée · grand livre",
+    "icon": "📖",
+    "description": "Une grande page tournée lentement, pour ouvrir un nouveau chapitre."
+  },
+  {
+    "preset": "page",
+    "libraryId": "sfx-transition-page-paper",
+    "label": "Page tournée · papier épais",
+    "icon": "📄",
+    "description": "Un froissement de page ample, avec une texture de papier bien présente."
+  },
+  {
+    "preset": "page",
+    "libraryId": "sfx-transition-page-flip",
+    "label": "Feuilletage · plusieurs pages",
+    "icon": "📚",
+    "description": "Plusieurs pages qui se suivent pour passer à un dossier ou une chronique."
   }
 ];

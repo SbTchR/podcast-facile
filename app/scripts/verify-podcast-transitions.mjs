@@ -9,8 +9,8 @@ const rows = JSON.parse(await readFile(new URL('sources.json', directory), 'utf8
 const { PODCAST_TRANSITIONS, TRANSITION_RECORDINGS } = await import(await typescriptModuleUrl(new URL('../src/data/podcastTransitions.ts', import.meta.url)));
 const { AUDIO_LIBRARY, availableLibrarySounds } = await import(await typescriptModuleUrl(new URL('../src/data/audioLibrary.ts', import.meta.url)));
 const { transitionVolumeValue, getBlockDuration } = await loadAudioEngine();
-assert.equal(rows.length, 17);
-assert.equal(new Set(rows.map(row => row.sha256)).size, 17, 'Each choice must offer a distinct sound.');
+assert.equal(rows.length, 27);
+assert.equal(new Set(rows.map(row => row.sha256)).size, 27, 'Each choice must offer a distinct sound.');
 assert.equal(new Set(AUDIO_LIBRARY.map(row => row.id)).size, AUDIO_LIBRARY.length, 'Library IDs must stay unique.');
 assert.equal(TRANSITION_RECORDINGS.length, rows.length);
 const rmsValues = [];
@@ -54,7 +54,7 @@ assert.equal(transitionVolumeValue('normal'), .34, 'Existing projects keep their
 assert.equal(transitionVolumeValue('normal', rows[0].id), .75);
 assert.ok(transitionVolumeValue('low', rows[0].id) < transitionVolumeValue('normal', rows[0].id));
 assert.ok(transitionVolumeValue('high', rows[0].id) > transitionVolumeValue('normal', rows[0].id));
-console.log(`17 distinct CC0 transitions decoded: 0.2–8s, active RMS ${Math.min(...rmsValues).toFixed(1)} to ${Math.max(...rmsValues).toFixed(1)} dBFS, no clipping; catalogue, hashes and legacy compatibility verified.`);
+console.log(`27 distinct CC0 transitions decoded: 0.2–8s, active RMS ${Math.min(...rmsValues).toFixed(1)} to ${Math.max(...rmsValues).toFixed(1)} dBFS, no clipping; catalogue, hashes and legacy compatibility verified.`);
 
 const longRadio = rows.filter(row => row.id.startsWith('sfx-transition-radio-'));
 assert.equal(longRadio.length, 3);
@@ -64,3 +64,12 @@ for (const row of longRadio) {
   assert.equal(getBlockDuration(block, [{id:'radio', libraryId:row.id}]), row.preparedDuration, 'Long radio transitions must not be truncated in the timeline.');
   assert.equal(getBlockDuration(block, [{id:'radio', libraryId:'sfx-airplane-chime'}]), 4, 'Keep the legacy duration cap.');
 }
+
+for (const id of ['page-slow', 'page-paper', 'page-flip', 'buzzer-show', 'buzzer-arcade', 'pop', 'boing', 'glitch', 'boom', 'ding']) {
+  assert.ok(rows.some(row => row.id === 'sfx-transition-' + id), 'Keep the requested expanded palette: ' + id);
+}
+for (const id of ['page-slow', 'page-paper', 'page-flip']) {
+  const row = rows.find(row => row.id === 'sfx-transition-' + id);
+  assert.ok(row.preparedDuration > 1.2, 'New page turns must be longer than the original 0.45s clip.');
+}
+assert.ok(rows.find(row => row.id === 'sfx-transition-page-flip').preparedDuration > 5);
