@@ -823,16 +823,19 @@ details.cue-source-range { display: block; grid-column: 1 / -1; }
 .track-clip > strong { display: block; position: relative; z-index: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 11px; font-weight: 650; padding: 5px 8px 0; pointer-events: none; }
 .track-clip.voice { background: #91d3a8; color: #205338; border-color: #70b989; }
 .track-clip.voice.speaker-voice-1 { background: #d5e4ff; color: #204a8b; border-color: #98b7eb; }
-.track-clip.voice.speaker-voice-2 { background: #ffe3c4; color: #794514; border-color: #e6b578; }
-.track-clip.voice.speaker-both { background: linear-gradient(115deg, #d5e4ff 0 49.5%, #ffe3c4 50.5% 100%); color: #33415a; border-color: #b9bdd1; }
+.track-clip.voice.speaker-voice-2 { background: #ffe0e3; color: #a12535; border-color: #e49ba1; }
+.track-clip.voice.speaker-both { background: linear-gradient(115deg, #d5e4ff 0 49.5%, #ffe0e3 50.5% 100%); color: #33415a; border-color: #b9bdd1; }
 .track-voice-speakers { gap: 3px; }
 .track-voice-speakers > span:first-child { flex: 0 0 auto; }
 .track-speaker-key { display: flex; gap: 2px; align-items: center; }
 .track-speaker-key i { display: grid; place-items: center; width: 11px; height: 11px; border-radius: 50%; background: #d5e4ff; color: #204a8b; font-size: 7px; font-style: normal; line-height: 1; }
-.track-speaker-key .speaker-two { background: #ffe3c4; color: #794514; }
+.track-speaker-key .speaker-two { background: #ffe0e3; color: #a12535; }
 .voice-speaker-select select { max-width: 320px; }
 .section-element-card.block-voice.speaker-voice-1 { --type-color: #6e98df; }
-.section-element-card.block-voice.speaker-voice-2 { --type-color: #d68e42; }
+.section-element-card.block-voice.speaker-voice-2 { --type-color: #bd4653; }
+.section-element-card.jingle-part-card.speaker-voice-1 { --type-color: #6e98df; }
+.section-element-card.jingle-part-card.speaker-voice-2 { --type-color: #bd4653; }
+.section-element-card.jingle-part-card.speaker-both { --type-color: #9787cc; }
 .section-element-card.block-voice.speaker-both { --type-color: #9787cc; }
 .track-clip.pause { background: #eef1f6; color: #728098; border-color: #dce4ee; }
 .track-clip.sfx { background: #f4c28e; color: #794514; border-color: #deac74; }
@@ -995,7 +998,8 @@ details.cue-source-range { display: block; grid-column: 1 / -1; }
 .jingle-recording-role { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin: 16px 0 8px; color: #324966; font-size: 13px; }
 .jingle-recording-role small { margin-left: auto; color: #6a7890; }
 .jingle-voice-badge { padding: 6px 9px; border-radius: 6px; background: #e7effe; color: #235abb; font-weight: 700; white-space: nowrap; }
-.jingle-voice-badge.voice-two { background: #fff0df; color: #97601a; }
+.jingle-voice-badge.voice-two { background: #ffe0e3; color: #a12535; }
+.jingle-voice-badge.voice-both { background: #eee9ff; color: #5e5190; }
 .jingle-speaker-choice { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 16px 0; font-size: 13px; }
 .jingle-speaker-choice > span { color: #65748b; margin-right: 4px; }
 .jingle-speaker-choice button { padding: 9px 12px; border: 1px solid #d7e1ee; border-radius: 7px; background: white; color: #415775; }
@@ -1030,7 +1034,8 @@ details.cue-source-range { display: block; grid-column: 1 / -1; }
 .jingle-timing-music, .jingle-timing-voice { position: absolute; top: 0; height: 100%; border-radius: 4px; overflow: hidden; }
 .jingle-timing-music { background: #d1eadd; box-shadow: inset 0 0 0 1px #99c8ac; }
 .jingle-timing-voice { border: 1px solid #adc7f6; background: #dce9ff; color: #16468e; padding: 0; min-width: 0; white-space: nowrap; font-size: 10px; font-weight: 750; }
-.jingle-timing-voice.reply { border-color: #efc58f; background: #ffe5bd; color: #85500b; }
+.jingle-timing-voice.speaker-voice-2 { border-color: #e49ba1; background: #ffe0e3; color: #a12535; }
+.jingle-timing-voice.speaker-both { border-color: #b9addd; background: #eee9ff; color: #5e5190; }
 .jingle-timing-voice:focus-visible { outline: 2px solid #245dd8; outline-offset: -2px; }
 .jingle-timing-help { margin-top: 12px; font-size: 12px; color: #52667f; }
 .jingle-timing-help summary { cursor: pointer; font-weight: 650; color: #264a7a; }
