@@ -1,6 +1,8 @@
 import type { JingleVoicePart, PodcastBlock } from '../types';
 
 export const RADIO_JINGLE_PARTS = ['title', 'title-echo', 'intro', 'intro-echo', 'title-alt', 'title-alt-echo', 'hook'] as const satisfies readonly JingleVoicePart[];
+export const isJinglePartEnabled = (jingle: NonNullable<PodcastBlock['jingle']>, part: JingleVoicePart) => jingle.enabledParts?.[part] !== false;
+
 export const JINGLE_ECHO_OVERLAP = .5;
 export const JINGLE_PART_LABELS: Record<JingleVoicePart, string> = {
   title: 'Titre 1', 'title-echo': 'Écho du titre 1', intro: 'Présentation', 'intro-echo': 'Écho de la présentation',

@@ -88,12 +88,14 @@ export interface PodcastBlock {
     voiceEnhancement?: VoiceEnhancement;
     musicLeadSeconds?: 1 | 2 | 3 | 4;
     musicTailSeconds?: 1 | 2 | 3 | 4;
-    production?: 'studio-v2' | 'guided-v3' | 'guided-v4' | 'guided-v5' | 'guided-v6' | 'guided-v7' | 'guided-v8';
+    production?: 'studio-v2' | 'guided-v3' | 'guided-v4' | 'guided-v5' | 'guided-v6' | 'guided-v7' | 'guided-v8' | 'guided-v9';
     signatureFx?: boolean;
     bedId?: string;
     takes?: Partial<Record<JingleVoicePart, JingleTake>>;
     scripts?: Partial<Record<JingleVoicePart, string>>;
     effects?: Partial<Record<JingleVoicePart, JingleVoiceEffects>>;
+    /** Missing flags include the element; disabling retains its recording. */
+    enabledParts?: Partial<Record<JingleVoicePart, boolean>>;
     introVoices?: 'voice-1' | 'duo';
     hookVoice?: 'voice-1' | 'voice-2';
     ending?: { assetId: string; presetId: string; volume: number };

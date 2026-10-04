@@ -1,5 +1,6 @@
 import type { AudioAsset, JingleTake, JingleVoicePart, PodcastBlock } from '../types';
 import { getAdaptiveRadioPlan, type AdaptiveJingleTiming, type RadioDurations } from './adaptiveJinglePlan';
+import { getFlexibleRadioPlan } from './flexibleJinglePlan';
 import { RADIO_JINGLE_PARTS, JINGLE_ECHO_OVERLAP, isJingleEcho } from './jingleParts';
 
 type LegacyJinglePart = Exclude<JingleVoicePart, 'title-echo' | 'intro-echo' | 'title-alt-echo'>;
@@ -20,7 +21,7 @@ export const JINGLE_ECHO_PAUSE = 0;
 export const JINGLE_AFTER_ECHO = 2;
 export const JINGLE_AFTER_INTRO = 2;
 export const JINGLE_AFTER_SECOND_TITLE = 1.5;
-export const isGuidedJingle = (block: PodcastBlock): block is PodcastBlock & { jingle: NonNullable<PodcastBlock['jingle']> } => block.jingle?.production === 'guided-v3' || block.jingle?.production === 'guided-v4' || block.jingle?.production === 'guided-v5' || block.jingle?.production === 'guided-v6' || block.jingle?.production === 'guided-v7' || block.jingle?.production === 'guided-v8';
+export const isGuidedJingle = (block: PodcastBlock): block is PodcastBlock & { jingle: NonNullable<PodcastBlock['jingle']> } => block.jingle?.production === 'guided-v3' || block.jingle?.production === 'guided-v4' || block.jingle?.production === 'guided-v5' || block.jingle?.production === 'guided-v6' || block.jingle?.production === 'guided-v7' || block.jingle?.production === 'guided-v8' || block.jingle?.production === 'guided-v9';
 
 export interface JingleVoiceCue {
   part: JingleVoicePart;
@@ -93,10 +94,11 @@ function getRadioPlan(block: PodcastBlock, assets: AudioAsset[], total: number, 
 }
 
 export function getGuidedJinglePlan(block: PodcastBlock, assets: AudioAsset[], fallbackDuration = 0): GuidedJinglePlan {
-  if (block.jingle?.production === 'guided-v8') {
+  if (block.jingle?.production === 'guided-v8' || block.jingle?.production === 'guided-v9') {
     const music = assets.find(asset => asset.id === block.jingle?.musicAssetId);
     const durations = Object.fromEntries(RADIO_JINGLE_PARTS.map(part => [part, jingleTakeDuration(block.jingle?.takes?.[part], assets)])) as RadioDurations;
-    return getAdaptiveRadioPlan(block.jingle, durations, music?.duration ?? fallbackDuration, Boolean(music));
+    const planner = block.jingle.production === 'guided-v9' ? getFlexibleRadioPlan : getAdaptiveRadioPlan;
+    return planner(block.jingle, durations, music?.duration ?? fallbackDuration, Boolean(music));
   }
   if (block.jingle?.production === 'guided-v7') {
     const music = assets.find(asset => asset.id === block.jingle?.musicAssetId);
@@ -261,7 +263,7 @@ export function getGuidedJingleEndingPlan(block: PodcastBlock, assets: AudioAsse
   const asset = assets.find(item => item.id === block.jingle!.ending!.assetId);
   if (!asset || !Number.isFinite(asset.duration) || asset.duration <= 0) return null;
   const plan = getGuidedJinglePlan(block, assets);
-  const room = block.jingle.production === 'guided-v8' ? Math.max(0, plan.total - plan.outroStart - .3) : JINGLE_TAIL - .3;
+  const room = (block.jingle.production === 'guided-v8' || block.jingle.production === 'guided-v9') ? Math.max(0, plan.total - plan.outroStart - .3) : JINGLE_TAIL - .3;
   const duration = Math.min(asset.duration, room);
   if (duration <= 0) return null;
   return { assetId: asset.id, start: Math.max(plan.outroStart + .15, plan.total - duration - .15), duration, volume: Math.max(0, Math.min(100, block.jingle.ending.volume ?? 65)) / 100 };

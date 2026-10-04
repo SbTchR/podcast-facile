@@ -133,7 +133,7 @@ function cloneBlock(block: PodcastBlock): PodcastBlock {
   return {
     ...block,
     background: block.background ? { ...block.background } : undefined,
-    jingle: block.jingle ? { ...block.jingle, takes: block.jingle.takes ? Object.fromEntries(Object.entries(block.jingle.takes).map(([part, take]) => [part, take ? { ...take } : undefined])) : undefined, scripts: block.jingle.scripts ? { ...block.jingle.scripts } : undefined, effects: block.jingle.effects ? Object.fromEntries(Object.entries(block.jingle.effects).map(([part, values]) => [part, values ? { ...values } : undefined])) : undefined } : undefined,
+    jingle: block.jingle ? { ...block.jingle, takes: block.jingle.takes ? Object.fromEntries(Object.entries(block.jingle.takes).map(([part, take]) => [part, take ? { ...take } : undefined])) : undefined, scripts: block.jingle.scripts ? { ...block.jingle.scripts } : undefined, enabledParts: block.jingle.enabledParts ? { ...block.jingle.enabledParts } : undefined, effects: block.jingle.effects ? Object.fromEntries(Object.entries(block.jingle.effects).map(([part, values]) => [part, values ? { ...values } : undefined])) : undefined } : undefined,
     voiceCues: block.voiceCues?.map((cue) => ({ ...cue })),
   };
 }
@@ -289,7 +289,7 @@ function makeBlock(type: BlockType, sectionId: string): PodcastBlock {
     voiceCues: type === 'voice' ? [] : undefined,
     transitionPreset: undefined,
     transitionVolume: type === 'transition' ? 'normal' : undefined,
-    jingle: type === 'jingle' ? { style: 'modern-radio', musicLevel: 'low', musicVolume: 32, production: 'guided-v8', bedId: getJingleBed('modern-radio', undefined, 'extended').id, signatureFx: false } : undefined,
+    jingle: type === 'jingle' ? { style: 'modern-radio', musicLevel: 'low', musicVolume: 32, production: 'guided-v9', bedId: getJingleBed('modern-radio', undefined, 'extended').id, signatureFx: false } : undefined,
   };
 }
 
@@ -362,7 +362,7 @@ function App() {
     card?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
   }, [selectedSection?.id, project?.sections.length]);
   const [addSectionId, setAddSectionId] = useState<string | null>(null);
-  const [editingLayer, setEditingLayer] = useState<{ sectionId: string; kind: 'music' | 'sfx'; initial?: SectionAudioLayer; initialVoiceId?: string } | null>(null);
+  const [editingLayer, setEditingLayer] = useState<{ sectionId: string; kind: 'voice' | 'music' | 'sfx'; initial?: SectionAudioLayer; initialVoiceId?: string; initialBlockId?: string; newBlockType?: 'voice' | 'silence' | 'transition' } | null>(null);
   const [editingBlock, setEditingBlock] = useState<PodcastBlock | null>(null);
   const [editingIsNew, setEditingIsNew] = useState(false);
   const [editingJinglePart, setEditingJinglePart] = useState<JingleVoicePart>();
@@ -778,7 +778,8 @@ function App() {
               project={project}
               onAddLayer={(kind) => setEditingLayer({ sectionId: section.id, kind })}
               onEditLayer={(initial) => setEditingLayer({ sectionId: section.id, kind: initial.kind, initial })}
-              onEditVoiceInTimeline={(voice) => setEditingLayer({ sectionId: section.id, kind: 'music', initialVoiceId: voice.id })}
+              onEditVoiceInTimeline={(voice) => setEditingLayer({ sectionId: section.id, kind: 'voice', initialVoiceId: voice.id })}
+              onEditPart={() => setEditingLayer({ sectionId: section.id, kind: 'voice' })}
               onPreviewSection={() => playProject({ ...project, sections: [section], blocks }, 0)}
               duration={duration}
               activeBlockId={activeBlockId}
@@ -787,8 +788,8 @@ function App() {
               selected={selectedSection?.id === section.id}
               onSelect={() => setSelectedSectionId(section.id)}
               onHelp={() => setSectionHelp(section)}
-              onAdd={() => setAddSectionId(section.id)}
-              onAddVoice={() => addVoice(section.id)}
+              onAdd={() => setEditingLayer({ sectionId: section.id, kind: 'voice' })}
+              onAddVoice={() => setEditingLayer({ sectionId: section.id, kind: 'voice', newBlockType: 'voice' })}
               onMoveSection={(direction) => applyChange((draft) => {
                 const index = draft.sections.findIndex((item) => item.id === section.id);
                 const target = index + direction;
@@ -837,7 +838,7 @@ function App() {
                   stopPlayback();
                 });
               }}
-              onEdit={(block, part) => { setEditingJinglePart(part); setEditingBlock(cloneBlock(block)); setEditingIsNew(false); }}
+              onEdit={(block, part) => { if (section.kind !== 'jingle' && ['voice', 'silence', 'transition'].includes(block.type)) { setEditingLayer({ sectionId: section.id, kind: 'voice', initialBlockId: block.id }); return; } setEditingJinglePart(part); setEditingBlock(cloneBlock(block)); setEditingIsNew(false); }}
               onDuplicate={(block) => applyChange((draft) => {
                 const index = draft.blocks.findIndex((item) => item.id === block.id);
                 const copy = cloneBlock(block);
@@ -920,7 +921,7 @@ function App() {
         />
       )}
 
-      {editingLayer && <SectionSoundWizard key={editingLayer.initial?.id ?? editingLayer.initialVoiceId ?? `${editingLayer.sectionId}-${editingLayer.kind}`} project={project} {...editingLayer} onClose={() => setEditingLayer(null)} onRegisterAsset={registerAsset} ui={{ Modal, FilePicker, Library: AudioLibraryModal, Preview: TimedPreviewButton, Recorder }} onSave={(edited) => {
+      {editingLayer && <SectionSoundWizard key={editingLayer.initial?.id ?? editingLayer.initialVoiceId ?? editingLayer.initialBlockId ?? `${editingLayer.sectionId}-${editingLayer.kind}`} project={project} {...editingLayer} onClose={() => setEditingLayer(null)} onRegisterAsset={registerAsset} ui={{ Modal, FilePicker, Library: AudioLibraryModal, Preview: TimedPreviewButton, Recorder, BlockEditor: BlockEditorModal, createBlock: makeBlock }} onSave={(edited) => {
         applyChange((draft) => applySectionArrangement(draft, edited, editingLayer.sectionId));
         setEditingLayer(null);
       }} />}
@@ -1041,11 +1042,11 @@ function EditorTopbar({ project, duration, saveState, canUndo, canRedo, onHome, 
 }
 
 function SectionPanel({
-  section, sectionIndex, sectionCount, blocks, assets, duration, activeBlockId, playbackStatus, project, onAddLayer, onEditLayer, onEditVoiceInTimeline, onPreviewSection,
+  section, sectionIndex, sectionCount, blocks, assets, duration, activeBlockId, playbackStatus, project, onAddLayer, onEditLayer, onEditVoiceInTimeline, onPreviewSection, onEditPart,
   onRename, selected, onSelect, onHelp, onAdd, onAddVoice, onMoveSection, onDeleteSection, onPlay, onEdit, onDuplicate, onDelete, onMove, onDropBlock,
 }: {
   section: PodcastSection; sectionIndex: number; sectionCount: number; blocks: PodcastBlock[]; assets: AudioAsset[]; duration: number; activeBlockId: string | null; playbackStatus: 'stopped' | 'loading' | 'playing' | 'paused';
-  project: PodcastProject; onAddLayer: (kind: 'music' | 'sfx') => void; onEditLayer: (layer: SectionAudioLayer) => void; onEditVoiceInTimeline: (block: PodcastBlock) => void; onPreviewSection: () => Promise<PreviewSession>;
+  project: PodcastProject; onEditPart: () => void; onAddLayer: (kind: 'music' | 'sfx') => void; onEditLayer: (layer: SectionAudioLayer) => void; onEditVoiceInTimeline: (block: PodcastBlock) => void; onPreviewSection: () => Promise<PreviewSession>;
   onRename: (title: string) => void; selected: boolean; onSelect: () => void; onHelp: () => void; onAdd: () => void; onAddVoice: () => void; onMoveSection: (direction: -1 | 1) => void; onDeleteSection: () => void;
   onPlay: (block: PodcastBlock) => void; onEdit: (block: PodcastBlock, part?: JingleVoicePart) => void; onDuplicate: (block: PodcastBlock) => void; onDelete: (block: PodcastBlock) => void;
   onMove: (block: PodcastBlock, direction: -1 | 1) => void; onDropBlock: (draggedId: string, beforeId?: string) => void;
@@ -1066,9 +1067,9 @@ function SectionPanel({
         <button className="mini-button danger" onClick={onDeleteSection} title="Supprimer la section">×</button>
       </div>
         <div className="block-stack">
-          {section.kind !== 'jingle' && <h3 className="narrative-heading"><span className="stage-number">1</span> Voix, transitions et pauses</h3>}
+          <div className="section-edit-action">{section.kind === 'jingle' ? blocks.find(block => block.type === 'jingle') && <button className="secondary-button compact" onClick={() => onEdit(blocks.find(block => block.type === 'jingle')!)}>✎ Editer le jingle</button> : <button className="secondary-button compact" onClick={onEditPart}>✎ Editer la partie</button>}</div>
           {blocks.length === 0 && <div className="empty-section"><strong>{section.kind === 'jingle' ? 'Prépare une courte signature sonore.' : 'À toi de parler !'}</strong><p>{sectionGuideContent[section.guideType ?? 'part'].prompts[0]}</p></div>}
-          {blocks.map((block) => block.type === 'jingle' && (block.jingle?.production === 'guided-v7' || block.jingle?.production === 'guided-v8') && block.jingle.takes ? <JingleSectionOverview key={block.id} block={block} assets={assets} podcastTitle={project.title} onEdit={part => onEdit(block, part)} onPreview={onPreviewSection} Preview={TimedPreviewButton} /> : managedPauses.has(block.id) ? <div className="sound-gap-row" key={block.id}>🔊 Bruitage seul · {getBlockDuration(block, assets).toFixed(1)} s <small>À modifier dans l’habillage sonore</small></div> : (
+          {blocks.map((block) => block.type === 'jingle' && (block.jingle?.production === 'guided-v7' || block.jingle?.production === 'guided-v8' || block.jingle?.production === 'guided-v9') && block.jingle.takes ? <JingleSectionOverview key={block.id} block={block} assets={assets} podcastTitle={project.title} onEdit={part => onEdit(block, part)} onPreview={onPreviewSection} Preview={TimedPreviewButton} /> : managedPauses.has(block.id) ? <div className="sound-gap-row" key={block.id}>🔊 Bruitage seul · {getBlockDuration(block, assets).toFixed(1)} s <small>À modifier dans l’habillage sonore</small></div> : (
             <BlockCard
               key={block.id}
               block={block}
@@ -1178,8 +1179,8 @@ function AddBlockModal({ onClose, onChoose }: { onClose: () => void; onChoose: (
   );
 }
 
-function BlockEditorModal({ block: initialBlock, assets, podcastTitle, isNew, initialJinglePart, onClose, onSave, onRegisterAsset, onPreview }: {
-  initialJinglePart?: JingleVoicePart; block: PodcastBlock; assets: AudioAsset[]; podcastTitle: string; isNew: boolean; onClose: () => void; onSave: (block: PodcastBlock) => void;
+function BlockEditorModal({ block: initialBlock, assets, podcastTitle, isNew, initialJinglePart, embedded = false, onBusyChange, onClose, onSave, onRegisterAsset, onPreview }: {
+  embedded?: boolean; onBusyChange?: (busy: boolean) => void; initialJinglePart?: JingleVoicePart; block: PodcastBlock; assets: AudioAsset[]; podcastTitle: string; isNew: boolean; onClose: () => void; onSave: (block: PodcastBlock) => void;
   onRegisterAsset: (blob: Blob, name: string, mimeType?: string, knownDuration?: number, metadata?: Pick<AudioAsset, 'source' | 'libraryId'>) => Promise<AudioAsset>;
   onPreview: (block: PodcastBlock) => Promise<PreviewSession>;
 }) {
@@ -1192,6 +1193,8 @@ function BlockEditorModal({ block: initialBlock, assets, podcastTitle, isNew, in
   const [transitionLoadingId, setTransitionLoadingId] = useState<string | null>(null);
   const [voiceBusy, setVoiceBusy] = useState(false);
   const [transcriptionBusy, setTranscriptionBusy] = useState(false);
+  useEffect(() => { onBusyChange?.(voiceBusy || transcriptionBusy || Boolean(transitionLoadingId)); }, [voiceBusy, transcriptionBusy, transitionLoadingId, onBusyChange]);
+  const EditorFrame = embedded ? InlineBlockEditorFrame : Modal;
   const selectedAsset = assets.find((asset) => asset.id === block.assetId);
   const requiresAsset = block.type === 'voice' || block.type === 'music' || block.type === 'sfx';
   const canSave = block.type === 'transition' ? Boolean(block.assetId && block.transitionPreset) : !requiresAsset || Boolean(block.assetId);
@@ -1333,7 +1336,7 @@ function BlockEditorModal({ block: initialBlock, assets, podcastTitle, isNew, in
 
   return (
     <>
-      <Modal title={`${isNew ? 'Ajouter' : 'Modifier'} : ${blockLabels[block.type]}`} onClose={onClose} wide>
+      <EditorFrame title={`${isNew ? 'Ajouter' : 'Modifier'} : ${blockLabels[block.type]}`} onClose={onClose} wide>
         <div className="editor-modal-body">
           {block.type !== 'jingle' && <label className="field"><span>Nom de l’élément</span><input value={block.title} onChange={(event) => update('title', event.target.value)} /></label>}
           {block.type === 'voice' && <VoiceScript value={block.script ?? ''} onChange={text => update('script', text)} asset={selectedAsset} start={block.trimStart} end={block.trimEnd || selectedAsset?.duration} disabled={voiceBusy} onBusyChange={setTranscriptionBusy} />}
@@ -1437,7 +1440,7 @@ function BlockEditorModal({ block: initialBlock, assets, podcastTitle, isNew, in
                   </div>
                 )}
               </div></details>}
-              <p className="voice-arrangement-note">Après l’ajout, clique sur la voix dans la trame pour régler son volume et ses effets.</p>
+              <p className="voice-arrangement-note">{embedded ? 'Garde cette prise pour régler ensuite son volume et ses effets dans la trame.' : 'Après l’ajout, clique sur la voix dans la trame pour régler son volume et ses effets.'}</p>
             </>
           )}
 
@@ -1446,10 +1449,10 @@ function BlockEditorModal({ block: initialBlock, assets, podcastTitle, isNew, in
         {block.type !== 'jingle' && <div className="modal-footer">
           {block.type !== 'transition' && <TimedPreviewButton previewId={`block-editor-${block.id}`} onStart={() => onPreview(block)} disabled={!canSave} />}
           <span className="footer-spacer" />
-          <button className="ghost-button" onClick={onClose}>Annuler</button>
-          <button className="primary-button" disabled={!canSave || !block.title.trim() || voiceBusy || transcriptionBusy || Boolean(transitionLoadingId)} onClick={() => onSave(block)}>✓ {isNew ? 'Ajouter' : 'Enregistrer'}</button>
+          <button className="ghost-button" disabled={voiceBusy || transcriptionBusy || Boolean(transitionLoadingId)} onClick={onClose}>Annuler</button>
+          <button className="primary-button" disabled={!canSave || !block.title.trim() || voiceBusy || transcriptionBusy || Boolean(transitionLoadingId)} onClick={() => onSave(block)}>✓ {embedded ? isNew ? 'Ajouter à la partie' : 'Garder les modifications' : isNew ? 'Ajouter' : 'Enregistrer'}</button>
         </div>}
-      </Modal>
+      </EditorFrame>
       {libraryTarget && <AudioLibraryModal kind={libraryKind} onClose={() => setLibraryTarget(null)} onChoose={chooseLibraryPreset} />}
     </>
   );
@@ -1863,6 +1866,10 @@ function ExportScreen({ project, duration, rendering, onBack, onListen, onExport
 
 function HelpModal({ onClose }: { onClose: () => void }) {
   return <Modal title="Aide rapide" onClose={onClose}><div className="help-steps"><div><span>1</span><p><strong>Enregistre les voix.</strong><br />Dans chaque partie, ajoute tes voix puis les transitions ou pauses utiles.</p></div><div><span>2</span><p><strong>Place les musiques de fond.</strong><br />Ouvre les pistes de la partie. Ajoute la musique, choisis l’extrait puis déplace et découpe le son en écoutant le mixage avec les voix.</p></div><div><span>3</span><p><strong>Ajoute les ambiances et bruitages.</strong><br />Choisis une ambiance pour le décor, ou un bruitage court pour une action ou une transition. Place-les sur la trame en écoutant avec les voix.</p></div><div><span>4</span><p><strong>Écoute et télécharge.</strong><br />Vérifie la partie ou le podcast complet, puis télécharge le WAV et une sauvegarde .podfacile.</p></div></div><div className="important-note"><strong>Important</strong><p>Les projets enregistrés uniquement dans le navigateur peuvent disparaître si ses données sont effacées. Télécharge régulièrement une sauvegarde .podfacile.</p></div></Modal>;
+}
+
+function InlineBlockEditorFrame({ title, children }: { title: string; onClose: () => void; wide?: boolean; children: React.ReactNode }) {
+  return <section className="inline-block-editor" aria-label={title}><h3>{title}</h3>{children}</section>;
 }
 
 function Modal({ title, onClose, wide = false, children }: { title: string; onClose: () => void; wide?: boolean; children: React.ReactNode }) {

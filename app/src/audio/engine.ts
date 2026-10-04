@@ -677,7 +677,10 @@ function referencedAssetIds(project: PodcastProject, offset = 0): Set<string> {
   for (const block of blocks) {
     if (isGuidedJingle(block)) {
       if (block.jingle.musicAssetId) ids.add(block.jingle.musicAssetId);
-      for (const take of Object.values(block.jingle.takes ?? {})) if (take) ids.add(take.assetId);
+      const takes = block.jingle.production === 'guided-v9'
+        ? getGuidedJinglePlan(block, project.assets).voices!.map(cue => block.jingle.takes?.[cue.part])
+        : Object.values(block.jingle.takes ?? {});
+      for (const take of takes) if (take) ids.add(take.assetId);
       if (block.jingle.ending) ids.add(block.jingle.ending.assetId);
       continue;
     }

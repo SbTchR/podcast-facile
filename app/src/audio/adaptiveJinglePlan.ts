@@ -21,7 +21,7 @@ const pairDuration = (main: number, reply: number) => reply > 0 ? Math.max(main,
 export const radioSpeechDuration = (takes: RadioDurations) => pairDuration(takes.title, takes['title-echo']) + pairDuration(takes.intro, takes['intro-echo']) + pairDuration(takes['title-alt'], takes['title-alt-echo']) + takes.hook;
 
 /** Reading estimates reserve a fair place for missing takes; recordings always win. */
-function estimateTakes(jingle: NonNullable<PodcastBlock['jingle']>, durations: RadioDurations): RadioDurations {
+export function estimateTakes(jingle: NonNullable<PodcastBlock['jingle']>, durations: RadioDurations): RadioDurations {
   const estimates = Object.fromEntries(RADIO_JINGLE_PARTS.map(part => {
     const text = jinglePartScript(jingle, '', part);
     const words = (text.match(/[\p{L}\p{N}]+(?:['’\-][\p{L}\p{N}]+)*/gu) ?? []).length;

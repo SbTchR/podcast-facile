@@ -67,8 +67,8 @@ export function splitVoice(project: PodcastProject, blockId: string, at: number,
 }
 
 /** Close the deleted gap while keeping tracks attached to the surviving voices. */
-export function removeVoicePiece(project: PodcastProject, blockId: string): PodcastProject {
-  const block = project.blocks.find(item => item.id === blockId && item.type === 'voice');
+export function removeNarrativeBlock(project: PodcastProject, blockId: string): PodcastProject {
+  const block = project.blocks.find(item => item.id === blockId && ['voice', 'silence', 'transition'].includes(item.type));
   if (!block) return project;
   const before = scopeSection(project, block.sectionId);
   const timeline = getTimeline(before);
@@ -85,4 +85,9 @@ export function removeVoicePiece(project: PodcastProject, blockId: string): Podc
   // and the caller's undo snapshot retain it, including its original anchors.
   section.audioLayers = section.audioLayers?.filter(layer => !previouslyPlaced.has(layer.id) || placed.has(layer.id));
   return { ...project, blocks, sections: project.sections.map(item => item.id === block.sectionId ? section : item) };
+}
+
+/** The cutting toolbar only removes voice pieces. */
+export function removeVoicePiece(project: PodcastProject, blockId: string): PodcastProject {
+  return project.blocks.some(block => block.id === blockId && block.type === 'voice') ? removeNarrativeBlock(project, blockId) : project;
 }
