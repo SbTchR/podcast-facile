@@ -1,5 +1,6 @@
 import type { AudioAsset, FadeLevel, PodcastBlock, PodcastProject, VoiceEffect, VoiceEnhancement, VolumeLevel } from '../types';
 
+import { sectionMusicGain, sectionMusicEnvelope, envelopeValue } from './sectionMusic';
 import { resolveSectionLayers } from './sectionLayers';
 import { connectStudioVoice, scheduleSignatureFx, applyStudioMusicEnvelope, studioVoiceGain } from './jingleStudio';
 import { getGuidedJinglePlan, isGuidedJingle } from './jinglePlan';
@@ -403,7 +404,7 @@ async function scheduleVoiceBlock(
     if (background) {
       const bgGain = context.createGain();
       bgGain.connect(destination);
-      const level = backgroundMusicValue(block.background.volume, block.background.level);
+      const level = sectionMusicGain(await decodeAsset(context, background, cache), musicVolumePercent(block.background.volume, backgroundMusicFallback(block.background.level)));
       const bgStart = start;
       const voiceStartRelative = Math.max(0, pre - localOffset);
       const voiceRemaining = Math.max(0, coreTimelineDuration - Math.max(0, localOffset - pre));
@@ -734,10 +735,16 @@ async function scheduleProject(
     const valueAt = (at: number) => peak * Math.min(inSeconds ? Math.min(1, at / inSeconds) : 1, outSeconds ? Math.min(1, (fullDuration - at) / outSeconds) : 1);
     const gain = context.createGain();
     source.connect(gain).connect(destination);
+    if (item.layer.kind === 'music') {
+      const points = sectionMusicEnvelope(item, timeline, sectionMusicGain(buffer, 100), inSeconds, outSeconds);
+      gain.gain.setValueAtTime(envelopeValue(points, consumed), playbackStart);
+      for (const [at, value] of points) if (at > consumed) gain.gain.linearRampToValueAtTime(value, playbackStart + at - consumed);
+    } else {
     gain.gain.setValueAtTime(valueAt(consumed), playbackStart);
     if (consumed < inSeconds) gain.gain.linearRampToValueAtTime(peak, playbackStart + inSeconds - consumed);
     if (outSeconds && consumed < fullDuration - outSeconds) gain.gain.setValueAtTime(peak, playbackStart + fullDuration - outSeconds - consumed);
     gain.gain.linearRampToValueAtTime(outSeconds ? 0 : peak, playbackStart + remaining);
+    }
     const sourceOffset = item.sourceStart + (item.layer.repeat ? consumed % (item.sourceEnd - item.sourceStart) : consumed);
     source.start(playbackStart, sourceOffset, item.layer.repeat ? undefined : remaining);
     source.stop(playbackStart + remaining);

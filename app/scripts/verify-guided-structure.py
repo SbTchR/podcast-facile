@@ -15,7 +15,7 @@ assert "'very-high': 'Voix très aiguë'" in app
 assert "effect === 'high' ? 1.12" in engine
 assert "effect === 'very-high' ? 1.24" in engine
 
-assert "backgroundMusicValue(block.background.volume, block.background.level)" in engine
+assert "sectionMusicGain(await decodeAsset(context, background, cache)" in engine
 assert "level === 'high' ? 1.38" in engine
 assert "level === 'low' ? 0.14 : level === 'high' ? 1.0" in engine
 assert "level === 'low' ? 0.11 : level === 'high' ? 0.7" in engine

@@ -40,13 +40,13 @@ function TakePlayer({ asset, start = 0, end = asset.duration, label }: { asset: 
   return <audio ref={audioRef} className="jingle-take-audio" controls preload="metadata" aria-label={label} src={url || undefined} onLoadedMetadata={(event) => { event.currentTarget.currentTime = start; }} onPlay={(event) => { const audio = event.currentTarget; if (audio.currentTime < start || audio.currentTime >= end) audio.currentTime = start; window.dispatchEvent(new CustomEvent('podcast-facile-stop-preview', { detail: previewId })); }} onTimeUpdate={(event) => { if (event.currentTarget.currentTime >= end) event.currentTarget.pause(); }} />;
 }
 
-export function JingleWizard({ block, assets, podcastTitle, onBlock, onRegisterAsset, onPreview, onSave, onClose, isNew, FilePicker, Preview, Recorder }: {
-  block: PodcastBlock; assets: AudioAsset[]; podcastTitle: string; onBlock: Dispatch<SetStateAction<PodcastBlock>>;
+export function JingleWizard({ block, assets, podcastTitle, onBlock, onRegisterAsset, onPreview, onSave, onClose, isNew, FilePicker, Preview, Recorder, initialPart }: {
+  initialPart?: JingleVoicePart; block: PodcastBlock; assets: AudioAsset[]; podcastTitle: string; onBlock: Dispatch<SetStateAction<PodcastBlock>>;
   onRegisterAsset: RegisterAsset; onPreview: (block: PodcastBlock) => Promise<PreviewSession>; onSave: (block: PodcastBlock) => void; onClose: () => void; isNew: boolean;
   FilePicker: WizardUI['FilePicker']; Preview: WizardUI['Preview']; Recorder: ComponentType<{ onReady: (blob: Blob, duration: number) => Promise<void> | void; onBusyChange?: (busy: boolean) => void; maxSeconds?: number; showHint?: boolean }>;
 }) {
-  const [step, setStep] = useState(0);
-  const [takeKind, setTakeKind] = useState<'main' | 'echo'>('main');
+  const [step, setStep] = useState(() => initialPart ? STEP_PARTS.findIndex(parts => parts.includes(initialPart)) : 0);
+  const [takeKind, setTakeKind] = useState<'main' | 'echo'>(() => initialPart && isJingleEcho(initialPart) ? 'echo' : 'main');
   const [busy, setBusy] = useState(false);
   const [loadingBed, setLoadingBed] = useState(true);
   const [retry, setRetry] = useState(0);
