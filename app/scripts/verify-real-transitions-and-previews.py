@@ -45,8 +45,9 @@ assert "requestExclusivePreview(`screen-${screen}`)" in app
 assert "requestExclusivePreview('audio-library-window')" in app
 assert "requestExclusivePreview('modal-window')" in app
 assert 'playbackRequestRef' in app
-assert "setPlaybackKind('block')" in app
-assert 'setPlaybackDisplayDuration(getBlockDuration(block, project.assets))' in app
+assert 'previewId={`element-${block.id}`}' in app
+assert 'onPreviewBlock={block => playProject(' in app
+assert 'onStart={onPreview}' in app
 assert "seekable={playbackKind === 'project'}" in app
 assert 'onWaiting={() => setLoading(true)}' in app
 assert '.transition-recording-grid' in styles

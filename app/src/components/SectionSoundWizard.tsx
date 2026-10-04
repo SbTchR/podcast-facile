@@ -9,7 +9,8 @@ import { AudioExcerpt } from './AudioExcerpt';
 import { SectionTimeline } from './SectionTimeline';
 import { useSectionPlayback } from './useSectionPlayback';
 import { VoiceSettings } from './VoiceSettings';
-import { removeVoicePiece, removeNarrativeBlock, splitVoice, voiceSplitPoint } from '../audio/voiceEditing';
+import { duplicateNarrativeBlock, reorderNarrativeBlock } from '../audio/narrativeEditing';
+import { removeNarrativeBlock, splitVoice, voiceSplitPoint } from '../audio/voiceEditing';
 
 export interface WizardUI {
   Modal: ComponentType<{ title: string; onClose: () => void; wide?: boolean; children: ReactNode }>;
@@ -18,7 +19,7 @@ export interface WizardUI {
   Recorder?: ComponentType<{ onReady: (blob: Blob, duration: number) => Promise<void> | void; onBusyChange?: (busy: boolean) => void }>;
   createBlock: (type: BlockType, sectionId: string) => PodcastBlock;
   BlockEditor: ComponentType<{
-    block: PodcastBlock; assets: AudioAsset[]; podcastTitle: string; isNew: boolean; embedded?: boolean;
+    block: PodcastBlock; assets: AudioAsset[]; podcastTitle: string; isNew: boolean;
     onClose: () => void; onSave: (block: PodcastBlock) => void; onRegisterAsset: RegisterAsset;
     onPreview: (block: PodcastBlock) => Promise<PreviewSession>; onBusyChange?: (busy: boolean) => void;
   }>;
@@ -61,7 +62,8 @@ export function SectionSoundWizard({ project, sectionId, kind, initial, initialV
   const duration = timeline.at(-1)?.end ?? 0;
   const resolved = resolveSectionLayers(scoped, timeline);
   const selected = layers.find(layer => layer.id === selectedId);
-  const selectedVoice = scoped.blocks.find(block => block.id === selectedVoiceId && block.type === 'voice');
+  const selectedBlock = scoped.blocks.find(block => block.id === selectedVoiceId && !layers.some(layer => layer.pauseBlockId === block.id));
+  const selectedVoice = selectedBlock?.type === 'voice' ? selectedBlock : undefined;
   const position = resolved.find(item => item.layer.id === selectedId);
   const asset = assets.find(item => item.id === selected?.assetId);
   const invalid = layers.filter(layer => !resolved.some(item => item.layer.id === layer.id));
@@ -79,7 +81,7 @@ export function SectionSoundWizard({ project, sectionId, kind, initial, initialV
       if (event.code !== 'Space' || event.ctrlKey || event.altKey || event.metaKey || current.libraryOpen || !current.canPlay || document.querySelectorAll('[data-podcast-dialog]').item(document.querySelectorAll('[data-podcast-dialog]').length - 1) !== dialog) return;
       const target = event.target as HTMLElement | null;
       // Text entry and native controls keep their usual Space behavior.
-      if (target?.closest('input, textarea, select, button, summary, [contenteditable="true"], [role="textbox"]')) return;
+      if (target?.closest('input, textarea, select, button, summary, [contenteditable="true"], [role="textbox"], [role="button"]')) return;
       event.preventDefault(); event.stopPropagation();
       if (!event.repeat) void current.toggle();
     };
@@ -103,13 +105,6 @@ export function SectionSoundWizard({ project, sectionId, kind, initial, initialV
     const next = splitVoice(scoped, selectedVoice.id, player.position, id);
     player.stop(); syncLayerPauses(next); commit(next); setSelectedVoiceId(id);
   };
-  const deleteVoice = () => {
-    if (!selectedVoice) return;
-    const start = timeline.find(entry => entry.block.id === selectedVoice.id)?.start ?? 0;
-    const next = removeVoicePiece(scoped, selectedVoice.id);
-    player.seek(Math.min(start, getTimeline(next).at(-1)?.end ?? 0));
-    syncLayerPauses(next); commit(next); setSelectedVoiceId(undefined);
-  };
 
   const change = (layer: SectionAudioLayer, pauseAfterId: string | null = layer.afterBlockId ?? null) => {
     player.stop(); setError('');
@@ -120,7 +115,7 @@ export function SectionSoundWizard({ project, sectionId, kind, initial, initialV
   const update = (values: Partial<SectionAudioLayer>) => { if (selected) change({ ...selected, ...values }); };
   const edit = (layer: SectionAudioLayer, action: 'move' | 'start' | 'end', at: number) => { if (!loading) change(editLayerOnTimeline(scoped, layer, action, at), null); };
   const select = (layer: SectionAudioLayer) => { if (loading) return; player.stop(); setSelectedVoiceId(undefined); setPhase(layer.kind); setSelectedId(layer.id); };
-  const selectVoice = (block: PodcastBlock) => { player.stop(); setSelectedId(undefined); setPhase('voice'); setSelectedVoiceId(block.id); };
+  const selectVoice = (block: PodcastBlock) => { if (loading || itemEditor) return; const linked = layers.find(layer => layer.pauseBlockId === block.id); if (linked) { select(linked); return; } player.stop(); setSelectedId(undefined); setPhase('voice'); setSelectedVoiceId(block.id); };
   const updateVoice = (values: Partial<PodcastBlock>) => {
     player.stop();
     const current = draftRef.current;
@@ -173,25 +168,27 @@ export function SectionSoundWizard({ project, sectionId, kind, initial, initialV
     return chosen;
   };
   const openItem = (block: PodcastBlock, isNew = false) => {
-    player.stop(); setPhase('voice'); setSelectedId(undefined); setSelectedVoiceId(block.type === 'voice' ? block.id : undefined);
+    player.stop(); setPhase('voice'); setSelectedId(undefined); setSelectedVoiceId(block.id);
     setItemEditor({ block, isNew }); setError('');
   };
   const keepItem = (block: PodcastBlock) => {
     const current = draftRef.current;
     const exists = current.blocks.some(item => item.id === block.id);
     const next = { ...current, blocks: exists ? current.blocks.map(item => item.id === block.id ? block : item) : [...current.blocks, block] };
-    syncLayerPauses(next); commit(next); setItemEditor(null); setSelectedVoiceId(block.type === 'voice' ? block.id : undefined);
+    syncLayerPauses(next); commit(next); setItemEditor(null); setSelectedVoiceId(block.id);
   };
-  const moveItem = (block: PodcastBlock, direction: -1 | 1) => {
-    player.stop();
-    const current = draftRef.current;
-    const from = current.blocks.findIndex(item => item.id === block.id);
-    const target = blocks[blocks.findIndex(item => item.id === block.id) + direction];
-    if (!target) return;
-    const to = current.blocks.findIndex(item => item.id === target.id);
-    const next = { ...current, blocks: [...current.blocks] };
-    [next.blocks[from], next.blocks[to]] = [next.blocks[to], next.blocks[from]];
-    syncLayerPauses(next); commit(next);
+  const moveItem = (blockId: string, beforeId?: string) => {
+    if (loading || itemEditor) return;
+    const next = reorderNarrativeBlock(scoped, blockId, beforeId);
+    if (next === scoped) return;
+    player.stop(); commit(next); setSelectedVoiceId(blockId);
+    player.seek(getTimeline(next).find(entry => entry.block.id === blockId)?.start ?? 0);
+  };
+  const duplicateItem = (block: PodcastBlock) => {
+    const id = crypto.randomUUID();
+    const next = duplicateNarrativeBlock(scoped, block.id, id);
+    if (next === scoped) return;
+    player.stop(); commit(next); setSelectedVoiceId(id);
   };
   const deleteItem = (block: PodcastBlock) => {
     player.stop(); const next = removeNarrativeBlock(scoped, block.id); syncLayerPauses(next); commit(next);
@@ -207,19 +204,20 @@ export function SectionSoundWizard({ project, sectionId, kind, initial, initialV
           <button ref={transportRef} className="primary-button compact" disabled={!canPlay} aria-label={player.status === 'loading' ? 'Annuler le chargement de la partie' : player.status === 'playing' ? 'Mettre la partie en pause' : 'Écouter la partie avec les voix'} onClick={() => void player.toggle()}>{player.status === 'loading' ? 'Chargement…' : player.status === 'playing' ? 'Ⅱ Pause' : '▶ Écouter la partie'}</button>
           <output aria-label="Position de lecture">{player.position.toFixed(1).replace('.', ',')} s / {formatTime(duration)}</output><kbd>Espace</kbd>
           <span className="transport-spacer" />
-          {selectedVoice && <><button className="secondary-button compact" disabled={!canSplit || loading || Boolean(itemEditor)} onClick={cutVoice} title={canSplit ? 'Créer deux morceaux à la position du repère' : 'Place le repère à l’intérieur de la voix sélectionnée'}>✂ Scinder au repère</button><button className="danger-text" disabled={loading || Boolean(itemEditor)} onClick={deleteVoice}>Supprimer ce morceau</button></>}
+          {selectedVoice && <><button className="secondary-button compact" disabled={!canSplit || loading || Boolean(itemEditor)} onClick={cutVoice} title={canSplit ? 'Créer deux morceaux à la position du repère' : 'Place le repère à l’intérieur de la voix sélectionnée'}>✂ Scinder au repère</button></>}
           <button className="ghost-button compact" disabled={!history.length || loading || Boolean(itemEditor)} onClick={undo} aria-label="Annuler la dernière modification">↶ Annuler</button>
         </div>
-        <SectionTimeline project={scoped} selectedId={selectedId} selectedVoiceId={selectedVoiceId} phase={phase === 'voice' ? undefined : phase} playhead={player.position} onSeek={at => { if (!loading) player.seek(at); }} onSelect={select} onSelectVoice={block => { if (!loading) selectVoice(block); }} onEdit={edit} />
+        <SectionTimeline project={scoped} selectedId={selectedId} selectedVoiceId={selectedVoiceId} phase={phase === 'voice' ? undefined : phase} playhead={player.position} onSeek={at => { if (!loading) player.seek(at); }} onSelect={select} onSelectBlock={selectVoice} onMoveBlock={phase === 'voice' && !loading && !itemEditor ? moveItem : undefined} onEdit={edit} />
         {phase === 'voice' && selectedVoice && !itemEditor && <p className="voice-cut-help">Clique sur la règle pour placer une coupe. Deux coupes permettent de supprimer un passage au milieu.</p>}
-        {phase === 'voice' && <div className="part-recording-list">{blocks.map((block, index) => <article className={`part-recording-row ${selectedVoiceId === block.id ? 'selected' : ''}`} key={block.id}>
-          <button className="part-recording-select" disabled={loading || Boolean(itemEditor)} onClick={() => block.type === 'voice' ? selectVoice(block) : openItem(block)}><span aria-hidden="true">{block.type === 'voice' ? '🎙' : block.type === 'silence' ? '⏸' : '↗'}</span><span><strong>{block.title}</strong><small>{block.type === 'silence' ? 'Pause/Musique seule · ' : ''}{formatTime(getBlockDuration(block, assets))}</small></span></button>
-          <button className="ghost-button compact" disabled={loading || Boolean(itemEditor)} onClick={() => openItem(block)}>✎ Modifier</button>
-          <button className="mini-button" aria-label={`Monter ${block.title}`} disabled={index === 0 || loading || Boolean(itemEditor)} onClick={() => moveItem(block, -1)}>↑</button><button className="mini-button" aria-label={`Descendre ${block.title}`} disabled={index === blocks.length - 1 || loading || Boolean(itemEditor)} onClick={() => moveItem(block, 1)}>↓</button>
-          <button className="mini-button danger" aria-label={`Retirer ${block.title}`} disabled={loading || Boolean(itemEditor)} onClick={() => deleteItem(block)}>×</button>
-        </article>)}{!blocks.length && !itemEditor && <p className="sound-editor-empty">Enregistre une première voix, puis ajoute une pause ou une transition si tu le souhaites.</p>}</div>}
-        {itemEditor && <div className="part-inline-editor" hidden={phase !== 'voice'}><BlockEditor key={itemEditor.block.id} embedded block={itemEditor.block} assets={assets} podcastTitle={project.title} isNew={itemEditor.isNew} onClose={() => setItemEditor(null)} onSave={keepItem} onRegisterAsset={registerVoiceAsset} onBusyChange={setLoading} onPreview={block => playProject({ ...scoped, sections: scoped.sections.map(section => ({ ...section, audioLayers: [] })), blocks: [block] }, 0)} /></div>}
-        {phase === 'voice' && selectedVoice && !itemEditor && <><div className="setting-title-row"><h4>{selectedVoice.title}</h4><button className="secondary-button compact" onClick={() => openItem(selectedVoice)}>Modifier l’enregistrement et le texte</button></div><VoiceSettings block={selectedVoice} onChange={updateVoice} /></>}
+        {phase === 'voice' && !blocks.length && <p className="sound-editor-empty">Ajoute une première voix avec le bouton « Enregistrer une voix ».</p>}
+        {phase === 'voice' && selectedBlock && !itemEditor && <div className="narrative-inspector">
+          <div className="setting-title-row"><div><h4>{selectedBlock.title}</h4><small>{getBlockDuration(selectedBlock, assets).toFixed(1).replace('.', ',')} s</small></div><div className="narrative-element-actions">
+            <button className="secondary-button compact" disabled={loading} onClick={() => openItem(selectedBlock)}>✎ Modifier</button>
+            <button className="secondary-button compact" disabled={loading} onClick={() => duplicateItem(selectedBlock)}>⧉ Dupliquer</button>
+            <button className="danger-text" disabled={loading} onClick={() => deleteItem(selectedBlock)}>Supprimer cet élément</button>
+          </div></div>
+          {selectedVoice && <VoiceSettings block={selectedVoice} onChange={updateVoice} />}
+        </div>}
         {phase !== 'voice' && selected && asset && <div className="sound-inspector">
           <div className="setting-title-row"><h4>{selected.title}</h4><button className="danger-text" onClick={remove}>Retirer ce son</button></div>
           {!position && <button className="secondary-button compact" onClick={() => {
@@ -242,12 +240,12 @@ export function SectionSoundWizard({ project, sectionId, kind, initial, initialV
         </div>}
         {phase !== 'voice' && !selected && !selectedVoice && <p className="sound-editor-empty">{layers.some(layer => layer.kind === phase) ? 'Choisis une piste à modifier.' : phase === 'music' ? 'Ajoute une musique ou passe aux ambiances et bruitages.' : 'Ajoute une ambiance ou un bruitage, puis enregistre la partie.'}</p>}
         {phase !== 'voice' && <div className="sound-import-actions"><FilePicker label={`Importer ${phase === 'music' ? 'une musique' : 'un son'}`} onFile={file => void importFile(file)} />{phase === 'sfx' && Recorder && <details><summary>Enregistrer mon bruitage</summary><Recorder onBusyChange={busy => { if (busy) player.stop(); setLoading(busy); }} onReady={async (blob, recordedDuration) => addAsset(await onRegisterAsset(blob, 'Mon bruitage enregistré', blob.type, recordedDuration, { source: 'recording' }))} /></details>}</div>}
-        {itemEditor && phase !== 'voice' && <p className="jingle-production-note">Une prise est en cours de modification. Reviens dans « Enregistrements vocaux » pour la garder ou l’annuler.</p>}
         {(error || player.error) && <p className="error-box" role="alert">{error || player.error}</p>}
         {invalid.length > 0 && <p className="error-box" role="alert">{invalid.length} son{invalid.length > 1 ? 's' : ''} à replacer : clique sur la piste pour corriger son début ou sa fin.</p>}
       </div>
       <div className="modal-footer"><button className="ghost-button" disabled={loading} onClick={onClose}>Annuler</button><span className="footer-spacer" />{phase === 'music' && !selectedVoice && <button className="ghost-button" disabled={loading} onClick={() => movePhase('sfx')}>Ambiances et bruitages →</button>}<button className="primary-button" disabled={loading || Boolean(itemEditor) || invalid.length > 0} onClick={() => { player.stop(); onSave(scoped); }}>✓ Enregistrer la partie</button></div>
     </Modal>
+    {itemEditor && <BlockEditor key={itemEditor.block.id} block={itemEditor.block} assets={assets} podcastTitle={project.title} isNew={itemEditor.isNew} onClose={() => { if (!loading) setItemEditor(null); }} onSave={keepItem} onRegisterAsset={registerVoiceAsset} onBusyChange={setLoading} onPreview={block => playProject({ ...scoped, sections: scoped.sections.map(section => ({ ...section, audioLayers: [] })), blocks: [block] }, 0)} />}
     {libraryOpen && phase !== 'voice' && <Library kind={phase} initialSoundGroup={libraryGroup} onClose={() => setLibraryOpen(false)} onChoose={chooseLibrary} />}
   </>;
 }

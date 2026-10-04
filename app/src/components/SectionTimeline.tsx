@@ -24,9 +24,10 @@ const Waveform = memo(function Waveform({ asset, from = 0, to = asset?.duration 
   return <svg className="track-waveform" viewBox="0 0 360 30" preserveAspectRatio="none" aria-hidden="true"><path d={path} stroke="currentColor" strokeWidth="1.5" /></svg>;
 });
 
-export function SectionTimeline({ project, selectedId, selectedVoiceId, phase, playhead, onSeek, onSelect, onSelectVoice, onOpenTrack, onEdit, compact = false }: {
+export function SectionTimeline({ project, selectedId, selectedVoiceId, phase, playhead, onSeek, onSelect, onSelectVoice, onSelectBlock, onMoveBlock, onOpenVoice, onOpenTrack, onEdit, compact = false }: {
   project: PodcastProject; selectedId?: string; phase?: 'music' | 'sfx'; playhead?: number;
-  selectedVoiceId?: string; onSelectVoice?: (block: PodcastBlock) => void; onOpenTrack?: (kind: 'music' | 'sfx') => void;
+  selectedVoiceId?: string; onSelectVoice?: (block: PodcastBlock) => void; onSelectBlock?: (block: PodcastBlock) => void;
+  onMoveBlock?: (blockId: string, beforeId?: string) => void; onOpenVoice?: () => void; onOpenTrack?: (kind: 'music' | 'sfx') => void;
   onSeek?: (time: number) => void; onSelect?: (layer: SectionAudioLayer) => void;
   onEdit?: (layer: SectionAudioLayer, action: 'move' | 'start' | 'end', time: number) => void; compact?: boolean;
 }) {
@@ -35,6 +36,38 @@ export function SectionTimeline({ project, selectedId, selectedVoiceId, phase, p
   const layers = project.sections[0]?.audioLayers ?? [];
   const resolved = resolveSectionLayers(project, timeline);
   const gesture = useRef<{ layer: SectionAudioLayer; action: 'move' | 'start' | 'end'; pointer: number; x: number; at: number; width: number } | null>(null);
+  const blockGesture = useRef<{ id: string; pointer: number; x: number; railLeft: number; width: number; moved: boolean; beforeId?: string; boundary: number } | null>(null);
+  const skipClick = useRef<string | null>(null);
+  const [blockDrag, setBlockDrag] = useState<{ id: string; dx: number; boundary: number } | null>(null);
+  const managedPauses = new Set(layers.map(layer => layer.pauseBlockId));
+  const reorderable = timeline.filter(entry => !managedPauses.has(entry.block.id));
+  const beginBlock = (event: React.PointerEvent<HTMLElement>, block: PodcastBlock) => {
+    if (!onMoveBlock || managedPauses.has(block.id) || event.button !== 0) return;
+    event.stopPropagation();
+    const rail = event.currentTarget.closest('.track-rail')!.getBoundingClientRect();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    blockGesture.current = { id: block.id, pointer: event.pointerId, x: event.clientX, railLeft: rail.left, width: rail.width, moved: false, boundary: 0 };
+    onSelectBlock?.(block);
+  };
+  const moveBlock = (event: React.PointerEvent<HTMLElement>) => {
+    const current = blockGesture.current;
+    if (!current || current.pointer !== event.pointerId) return;
+    const dx = event.clientX - current.x;
+    if (!current.moved && Math.abs(dx) < 6) return;
+    event.preventDefault(); current.moved = true;
+    const at = clampTime((event.clientX - current.railLeft) / Math.max(1, current.width) * duration, 0, duration);
+    const target = reorderable.filter(entry => entry.block.id !== current.id).find(entry => at < (entry.start + entry.end) / 2);
+    current.beforeId = target?.block.id; current.boundary = target?.start ?? duration;
+    setBlockDrag({ id: current.id, dx, boundary: current.boundary });
+  };
+  const finishBlock = (event: React.PointerEvent<HTMLElement>, cancelled = false) => {
+    const current = blockGesture.current;
+    blockGesture.current = null; setBlockDrag(null);
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    if (!current?.moved || cancelled) return;
+    skipClick.current = current.id;
+    onMoveBlock?.(current.id, current.beforeId);
+  };
   const tickCount = compact ? 4 : 7;
   const position = (start: number, end: number) => ({ left: `${start / Math.max(0.05, duration) * 100}%`, width: `${Math.max(0.15, (end - start) / Math.max(0.05, duration) * 100)}%` });
   const seek = (event: React.MouseEvent<HTMLElement>) => {
@@ -81,15 +114,32 @@ export function SectionTimeline({ project, selectedId, selectedVoiceId, phase, p
       event.preventDefault(); event.stopPropagation();
       const at = event.key === 'Home' ? 0 : event.key === 'End' ? duration - .1 : (playhead ?? 0) + (event.key === 'ArrowLeft' ? -1 : 1) * (event.shiftKey ? 1 : .1);
       onSeek(clampTime(roundTime(at), 0, Math.max(0, duration - .05)));
-    }} onClick={event => onOpenTrack ? onOpenTrack('music') : seek(event)}>{Array.from({ length: tickCount + 1 }, (_, index) => <span key={index} style={{ left: `${index / tickCount * 100}%` }}>{formatTime(index / tickCount * duration)}</span>)}{head}</div></div>
+    }} onClick={event => onOpenTrack ? onOpenTrack('music') : seek(event)}>{Array.from({ length: duration > 0 ? tickCount + 1 : 1 }, (_, index) => <span key={index} style={{ left: `${index / tickCount * 100}%` }}>{formatTime(index / tickCount * duration)}</span>)}{head}</div></div>
     <div className="track-row"><strong className="track-label">Voix</strong><div className="track-rail" onClick={seek}>{timeline.filter(e => e.duration > 0).map(entry => {
       const asset = project.assets.find(item => item.id === entry.block.assetId);
       const voice = entry.block.type === 'voice';
       const background = entry.block.background;
       const pre = voice && background?.startBefore ? Math.min(3, Math.max(1, background.startBeforeSeconds ?? 2)) : 0;
       const post = voice && background?.continueAfter ? Math.min(3, Math.max(1, background.continueAfterSeconds ?? 2)) : 0;
-      return <div key={entry.block.id} role={voice && onSelectVoice ? 'button' : undefined} tabIndex={voice && onSelectVoice ? 0 : undefined} aria-label={voice && onSelectVoice ? `Régler la voix : ${entry.block.title}` : undefined} aria-pressed={voice && onSelectVoice ? selectedVoiceId === entry.block.id : undefined} className={`track-clip narrative ${voice ? 'voice' : 'pause'} ${selectedVoiceId === entry.block.id ? 'selected' : ''}`} style={position(entry.start + pre, entry.end - post)} title={entry.block.title} onClick={event => { if (voice && onSelectVoice) { event.stopPropagation(); onSelectVoice(entry.block); } }} onKeyDown={event => { if (voice && onSelectVoice && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); onSelectVoice(entry.block); } }}><strong>{entry.block.type === 'silence' ? 'Pause/Musique seule' : entry.block.title}</strong>{voice && <Waveform asset={asset} from={entry.block.trimStart} to={entry.block.trimEnd || asset?.duration} />}</div>;
-    })}{head}</div></div>
+      const pick = onSelectBlock ?? (voice ? onSelectVoice : undefined);
+      const draggable = Boolean(onMoveBlock && !managedPauses.has(entry.block.id));
+      return <div key={entry.block.id} data-block-id={entry.block.id} role={pick ? 'button' : undefined} tabIndex={pick ? 0 : undefined}
+        aria-label={pick ? `Sélectionner ${entry.block.title}` : undefined} aria-pressed={pick ? selectedVoiceId === entry.block.id : undefined}
+        className={`track-clip narrative ${voice ? 'voice' : entry.block.type === 'transition' ? 'transition' : 'pause'} ${selectedVoiceId === entry.block.id ? 'selected' : ''} ${draggable ? 'reorderable' : ''} ${blockDrag?.id === entry.block.id ? 'dragging' : ''}`}
+        style={{ ...position(entry.start + pre, entry.end - post), transform: blockDrag?.id === entry.block.id ? `translateX(${blockDrag.dx}px)` : undefined }}
+        title={entry.block.title + (draggable ? ' · Glisser pour déplacer' : '')}
+        onPointerDown={event => beginBlock(event, entry.block)} onPointerMove={moveBlock} onPointerUp={event => finishBlock(event)} onPointerCancel={event => finishBlock(event, true)}
+        onClick={event => { if (skipClick.current === entry.block.id) { skipClick.current = null; event.stopPropagation(); return; } if (pick) { event.stopPropagation(); pick(entry.block); } }}
+        onKeyDown={event => {
+          if (pick && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); event.stopPropagation(); pick(entry.block); }
+          if (draggable && event.altKey && ['ArrowLeft', 'ArrowRight'].includes(event.key)) {
+            const index = reorderable.findIndex(item => item.block.id === entry.block.id);
+            if (event.key === 'ArrowLeft' && index > 0 || event.key === 'ArrowRight' && index < reorderable.length - 1) {
+              event.preventDefault(); event.stopPropagation(); onMoveBlock?.(entry.block.id, reorderable[event.key === 'ArrowLeft' ? index - 1 : index + 2]?.block.id);
+            }
+          }
+        }}><strong>{entry.block.type === 'silence' ? 'Pause/Musique seule' : entry.block.title}</strong>{voice && <Waveform asset={asset} from={entry.block.trimStart} to={entry.block.trimEnd || asset?.duration} />}</div>;
+    })}{!timeline.some(entry => entry.duration > 0) && (onOpenVoice ? <button className="track-add" onClick={event => { event.stopPropagation(); onOpenVoice(); }}>＋ Voix</button> : <span className="track-empty-label">Aucun enregistrement</span>)}{blockDrag && <i className="track-insertion-marker" style={{ left: `${blockDrag.boundary / Math.max(.05, duration) * 100}%` }} aria-hidden="true" />}{head}</div></div>
     {(['music', 'sfx'] as const).flatMap(kind => {
       const matching = layers.filter(layer => layer.kind === kind);
       if (!matching.length && !legacy.some(layer => layer.kind === kind)) return <div className={`track-row ${phase && phase !== kind ? 'inactive' : ''}`} key={kind}><strong className="track-label">{kind === 'music' ? 'Musique' : 'Sons'}</strong><div className="track-rail empty" onClick={event => onOpenTrack ? onOpenTrack(kind) : seek(event)}>{onOpenTrack ? <button className="track-add" aria-label={kind === 'music' ? 'Ajouter une musique sur la trame' : 'Ajouter une ambiance ou un bruitage sur la trame'} onClick={event => { event.stopPropagation(); onOpenTrack(kind); }}>{kind === 'music' ? '＋ Musique' : '＋ Son'}</button> : <span>{kind === 'music' ? 'Aucune musique de fond' : 'Aucune ambiance ni bruitage'}</span>}{head}</div></div>;
@@ -107,6 +157,6 @@ export function SectionTimeline({ project, selectedId, selectedVoiceId, phase, p
           </div> : <button className="track-unplaced" onClick={() => onSelect?.(layer)}>À replacer · {layer.title}</button>}{head}</div></div>;
       });
     })}
-    {legacy.map(layer => <div className="track-row legacy" key={layer.id}><strong className="track-label">{layer.kind === 'music' ? 'Fond lié' : 'Son lié'}</strong><div className="track-rail" onClick={() => { const voice = timeline.find(entry => entry.block.background?.assetId === layer.assetId || entry.block.voiceCues?.some(cue => cue.id === layer.id)); if (voice) onSelectVoice?.(voice.block); }}><div className={`track-clip ${layer.kind}`} style={position(layer.start, layer.end)} title={layer.title}><strong>{layer.title}</strong><Waveform asset={project.assets.find(a => a.id === layer.assetId)} from={layer.sourceStart} to={layer.sourceEnd} repeat={layer.repeat} length={layer.end - layer.start} /></div>{head}</div></div>)}
+    {legacy.map(layer => <div className="track-row legacy" key={layer.id}><strong className="track-label">{layer.kind === 'music' ? 'Fond lié' : 'Son lié'}</strong><div className="track-rail" onClick={() => { const voice = timeline.find(entry => entry.block.background?.assetId === layer.assetId || entry.block.voiceCues?.some(cue => cue.id === layer.id)); if (voice) (onSelectBlock ?? onSelectVoice)?.(voice.block); }}><div className={`track-clip ${layer.kind}`} style={position(layer.start, layer.end)} title={layer.title}><strong>{layer.title}</strong><Waveform asset={project.assets.find(a => a.id === layer.assetId)} from={layer.sourceStart} to={layer.sourceEnd} repeat={layer.repeat} length={layer.end - layer.start} /></div>{head}</div></div>)}
   </div>;
 }

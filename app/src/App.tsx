@@ -7,7 +7,9 @@ import { AudioExcerpt } from './components/AudioExcerpt';
 import { SectionSoundWizard } from './components/SectionSoundWizard';
 import { SectionAudioOverview } from './components/SectionAudioOverview';
 import { JingleSectionOverview } from './components/JingleSectionOverview';
-import { syncLayerPauses } from './audio/sectionLayers';
+import { SectionElementCard } from './components/SectionElementCard';
+import { removeNarrativeBlock } from './audio/voiceEditing';
+import { removeSectionLayer, syncLayerPauses } from './audio/sectionLayers';
 import { applySectionArrangement } from './audio/sectionTimeline';
 import { JingleWizard } from './components/JingleWizard';
 import { VoiceScript } from './components/VoiceScript';
@@ -342,13 +344,13 @@ function App() {
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
   const [carouselPosition, setCarouselPosition] = useState(0);
-  const [carouselOverflow, setCarouselOverflow] = useState(0);
+  const [carouselThumbSize, setCarouselThumbSize] = useState(100);
   useEffect(() => {
     const carousel = carouselRef.current;
     if (!carousel) return;
     const update = () => {
       const overflow = Math.max(0, carousel.scrollWidth - carousel.clientWidth);
-      setCarouselOverflow(overflow);
+      setCarouselThumbSize(Math.max(12, Math.min(100, carousel.clientWidth / Math.max(1, carousel.scrollWidth) * 100)));
       setCarouselPosition(overflow ? Math.max(0, Math.min(100, carousel.scrollLeft / overflow * 100)) : 0);
     };
     const observer = new ResizeObserver(update); observer.observe(carousel);
@@ -750,20 +752,15 @@ function App() {
         onExport={() => setScreen('export')}
       />
 
-      <main className="editor-main">
-        <div className="editor-intro">
-          <div>
-            <h1>{project.title}</h1>
-          </div>
-        </div>
+      <main className="editor-main" aria-label={`Montage de ${project.title}`}>
 
         <div className="section-carousel-toolbar">
           <div className="section-carousel-nav"><button className="secondary-button compact" aria-label="Section précédente" disabled={selectedSectionIndex <= 0} onClick={() => setSelectedSectionId(project.sections[selectedSectionIndex - 1].id)}>←</button><button className="secondary-button compact" aria-label="Section suivante" disabled={selectedSectionIndex >= project.sections.length - 1} onClick={() => setSelectedSectionId(project.sections[selectedSectionIndex + 1].id)}>→</button></div>
           <span className="section-selection-label">{selectedSection ? `Après « ${selectedSection.title} »` : 'Ton podcast'}</span>
           <button className="add-section-button" onClick={() => setAddSectionOpen(true)}>＋ Ajouter une section</button>
-          <label className="section-carousel-position"><span>← Défiler →</span><input type="range" aria-label="Défiler parmi les sections" min="0" max="100" step="0.1" disabled={carouselOverflow <= 0} value={carouselPosition} onChange={event => { const value = Number(event.target.value); carouselRef.current?.scrollTo({ left: value / 100 * carouselOverflow }); setCarouselPosition(value); }} /></label>
+          <div className="section-carousel-position" aria-hidden="true"><div className="carousel-position-track"><span className="carousel-position-thumb" style={{ width: `${carouselThumbSize}%`, left: `${carouselPosition * (100 - carouselThumbSize) / 100}%` }} /></div></div>
         </div>
-        <div className="section-carousel" ref={carouselRef} role="region" aria-label="Trame du podcast">
+        <div className="section-carousel" ref={carouselRef} tabIndex={0} role="region" aria-label="Trame du podcast">
         {project.sections.map((section, sectionIndex) => {
           const blocks = project.blocks.filter((block) => block.sectionId === section.id);
           const duration = blocks.reduce((sum, block) => sum + getBlockDuration(block, project.assets), 0);
@@ -781,9 +778,19 @@ function App() {
               onEditVoiceInTimeline={(voice) => setEditingLayer({ sectionId: section.id, kind: 'voice', initialVoiceId: voice.id })}
               onEditPart={() => setEditingLayer({ sectionId: section.id, kind: 'voice' })}
               onPreviewSection={() => playProject({ ...project, sections: [section], blocks }, 0)}
+              onPreviewBlock={block => playProject({ ...project, sections: project.sections.map(item => ({ ...item, audioLayers: [] })), blocks: [block] }, 0)}
+              onToggleJinglePart={(block, part, included) => {
+                requestExclusivePreview('jingle-toggle'); stopPlayback();
+                applyChange(draft => {
+                  const current = draft.blocks.find(item => item.id === block.id);
+                  if (current?.jingle) current.jingle = { ...current.jingle, production: 'guided-v9', enabledParts: { ...current.jingle.enabledParts, [part]: included } };
+                });
+              }}
+              onDeleteLayer={layer => {
+                if (!window.confirm(`Supprimer « ${layer.title} » ?`)) return;
+                applyChange(draft => removeSectionLayer(draft, section.id, layer.id));
+              }}
               duration={duration}
-              activeBlockId={activeBlockId}
-              playbackStatus={playbackStatus}
               onRename={(title) => applyChange((draft) => { const item = draft.sections.find((candidate) => candidate.id === section.id); if (item) item.title = title; })}
               selected={selectedSection?.id === section.id}
               onSelect={() => setSelectedSectionId(section.id)}
@@ -804,76 +811,11 @@ function App() {
                   draft.sections = draft.sections.filter((item) => item.id !== section.id);
                 });
               }}
-              onPlay={(block) => {
-                if (activeBlockId === block.id && (playbackStatus === 'playing' || playbackStatus === 'paused')) {
-                  void togglePause();
-                  return;
-                }
-                requestExclusivePreview('global-player');
-                stopPlayback();
-                const request = ++playbackRequestRef.current;
-                const previewProject = { ...project, sections: project.sections.map((item) => ({ ...item, audioLayers: [] })), blocks: [block] };
-                setPlaybackKind('block');
-                setPlaybackDisplayDuration(getBlockDuration(block, project.assets));
-                setElapsed(0);
-                setActiveBlockId(block.id);
-                setPlaybackStatus('loading');
-                void playProject(previewProject, 0).then((controller) => {
-                  if (request !== playbackRequestRef.current) {
-                    void controller.stop();
-                    return;
-                  }
-                  playbackRef.current = controller;
-                  setPlaybackStatus('playing');
-                  playbackTimerRef.current = window.setInterval(() => {
-                    const current = playbackRef.current;
-                    if (!current) return;
-                    const value = current.getElapsed();
-                    setElapsed(value);
-                    if (value >= current.totalDuration - 0.04) { setElapsed(0); void stopPlayback(); }
-                  }, 80);
-                }).catch((error) => {
-                  if (request !== playbackRequestRef.current) return;
-                  setToast(error instanceof Error ? error.message : 'Impossible de lire cet élément.');
-                  stopPlayback();
-                });
-              }}
               onEdit={(block, part) => { if (section.kind !== 'jingle' && ['voice', 'silence', 'transition'].includes(block.type)) { setEditingLayer({ sectionId: section.id, kind: 'voice', initialBlockId: block.id }); return; } setEditingJinglePart(part); setEditingBlock(cloneBlock(block)); setEditingIsNew(false); }}
-              onDuplicate={(block) => applyChange((draft) => {
-                const index = draft.blocks.findIndex((item) => item.id === block.id);
-                const copy = cloneBlock(block);
-                copy.id = crypto.randomUUID();
-                copy.title = `${copy.title} – copie`;
-                draft.blocks.splice(index + 1, 0, copy);
-              })}
               onDelete={(block) => {
                 if (!window.confirm(`Supprimer « ${block.title} » ?`)) return;
-                applyChange((draft) => { draft.blocks = draft.blocks.filter((item) => item.id !== block.id); });
+                applyChange(draft => { if (['voice', 'silence', 'transition'].includes(block.type)) Object.assign(draft, removeNarrativeBlock(draft, block.id)); else draft.blocks = draft.blocks.filter(item => item.id !== block.id); });
               }}
-              onMove={(block, direction) => applyChange((draft) => {
-                const index = draft.blocks.findIndex((item) => item.id === block.id);
-                const managedPauses = new Set(draft.sections.flatMap((item) => item.audioLayers?.map((layer) => layer.pauseBlockId) ?? []));
-                const sectionIndexes = draft.blocks.map((item, itemIndex) => item.sectionId === block.sectionId && !managedPauses.has(item.id) ? itemIndex : -1).filter((value) => value >= 0);
-                const localIndex = sectionIndexes.indexOf(index);
-                const targetLocal = localIndex + direction;
-                if (targetLocal < 0 || targetLocal >= sectionIndexes.length) return;
-                const targetIndex = sectionIndexes[targetLocal];
-                [draft.blocks[index], draft.blocks[targetIndex]] = [draft.blocks[targetIndex], draft.blocks[index]];
-              })}
-              onDropBlock={(draggedId, beforeId) => applyChange((draft) => {
-                if (section.kind === 'jingle') return;
-                const fromIndex = draft.blocks.findIndex((item) => item.id === draggedId);
-                if (fromIndex < 0) return;
-                const [moved] = draft.blocks.splice(fromIndex, 1);
-                moved.sectionId = section.id;
-                if (beforeId) {
-                  const beforeIndex = draft.blocks.findIndex((item) => item.id === beforeId);
-                  draft.blocks.splice(beforeIndex >= 0 ? beforeIndex : draft.blocks.length, 0, moved);
-                } else {
-                  const indexes = draft.blocks.map((item, index) => item.sectionId === section.id ? index : -1).filter((value) => value >= 0);
-                  draft.blocks.splice(indexes.length ? Math.max(...indexes) + 1 : draft.blocks.length, 0, moved);
-                }
-              })}
             />
           );
         })}
@@ -1042,78 +984,52 @@ function EditorTopbar({ project, duration, saveState, canUndo, canRedo, onHome, 
 }
 
 function SectionPanel({
-  section, sectionIndex, sectionCount, blocks, assets, duration, activeBlockId, playbackStatus, project, onAddLayer, onEditLayer, onEditVoiceInTimeline, onPreviewSection, onEditPart,
-  onRename, selected, onSelect, onHelp, onAdd, onAddVoice, onMoveSection, onDeleteSection, onPlay, onEdit, onDuplicate, onDelete, onMove, onDropBlock,
+  section, sectionIndex, sectionCount, blocks, assets, duration, project, onAddLayer, onEditLayer, onDeleteLayer, onEditVoiceInTimeline, onPreviewSection, onPreviewBlock, onEditPart, onToggleJinglePart,
+  onRename, selected, onSelect, onHelp, onAdd, onAddVoice, onMoveSection, onDeleteSection, onEdit, onDelete,
 }: {
-  section: PodcastSection; sectionIndex: number; sectionCount: number; blocks: PodcastBlock[]; assets: AudioAsset[]; duration: number; activeBlockId: string | null; playbackStatus: 'stopped' | 'loading' | 'playing' | 'paused';
-  project: PodcastProject; onEditPart: () => void; onAddLayer: (kind: 'music' | 'sfx') => void; onEditLayer: (layer: SectionAudioLayer) => void; onEditVoiceInTimeline: (block: PodcastBlock) => void; onPreviewSection: () => Promise<PreviewSession>;
-  onRename: (title: string) => void; selected: boolean; onSelect: () => void; onHelp: () => void; onAdd: () => void; onAddVoice: () => void; onMoveSection: (direction: -1 | 1) => void; onDeleteSection: () => void;
-  onPlay: (block: PodcastBlock) => void; onEdit: (block: PodcastBlock, part?: JingleVoicePart) => void; onDuplicate: (block: PodcastBlock) => void; onDelete: (block: PodcastBlock) => void;
-  onMove: (block: PodcastBlock, direction: -1 | 1) => void; onDropBlock: (draggedId: string, beforeId?: string) => void;
+  section: PodcastSection; sectionIndex: number; sectionCount: number; blocks: PodcastBlock[]; assets: AudioAsset[]; duration: number; project: PodcastProject;
+  onEditPart: () => void; onAddLayer: (kind: 'music' | 'sfx') => void; onEditLayer: (layer: SectionAudioLayer) => void; onDeleteLayer: (layer: SectionAudioLayer) => void;
+  onEditVoiceInTimeline: (block: PodcastBlock) => void; onPreviewSection: () => Promise<PreviewSession>; onPreviewBlock: (block: PodcastBlock) => Promise<PreviewSession>;
+  onToggleJinglePart: (block: PodcastBlock, part: JingleVoicePart, included: boolean) => void;
+  onRename: (title: string) => void; selected: boolean; onSelect: () => void; onHelp: () => void; onAdd: () => void; onAddVoice: () => void;
+  onMoveSection: (direction: -1 | 1) => void; onDeleteSection: () => void; onEdit: (block: PodcastBlock, part?: JingleVoicePart) => void; onDelete: (block: PodcastBlock) => void;
 }) {
-  const [draggedId, setDraggedId] = useState<string | null>(null);
-  const managedPauses = new Set(section.audioLayers?.map((layer) => layer.pauseBlockId));
-  const narrativeBlocks = blocks.filter((block) => !managedPauses.has(block.id));
-  return (
-    <section className={`podcast-section ${section.kind === 'jingle' ? 'jingle-section' : ''} ${selected ? 'selected-section' : ''}`} data-section-id={section.id} onPointerDown={onSelect} onFocusCapture={onSelect} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); if (section.kind === 'jingle') return; const id = event.dataTransfer.getData('text/plain') || draggedId; if (id) onDropBlock(id); setDraggedId(null); }}>
-      <div className="podcast-section-header">
-        <button className="section-select-button" aria-label={`Sélectionner ${section.title}`} aria-pressed={selected} onClick={onSelect}>{sectionIndex + 1}</button>
-        <input className="section-title-input" value={section.title} onChange={(event) => onRename(event.target.value)} aria-label="Nom de la section" />
-        <button className="section-help-button" onClick={onHelp} title="Conseils et exemples pour cette section" aria-label={`Aide pour ${section.title}`}>?</button>
-        {section.kind === 'jingle' && <span className="section-kind-badge">Jingle</span>}
-        <span className="section-duration">{formatTime(duration)}</span>
-        <button className="mini-button" disabled={sectionIndex === 0} onClick={() => onMoveSection(-1)} title="Déplacer la section vers la gauche">←</button>
-        <button className="mini-button" disabled={sectionIndex === sectionCount - 1} onClick={() => onMoveSection(1)} title="Déplacer la section vers la droite">→</button>
-        <button className="mini-button danger" onClick={onDeleteSection} title="Supprimer la section">×</button>
-      </div>
-        <div className="block-stack">
-          <div className="section-edit-action">{section.kind === 'jingle' ? blocks.find(block => block.type === 'jingle') && <button className="secondary-button compact" onClick={() => onEdit(blocks.find(block => block.type === 'jingle')!)}>✎ Editer le jingle</button> : <button className="secondary-button compact" onClick={onEditPart}>✎ Editer la partie</button>}</div>
-          {blocks.length === 0 && <div className="empty-section"><strong>{section.kind === 'jingle' ? 'Prépare une courte signature sonore.' : 'À toi de parler !'}</strong><p>{sectionGuideContent[section.guideType ?? 'part'].prompts[0]}</p></div>}
-          {blocks.map((block) => block.type === 'jingle' && (block.jingle?.production === 'guided-v7' || block.jingle?.production === 'guided-v8' || block.jingle?.production === 'guided-v9') && block.jingle.takes ? <JingleSectionOverview key={block.id} block={block} assets={assets} podcastTitle={project.title} onEdit={part => onEdit(block, part)} onPreview={onPreviewSection} Preview={TimedPreviewButton} /> : managedPauses.has(block.id) ? <div className="sound-gap-row" key={block.id}>🔊 Bruitage seul · {getBlockDuration(block, assets).toFixed(1)} s <small>À modifier dans l’habillage sonore</small></div> : (
-            <BlockCard
-              key={block.id}
-              block={block}
-              assets={assets}
-              active={block.id === activeBlockId}
-              playbackStatus={playbackStatus}
-              canMoveUp={narrativeBlocks.indexOf(block) > 0}
-              canMoveDown={narrativeBlocks.indexOf(block) < narrativeBlocks.length - 1}
-              onPlay={() => onPlay(block)}
-              onEdit={() => onEdit(block)}
-              onDuplicate={() => onDuplicate(block)}
-              onDelete={() => onDelete(block)}
-              onMoveUp={() => onMove(block, -1)}
-              onMoveDown={() => onMove(block, 1)}
-              onDragStart={(event) => { setDraggedId(block.id); event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', block.id); }}
-              onDropBefore={(event) => { event.preventDefault(); event.stopPropagation(); const id = event.dataTransfer.getData('text/plain') || draggedId; if (id && id !== block.id) onDropBlock(id, block.id); setDraggedId(null); }}
-            />
-          ))}
-          {section.kind !== 'jingle' && <><div className="narrative-actions"><button className="primary-button compact" onClick={onAddVoice}>🎙 Enregistrer une voix</button><button className="ghost-button compact" onClick={onAdd}>＋ Transition ou pause</button>{duration > 0 && <TimedPreviewButton previewId={`section-${section.id}`} label="Écouter cette partie" onStart={onPreviewSection} />}</div><SectionAudioOverview project={project} sectionId={section.id} onAdd={onAddLayer} onEdit={onEditLayer} onVoice={onEditVoiceInTimeline} /></>}
-        </div>
-    </section>
-  );
+  const mainJingle = blocks.find(block => block.type === 'jingle');
+  return <section className={`podcast-section ${section.kind === 'jingle' ? 'jingle-section' : ''} ${selected ? 'selected-section' : ''}`} data-section-id={section.id} onPointerDown={onSelect} onFocusCapture={onSelect}>
+    <div className="podcast-section-header">
+      <button className="section-select-button" aria-label={`Sélectionner ${section.title}`} aria-pressed={selected} onClick={onSelect}>{sectionIndex + 1}</button>
+      <input className="section-title-input" value={section.title} onChange={event => onRename(event.target.value)} aria-label="Nom de la section" />
+      <button className="section-help-button" onClick={onHelp} title="Conseils et exemples pour cette section" aria-label={`Aide pour ${section.title}`}>?</button>
+      {section.kind === 'jingle' && <span className="section-kind-badge">Jingle</span>}
+      <span className="section-duration">{formatTime(duration)}</span>
+      <button className="mini-button" disabled={sectionIndex === 0} onClick={() => onMoveSection(-1)} title="Déplacer la section vers la gauche">←</button>
+      <button className="mini-button" disabled={sectionIndex === sectionCount - 1} onClick={() => onMoveSection(1)} title="Déplacer la section vers la droite">→</button>
+      <button className="mini-button danger" onClick={onDeleteSection} title="Supprimer la section">×</button>
+    </div>
+    <div className="block-stack">
+      <div className="section-edit-action">{section.kind === 'jingle' ? mainJingle && <button className="secondary-button compact" onClick={() => onEdit(mainJingle)}>✎ Editer le jingle</button> : <button className="secondary-button compact" onClick={onEditPart}>✎ Editer la partie</button>}</div>
+      {section.kind !== 'jingle' && <SectionAudioOverview project={project} sectionId={section.id} onAdd={onAddLayer} onEdit={onEditLayer} onVoice={onEditVoiceInTimeline} onOpenVoice={onEditPart} />}
+      {!blocks.length && <div className="empty-section"><strong>{section.kind === 'jingle' ? 'Prépare une courte signature sonore.' : 'À toi de parler !'}</strong><p>{sectionGuideContent[section.guideType ?? 'part'].prompts[0]}</p></div>}
+      {blocks.map(block => {
+        if (block.type === 'jingle' && ['guided-v7', 'guided-v8', 'guided-v9'].includes(block.jingle?.production ?? '') && block.jingle?.takes) return <JingleSectionOverview key={block.id} block={block} assets={assets} podcastTitle={project.title} onEdit={part => onEdit(block, part)} onToggle={(part, included) => onToggleJinglePart(block, part, included)} onPreview={onPreviewSection} Preview={TimedPreviewButton} />;
+        const layer = section.audioLayers?.find(item => item.pauseBlockId === block.id);
+        return <SectionBlockCard key={block.id} block={block} assets={assets} onEdit={() => layer ? onEditLayer(layer) : onEdit(block)} onDelete={() => layer ? onDeleteLayer(layer) : onDelete(block)} onPreview={() => onPreviewBlock(block)} />;
+      })}
+      {section.kind !== 'jingle' && <div className="narrative-actions"><button className="primary-button compact" onClick={onAddVoice}>🎙 Enregistrer une voix</button><button className="ghost-button compact" onClick={onAdd}>＋ Transition ou pause</button>{duration > 0 && <TimedPreviewButton previewId={`section-${section.id}`} label="Écouter cette partie" onStart={onPreviewSection} />}</div>}
+    </div>
+  </section>;
 }
 
-function BlockCard({ block, assets, active, playbackStatus, canMoveUp, canMoveDown, onPlay, onEdit, onDuplicate, onDelete, onMoveUp, onMoveDown, onDragStart, onDropBefore }: {
-  block: PodcastBlock; assets: AudioAsset[]; active: boolean; playbackStatus: 'stopped' | 'loading' | 'playing' | 'paused'; canMoveUp: boolean; canMoveDown: boolean;
-  onPlay: () => void; onEdit: () => void; onDuplicate: () => void; onDelete: () => void; onMoveUp: () => void; onMoveDown: () => void;
-  onDragStart: (event: React.DragEvent) => void; onDropBefore: (event: React.DragEvent) => void;
+function SectionBlockCard({ block, assets, onEdit, onDelete, onPreview }: {
+  block: PodcastBlock; assets: AudioAsset[]; onEdit: () => void; onDelete: () => void; onPreview: () => Promise<PreviewSession>;
 }) {
-  const unpreparedJingle = block.type === 'jingle' && getBlockDuration(block, assets) === 0;
-  return (
-    <article className={`block-card block-${block.type} ${active ? 'active' : ''}`} draggable onDragStart={onDragStart} onDragOver={(event) => event.preventDefault()} onDrop={onDropBefore}>
-      <div className="drag-handle" title="Glisser pour déplacer">⋮⋮</div>
-      <div className="block-icon" aria-hidden="true">{blockIcons[block.type]}</div>
-      <div className="block-info"><span className="block-type-label">{blockLabels[block.type]}</span><strong>{block.type === 'silence' && block.title === 'Pause' ? 'Pause/Musique seule' : block.title}</strong><small>{unpreparedJingle ? 'Facultatif · à préparer ou à supprimer' : formatTime(getBlockDuration(block, assets))}{block.background ? ' · musique de fond' : ''}{block.voiceCues?.length ? ` · ${block.voiceCues.length} bruitage${block.voiceCues.length > 1 ? 's' : ''} synchronisé${block.voiceCues.length > 1 ? 's' : ''}` : ''}{block.voiceEffect !== 'none' ? ` · ${voiceEffectLabels[block.voiceEffect]}` : ''}</small></div>
-      <button className="round-play" disabled={unpreparedJingle} title={unpreparedJingle ? 'Prépare ce jingle pour l’écouter' : undefined} onClick={onPlay} aria-label={`${active && playbackStatus === 'playing' ? 'Mettre en pause' : 'Lire'} ${block.title}`} aria-busy={active && playbackStatus === 'loading'}>{active && playbackStatus === 'loading' ? <i className="preview-spinner" /> : active && playbackStatus === 'playing' ? 'Ⅱ' : '▶'}</button>
-      <div className="block-actions">
-        <button onClick={onEdit}>✎ <span>{unpreparedJingle ? 'Préparer le jingle' : 'Modifier'}</span></button>
-        {block.type !== 'jingle' && <button onClick={onDuplicate}>⧉ <span>Dupliquer</span></button>}
-        <button className="danger" onClick={onDelete}>🗑 <span>Supprimer</span></button>
-      </div>
-      <div className="move-buttons"><button disabled={!canMoveUp} onClick={onMoveUp} aria-label="Monter">↑</button><button disabled={!canMoveDown} onClick={onMoveDown} aria-label="Descendre">↓</button></div>
-    </article>
-  );
+  const duration = getBlockDuration(block, assets);
+  const unprepared = block.type === 'jingle' && duration === 0;
+  const title = block.type === 'silence' && block.title === 'Pause' ? 'Pause/Musique seule' : block.title;
+  const label = block.type === 'voice' ? 'cette voix' : block.type === 'silence' ? 'cette pause' : block.type === 'transition' ? 'cette transition' : 'cet élément';
+  return <SectionElementCard className={`block-${block.type}`} icon={blockIcons[block.type]} title={title} detail={unprepared ? 'Facultatif · à préparer' : `${duration.toFixed(1).replace('.', ',')} s${block.voiceEffect !== 'none' ? ' · ' + voiceEffectLabels[block.voiceEffect] : ''}`} onEdit={onEdit} onDelete={onDelete}>
+    <TimedPreviewButton previewId={`element-${block.id}`} label={`Écouter ${label}`} disabled={unprepared || duration <= 0} onStart={onPreview} />
+  </SectionElementCard>;
 }
 
 function AddSectionModal({ onClose, onChoose }: { onClose: () => void; onChoose: (type: SectionGuideType) => void }) {
@@ -1179,8 +1095,8 @@ function AddBlockModal({ onClose, onChoose }: { onClose: () => void; onChoose: (
   );
 }
 
-function BlockEditorModal({ block: initialBlock, assets, podcastTitle, isNew, initialJinglePart, embedded = false, onBusyChange, onClose, onSave, onRegisterAsset, onPreview }: {
-  embedded?: boolean; onBusyChange?: (busy: boolean) => void; initialJinglePart?: JingleVoicePart; block: PodcastBlock; assets: AudioAsset[]; podcastTitle: string; isNew: boolean; onClose: () => void; onSave: (block: PodcastBlock) => void;
+function BlockEditorModal({ block: initialBlock, assets, podcastTitle, isNew, initialJinglePart, onBusyChange, onClose, onSave, onRegisterAsset, onPreview }: {
+  onBusyChange?: (busy: boolean) => void; initialJinglePart?: JingleVoicePart; block: PodcastBlock; assets: AudioAsset[]; podcastTitle: string; isNew: boolean; onClose: () => void; onSave: (block: PodcastBlock) => void;
   onRegisterAsset: (blob: Blob, name: string, mimeType?: string, knownDuration?: number, metadata?: Pick<AudioAsset, 'source' | 'libraryId'>) => Promise<AudioAsset>;
   onPreview: (block: PodcastBlock) => Promise<PreviewSession>;
 }) {
@@ -1194,7 +1110,6 @@ function BlockEditorModal({ block: initialBlock, assets, podcastTitle, isNew, in
   const [voiceBusy, setVoiceBusy] = useState(false);
   const [transcriptionBusy, setTranscriptionBusy] = useState(false);
   useEffect(() => { onBusyChange?.(voiceBusy || transcriptionBusy || Boolean(transitionLoadingId)); }, [voiceBusy, transcriptionBusy, transitionLoadingId, onBusyChange]);
-  const EditorFrame = embedded ? InlineBlockEditorFrame : Modal;
   const selectedAsset = assets.find((asset) => asset.id === block.assetId);
   const requiresAsset = block.type === 'voice' || block.type === 'music' || block.type === 'sfx';
   const canSave = block.type === 'transition' ? Boolean(block.assetId && block.transitionPreset) : !requiresAsset || Boolean(block.assetId);
@@ -1336,7 +1251,7 @@ function BlockEditorModal({ block: initialBlock, assets, podcastTitle, isNew, in
 
   return (
     <>
-      <EditorFrame title={`${isNew ? 'Ajouter' : 'Modifier'} : ${blockLabels[block.type]}`} onClose={onClose} wide>
+      <Modal title={`${isNew ? 'Ajouter' : 'Modifier'} : ${blockLabels[block.type]}`} onClose={onClose} wide>
         <div className="editor-modal-body">
           {block.type !== 'jingle' && <label className="field"><span>Nom de l’élément</span><input value={block.title} onChange={(event) => update('title', event.target.value)} /></label>}
           {block.type === 'voice' && <VoiceScript value={block.script ?? ''} onChange={text => update('script', text)} asset={selectedAsset} start={block.trimStart} end={block.trimEnd || selectedAsset?.duration} disabled={voiceBusy} onBusyChange={setTranscriptionBusy} />}
@@ -1440,7 +1355,7 @@ function BlockEditorModal({ block: initialBlock, assets, podcastTitle, isNew, in
                   </div>
                 )}
               </div></details>}
-              <p className="voice-arrangement-note">{embedded ? 'Garde cette prise pour régler ensuite son volume et ses effets dans la trame.' : 'Après l’ajout, clique sur la voix dans la trame pour régler son volume et ses effets.'}</p>
+              <p className="voice-arrangement-note">Clique sur la voix dans la trame pour régler son volume et ses effets.</p>
             </>
           )}
 
@@ -1450,9 +1365,9 @@ function BlockEditorModal({ block: initialBlock, assets, podcastTitle, isNew, in
           {block.type !== 'transition' && <TimedPreviewButton previewId={`block-editor-${block.id}`} onStart={() => onPreview(block)} disabled={!canSave} />}
           <span className="footer-spacer" />
           <button className="ghost-button" disabled={voiceBusy || transcriptionBusy || Boolean(transitionLoadingId)} onClick={onClose}>Annuler</button>
-          <button className="primary-button" disabled={!canSave || !block.title.trim() || voiceBusy || transcriptionBusy || Boolean(transitionLoadingId)} onClick={() => onSave(block)}>✓ {embedded ? isNew ? 'Ajouter à la partie' : 'Garder les modifications' : isNew ? 'Ajouter' : 'Enregistrer'}</button>
+          <button className="primary-button" disabled={!canSave || !block.title.trim() || voiceBusy || transcriptionBusy || Boolean(transitionLoadingId)} onClick={() => onSave(block)}>✓ {isNew ? 'Ajouter' : 'Enregistrer'}</button>
         </div>}
-      </EditorFrame>
+      </Modal>
       {libraryTarget && <AudioLibraryModal kind={libraryKind} onClose={() => setLibraryTarget(null)} onChoose={chooseLibraryPreset} />}
     </>
   );
@@ -1866,10 +1781,6 @@ function ExportScreen({ project, duration, rendering, onBack, onListen, onExport
 
 function HelpModal({ onClose }: { onClose: () => void }) {
   return <Modal title="Aide rapide" onClose={onClose}><div className="help-steps"><div><span>1</span><p><strong>Enregistre les voix.</strong><br />Dans chaque partie, ajoute tes voix puis les transitions ou pauses utiles.</p></div><div><span>2</span><p><strong>Place les musiques de fond.</strong><br />Ouvre les pistes de la partie. Ajoute la musique, choisis l’extrait puis déplace et découpe le son en écoutant le mixage avec les voix.</p></div><div><span>3</span><p><strong>Ajoute les ambiances et bruitages.</strong><br />Choisis une ambiance pour le décor, ou un bruitage court pour une action ou une transition. Place-les sur la trame en écoutant avec les voix.</p></div><div><span>4</span><p><strong>Écoute et télécharge.</strong><br />Vérifie la partie ou le podcast complet, puis télécharge le WAV et une sauvegarde .podfacile.</p></div></div><div className="important-note"><strong>Important</strong><p>Les projets enregistrés uniquement dans le navigateur peuvent disparaître si ses données sont effacées. Télécharge régulièrement une sauvegarde .podfacile.</p></div></Modal>;
-}
-
-function InlineBlockEditorFrame({ title, children }: { title: string; onClose: () => void; wide?: boolean; children: React.ReactNode }) {
-  return <section className="inline-block-editor" aria-label={title}><h3>{title}</h3>{children}</section>;
 }
 
 function Modal({ title, onClose, wide = false, children }: { title: string; onClose: () => void; wide?: boolean; children: React.ReactNode }) {
