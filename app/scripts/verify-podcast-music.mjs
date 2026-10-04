@@ -8,7 +8,7 @@ const { usedLibraryCredits } = await import(await typescriptModuleUrl(new URL('.
 const sources = JSON.parse(await readFile(new URL('../public/audio/podcast-music/sources.json', import.meta.url), 'utf8'));
 const credits = await readFile(new URL('../public/audio-credits.html', import.meta.url), 'utf8');
 const visible = availableLibrarySounds('music');
-assert.equal(visible.length, 20);
+assert.equal(visible.length, 32);
 assert.equal(sources.length, visible.length);
 assert.equal(new Set(AUDIO_LIBRARY.map(preset => preset.id)).size, AUDIO_LIBRARY.length);
 for (const id of ['music-medieval-dream', 'music-egyptian-crawl']) assert.ok(visible.some(preset => preset.id === id));
@@ -38,4 +38,4 @@ const project = {
 assert.deepEqual(usedLibraryCredits(project).map(preset => preset.id).sort(), ['music-egyptian-crawl', 'music-podcast-sunday-smooth'].sort(), 'Credit section beds and old voice backgrounds; exclude unused imports.');
 project.blocks[0].background.assetId = 'bed';
 assert.equal(usedLibraryCredits(project).filter(preset => preset.id === 'music-podcast-sunday-smooth').length, 1, 'One credit per reused track.');
-console.log('Podcast music: 20 local beds, two favourites, 57 preserved references, sources, licences, hashes, deployment paths and export credits verified.');
+console.log('Podcast music: 32 local beds, two favourites, 57 preserved references, sources, licences, hashes, deployment paths and export credits verified.');
