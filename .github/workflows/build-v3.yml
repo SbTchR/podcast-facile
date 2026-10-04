@@ -36,6 +36,9 @@ jobs:
       - name: Reconstruire les sources complètes
         run: bash app/scripts/reconstruct-podcast-source.sh
 
+      - name: Installer FFmpeg pour analyser les transitions
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
       - name: Vérifier les sources corrigées
         run: bash app/scripts/verify-audio-source.sh
 

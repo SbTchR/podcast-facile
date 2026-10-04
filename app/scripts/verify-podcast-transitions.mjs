@@ -24,7 +24,8 @@ for (const row of rows) {
   const bytes = await readFile(new URL(row.filename, directory));
   assert.equal(createHash('sha256').update(bytes).digest('hex'), row.sha256, row.id);
   const result = spawnSync('ffmpeg', ['-v', 'error', '-i', new URL(row.filename, directory).pathname, '-ar', '44100', '-ac', '2', '-f', 'f32le', '-'], { maxBuffer: 5e6 });
-  assert.equal(result.status, 0, result.stderr.toString());
+  assert.ifError(result.error);
+  assert.equal(result.status, 0, result.stderr?.toString() ?? 'Audio decoding failed.');
   const samples = new Float32Array(result.stdout.buffer, result.stdout.byteOffset, result.stdout.length / 4);
   const seconds = samples.length / (44100 * 2);
   assert.ok(seconds > .2 && seconds <= 8, `${row.id}: ${seconds}s`);
