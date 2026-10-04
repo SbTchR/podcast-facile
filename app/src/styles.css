@@ -972,12 +972,26 @@ details.cue-source-range { display: block; grid-column: 1 / -1; }
 .title-take-tabs button { border: 1px solid #d7e1ee; background: white; color: #415775; padding: 12px; border-radius: 9px; text-align: left; display: grid; gap: 6px; }
 .title-take-tabs button.selected { border-color: #2365dc; background: #edf3fe; color: #2365dc; }
 .title-take-tabs small { font-size: 11px; }
+.jingle-recording-role { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin: 16px 0 8px; color: #324966; font-size: 13px; }
+.jingle-recording-role small { margin-left: auto; color: #6a7890; }
+.jingle-voice-badge { padding: 6px 9px; border-radius: 6px; background: #e7effe; color: #235abb; font-weight: 700; white-space: nowrap; }
+.jingle-voice-badge.voice-two { background: #fff0df; color: #97601a; }
+.jingle-speaker-choice { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 16px 0; font-size: 13px; }
+.jingle-speaker-choice > span { color: #65748b; margin-right: 4px; }
+.jingle-speaker-choice button { padding: 9px 12px; border: 1px solid #d7e1ee; border-radius: 7px; background: white; color: #415775; }
+.jingle-speaker-choice button.selected { border-color: #2365dc; background: #edf3fe; color: #2365dc; }
+.jingle-radio-sequence { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.jingle-shorter-choice { border: 1px solid #d7e1ee; border-radius: 9px; padding: 12px 14px; margin: 16px 0; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.jingle-shorter-choice p { flex: 1 1 230px; margin: 0; font-size: 13px; }
 @media (max-width: 640px) {
   .narrative-actions > .timed-preview { margin-left: 0; flex: 1 1 100%; }
   .sound-position-fields { grid-template-columns: minmax(0, 1fr); }
   .voice-setting-row { align-items: flex-start; flex-direction: column; gap: 8px; }
   .voice-script { padding: 12px; }
   .title-take-tabs { gap: 8px; }
+  .jingle-recording-role { align-items: flex-start; }
+  .jingle-recording-role strong { flex: 1 1 160px; }
+  .jingle-radio-sequence { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 .jingle-ending-grid .timed-preview { width: 100%; min-width: 0; margin-top: 8px; }
 .jingle-ending-grid .preview-control { min-height: 34px; padding: 7px 8px; }

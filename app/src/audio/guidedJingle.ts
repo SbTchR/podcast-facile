@@ -1,6 +1,7 @@
 import type { AudioAsset, JingleVoicePart, PodcastBlock } from '../types';
 import { getGuidedJinglePlan, getGuidedJingleEndingPlan, JINGLE_PARTS, type GuidedJinglePlan } from './jinglePlan';
 import { STUDIO_STYLES, studioVoiceGain } from './jingleStudio';
+import { connectRadioJingleVoice, radioJingleBus } from './radioJingleVoice';
 
 type Context = AudioContext | OfflineAudioContext;
 type Style = NonNullable<PodcastBlock['jingle']>['style'];
@@ -97,16 +98,17 @@ export function scheduleGuidedJingle(context: Context, destination: AudioNode, b
   const plan = getGuidedJinglePlan(block, assets);
   if (!plan.ready || offset >= plan.total) return;
   const jingle = block.jingle!;
+  const output = jingle.production === 'guided-v7' ? radioJingleBus(context, destination) : destination;
   const music = cache.get(jingle.musicAssetId!);
   if (!music) throw new Error('La musique du jingle est introuvable.');
   const full = musicLevel(music);
   const percent = Math.max(0, Math.min(100, jingle.musicVolume ?? 32)) / 100;
   const under = full * percent;
   const outro = full * 1.35;
-  const musicGain = context.createGain(); musicGain.connect(destination);
+  const musicGain = context.createGain(); musicGain.connect(output);
   const speechEnd = plan.titleReturnStart === undefined ? plan.starts.intro + plan.durations.intro : plan.titleReturnStart + plan.durations.title;
   const liftRamp = Math.min(.2, Math.max(0, plan.starts.hook - speechEnd) / 3);
-  const musicPoints: [number, number][] = jingle.production === 'guided-v6'
+  const musicPoints: [number, number][] = jingle.production === 'guided-v6' || jingle.production === 'guided-v7'
     ? composedJingleMusicEnvelope(plan, full, under)
     : [[0, 0], [0.16, full], [plan.starts.title - 0.2, full], [plan.starts.title, under], [speechEnd, under], [speechEnd + liftRamp, full], [plan.starts.hook - liftRamp, full], [plan.starts.hook, under], [plan.outroStart, under], [plan.outroStart + 0.32, outro], [plan.total - 0.6, outro], [plan.total, 0]];
   envelope(musicGain, musicPoints, start, offset);
@@ -123,14 +125,15 @@ export function scheduleGuidedJingle(context: Context, destination: AudioNode, b
     if (duration <= 0) return;
     const source = context.createBufferSource(); source.buffer = buffer;
     const gain = context.createGain(); source.connect(gain);
-    if (repeat) connectTitleRepeat(context, gain, destination, jingle.style);
-    else connectPhrase(context, gain, destination, jingle.style, part);
+    if (jingle.production === 'guided-v7') connectRadioJingleVoice(context, gain, output, jingle.style, part);
+    else if (repeat) connectTitleRepeat(context, gain, output, jingle.style);
+    else connectPhrase(context, gain, output, jingle.style, part);
     const now = start + Math.max(0, at - offset);
     const level = studioVoiceGain(buffer);
     gain.gain.setValueAtTime(level, now);
     source.start(now, take.sourceStart + consumed, duration);
   };
-  if (jingle.production === 'guided-v6') {
+  if (jingle.production === 'guided-v6' || jingle.production === 'guided-v7') {
     for (const cue of plan.voices!) phrase(cue.part, cue.start, cue.echo);
   } else if (jingle.production === 'guided-v4' || jingle.production === 'guided-v5') {
     for (const part of JINGLE_PARTS) phrase(part, plan.starts[part], part === 'title-alt');
@@ -151,7 +154,7 @@ export function scheduleGuidedJingle(context: Context, destination: AudioNode, b
     const consumed = Math.max(0, offset - ending.start);
     const remaining = ending.duration - consumed;
     const at = start + Math.max(0, ending.start - offset);
-    const gain = context.createGain(); gain.connect(destination);
+    const gain = context.createGain(); gain.connect(output);
     envelope(gain, [[0,0],[.008,level],[Math.max(.009, ending.duration - .12),level],[ending.duration,0]], at, consumed);
     const source = context.createBufferSource(); source.buffer = buffer; source.connect(gain);
     source.start(at, consumed, remaining);
