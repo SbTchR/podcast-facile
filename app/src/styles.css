@@ -794,7 +794,7 @@ details.cue-source-range { display: block; grid-column: 1 / -1; }
 /* One shared scale for the overview and the two-stage part editor. */
 .modal.wide:has(.part-sound-editor) { width: min(1160px, 100%); }
 .part-sound-editor { padding: 20px 24px; }
-.sound-phase-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 22px; }
+.sound-phase-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 22px; }
 .sound-phase-tabs button { display: flex; justify-content: center; align-items: center; gap: 10px; padding: 12px; border: 1px solid #d5dfec; border-radius: 9px; background: #f6f8fc; color: #6a7890; font-weight: 650; }
 .sound-phase-tabs button span { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: #e6ebf3; font-size: 12px; }
 .sound-phase-tabs button.selected { background: #edf4ff; border-color: #aec8f5; color: #2365dc; }
@@ -1096,3 +1096,35 @@ details.cue-source-range { display: block; grid-column: 1 / -1; }
 .jingle-timing.compact .jingle-timing-voice span { display: none; }
 .music-pause-level { margin: 8px 0 16px; }
 .music-pause-level > .check-row { margin-bottom: 10px; }
+
+.section-edit-action { display: flex; justify-content: flex-end; margin-bottom: 3px; }
+.section-edit-action button { width: 100%; }
+.jingle-take-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+.jingle-take-fields:disabled { opacity: .55; }
+.jingle-include-take { margin: 14px 0; }
+.jingle-duration-advice { display: grid; gap: 4px; margin: 18px 0; color: #4c6280; font-size: .82rem; }
+.jingle-duration-advice strong { color: #204f9d; }
+.jingle-element-options { margin: 16px 0; color: #4c6280; }
+.jingle-element-options summary { cursor: pointer; font-weight: 650; }
+.jingle-element-options summary small { font-weight: 400; margin-left: 6px; }
+.jingle-element-options > div { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 16px 0; }
+.jingle-missing-takes { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+.part-recording-list { display: grid; gap: 8px; margin: 20px 0; }
+.part-recording-row { display: flex; align-items: center; gap: 6px; border: 1px solid #d5dfec; border-radius: 10px; padding: 8px; min-width: 0; }
+.part-recording-row.selected { border-color: #aec8f5; background: #edf4ff; }
+.part-recording-select { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; border: 0; background: transparent; padding: 6px; text-align: left; }
+.part-recording-select > span:last-child { display: grid; min-width: 0; gap: 3px; }
+.part-recording-select strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.part-recording-select small { color: #6a7890; }
+.part-inline-editor { padding: 20px; margin: 18px 0; border: 1px solid #c6d6ef; border-radius: 12px; background: #f8faff; }
+.part-inline-editor[hidden] { display: none; }
+.inline-block-editor > h3 { margin-top: 0; }
+.inline-block-editor .editor-modal-body { padding: 0; }
+.inline-block-editor .modal-footer { position: static; padding: 16px 0 0; background: transparent; border-top: 1px solid #d5dfec; }
+@media (max-width: 650px) {
+  .sound-phase-tabs { grid-template-columns: 1fr; gap: 6px; }
+  .part-inline-editor { padding: 12px; }
+  .part-recording-row { flex-wrap: wrap; }
+  .part-recording-select { flex-basis: 55%; }
+  .jingle-element-options > div { grid-template-columns: 1fr; }
+}

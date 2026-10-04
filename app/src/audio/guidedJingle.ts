@@ -78,7 +78,7 @@ export function composedJingleMusicEnvelope(plan: GuidedJinglePlan, full: number
   // Adjacent title/repeat cues share one ducked interval: no music pulse at
   // the join, and no gain automation that leaks into the preceding voice.
   const speech: { start: number; end: number }[] = [];
-  for (const cue of plan.voices ?? []) {
+  for (const cue of [...(plan.voices ?? [])].filter(cue => cue.duration > 0).sort((a, b) => a.start - b.start)) {
     const previous = speech.at(-1);
     if (previous && cue.start <= previous.end + .001) previous.end = Math.max(previous.end, cue.start + cue.duration);
     else speech.push({ start: cue.start, end: cue.start + cue.duration });
@@ -98,7 +98,7 @@ export function scheduleGuidedJingle(context: Context, destination: AudioNode, b
   const plan = getGuidedJinglePlan(block, assets);
   if (!plan.ready || offset >= plan.total) return;
   const jingle = block.jingle!;
-  const radio = jingle.production === 'guided-v7' || jingle.production === 'guided-v8';
+  const radio = jingle.production === 'guided-v7' || jingle.production === 'guided-v8' || jingle.production === 'guided-v9';
   const output = radio ? radioJingleBus(context, destination) : destination;
   const music = cache.get(jingle.musicAssetId!);
   if (!music) throw new Error('La musique du jingle est introuvable.');
@@ -126,7 +126,7 @@ export function scheduleGuidedJingle(context: Context, destination: AudioNode, b
     if (duration <= 0) return;
     const source = context.createBufferSource(); source.buffer = buffer;
     const gain = context.createGain(); source.connect(gain);
-    if (radio) connectRadioJingleVoice(context, gain, output, jingle.style, part, jingle.production === 'guided-v8', jingle.effects?.[part]);
+    if (radio) connectRadioJingleVoice(context, gain, output, jingle.style, part, jingle.production === 'guided-v8' || jingle.production === 'guided-v9', jingle.effects?.[part]);
     else if (repeat) connectTitleRepeat(context, gain, output, jingle.style);
     else connectPhrase(context, gain, output, jingle.style, part);
     const now = start + Math.max(0, at - offset);
