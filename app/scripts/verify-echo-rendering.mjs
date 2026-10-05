@@ -64,29 +64,31 @@ assert.equal(await context.startRendering(), 'rendered');
 assert.deepEqual(events, [['start', 0, .2, .6], ['stop', .63], ['start', .4], ['stop', .9], ['render']]);
 console.log('Offline rendering: graph construction finishes before activation; native bindings, offsets, durations and stop ordering preserved.');
 
-const { readFile } = await import('node:fs/promises');
-const { runInNewContext } = await import('node:vm');
-let Capture, captured, transfers;
-runInNewContext(await readFile(new URL('../src/audio/pcmCapture.worklet.js', import.meta.url), 'utf8'), {
-  Float32Array,
-  AudioWorkletProcessor: class { port = { postMessage(data, buffers) { captured = data; transfers = buffers; } }; },
-  registerProcessor(name, processor) { assert.equal(name, 'podcast-pcm-capture'); Capture = processor; },
-});
-const processor = new Capture({ processorOptions: { frames: 333 } });
-const left = Float32Array.from({ length: 128 }, (_, i) => i / 128);
-const right = Float32Array.from(left, value => -value);
-const output = () => [[new Float32Array(128), new Float32Array(128)]];
-processor.process([[]], output()); // Silent intro must retain its exact length.
-processor.process([[left, right]], output());
-assert.equal(captured, undefined);
-processor.process([[left]], output()); // Mono input duplicates to stereo.
-assert.equal(captured.length, 2);
-assert.equal(captured[0].length, 333); assert.equal(captured[1].length, 333);
-assert.deepEqual([...captured[0].slice(0, 128)], Array(128).fill(0));
-assert.deepEqual([...captured[0].slice(128, 256)], [...left]);
-assert.deepEqual([...captured[1].slice(128, 256)], [...right]);
-assert.deepEqual([...captured[0].slice(256)], [...left.slice(0, 77)]);
-assert.deepEqual([...captured[1].slice(256)], [...left.slice(0, 77)]);
-assert.equal(transfers[0], captured[0].buffer); assert.equal(transfers[1], captured[1].buffer);
-assert.equal(processor.process([[]], output()), false);
-console.log('PCM capture: exact stereo signal, silence, mono fallback, partial last quantum and buffer transfer verified.');
+const { createPcmCapture, pcmCaptureRenderLength, PCM_CAPTURE_FRAMES } = await import(await typescriptModuleUrl(new URL('../src/audio/pcmCapture.ts', import.meta.url)));
+globalThis.AudioBuffer = class {
+  constructor({ numberOfChannels, length, sampleRate }) { this.length = length; this.sampleRate = sampleRate; this.channels = Array.from({ length: numberOfChannels }, () => new Float32Array(length)); }
+  copyToChannel(data, channel) { this.channels[channel].set(data); }
+};
+for (const frames of [1, 333, 4096, 8193, 44100]) {
+  let disconnected = false;
+  const node = { connect() {}, disconnect() { disconnected = true; } };
+  const context = { sampleRate: 44100, destination: {}, createScriptProcessor(...args) { assert.deepEqual(args, [PCM_CAPTURE_FRAMES, 2, 2]); return node; } };
+  const capture = createPcmCapture(context, frames);
+  assert.throws(() => capture.finish(), /incomplet/, 'An incomplete render must fail, never hang or return a truncated file.');
+  const expected = [new Float32Array(frames), new Float32Array(frames)];
+  const renderLength = pcmCaptureRenderLength(frames);
+  assert(renderLength >= frames + PCM_CAPTURE_FRAMES);
+  assert.equal(renderLength % PCM_CAPTURE_FRAMES, 0);
+  for (let offset = 0; offset < renderLength; offset += PCM_CAPTURE_FRAMES) {
+    const channels = [0, 1].map(channel => Float32Array.from({ length: PCM_CAPTURE_FRAMES }, (_, i) => offset + i < 128 ? 0 : Math.sin((offset + i) * .071) * (channel ? -.7 : .3)));
+    for (let channel = 0; channel < 2; channel++) {
+      if (offset < frames) expected[channel].set(channels[channel].subarray(0, Math.min(PCM_CAPTURE_FRAMES, frames - offset)), offset);
+    }
+    node.onaudioprocess({ inputBuffer: { length: PCM_CAPTURE_FRAMES, getChannelData: channel => channels[channel] } });
+  }
+  const result = capture.finish();
+  assert.equal(result.length, frames); assert.equal(result.sampleRate, 44100);
+  assert.deepEqual(result.channels, expected, 'Preserve leading silence, distinct stereo channels and final partial block, without padding.');
+  capture.dispose(); assert(disconnected); assert.equal(node.onaudioprocess, null);
+}
+console.log('PCM capture: exact stereo signal, silent intro, short files, block boundaries, final partial block, incomplete-render error and cleanup verified.');
