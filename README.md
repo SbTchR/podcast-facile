@@ -1,3 +1,5 @@
+Adresse de l’application : **https://sbtchr.github.io/podcast-facile/**. L’ancienne adresse `/site/` redirige vers cette version unique. Les projets locaux restent accessibles : l’origine du navigateur ne change pas.
+
 # Podcast Facile — version 3
 
 Webapp pédagogique de création de podcasts pour les élèves de 12 à 15 ans. Le podcast se construit avec des cartes successives, avec un habillage sonore compact sous les voix de chaque partie.

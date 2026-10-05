@@ -2,6 +2,7 @@ import type { AudioAsset, JingleTake, JingleVoicePart, JingleVoiceEffects, Podca
 import type { PreviewSession } from './libraryPreview';
 import { isJingleEcho } from './jingleParts';
 import { STUDIO_STYLES, studioVoiceGain } from './jingleStudio';
+import { connectEcho } from './echo';
 
 type Context = AudioContext | OfflineAudioContext;
 type Style = NonNullable<PodcastBlock['jingle']>['style'];
@@ -84,10 +85,9 @@ function connectCustomVoice(context: Context, input: AudioNode, output: AudioNod
     voice.connect(delay).connect(wet).connect(destination);
   }
   if (echo) {
-    const slap = context.createDelay(.2); slap.delayTime.value = .095;
-    const feedback = context.createGain(); feedback.gain.value = .18;
     const wet = context.createGain(); wet.gain.value = .22 * strength;
-    voice.connect(slap); slap.connect(feedback).connect(slap); slap.connect(wet).connect(destination);
+    wet.connect(destination);
+    connectEcho(context, voice, wet, .095, .18);
   }
 }
 
@@ -121,10 +121,9 @@ export function connectRadioJingleVoice(context: Context, input: AudioNode, outp
   const dry = context.createGain(); dry.gain.value = echo ? 1.35 : title ? 1.22 : 1.3;
   compressor.connect(dry).connect(destination);
   if (echo) {
-    const slap = context.createDelay(.2); slap.delayTime.value = .095;
-    const feedback = context.createGain(); feedback.gain.value = .18;
     const wet = context.createGain(); wet.gain.value = .22;
-    compressor.connect(slap); slap.connect(feedback).connect(slap); slap.connect(wet).connect(destination);
+    wet.connect(destination);
+    connectEcho(context, compressor, wet, .095, .18);
     addRoom(context, compressor, destination, .65, .18, .012, true);
   } else {
     addRoom(context, compressor, destination, title ? (broadcast ? broadcastRooms[style] : rooms[style]) : .38, title ? (broadcast ? 1.08 : .32) : .065, title ? (broadcast ? .045 : .022) : .012);

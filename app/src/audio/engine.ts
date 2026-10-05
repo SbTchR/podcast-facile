@@ -5,6 +5,9 @@ import { resolveSectionLayers } from './sectionLayers';
 import { connectStudioVoice, scheduleSignatureFx, applyStudioMusicEnvelope, studioVoiceGain } from './jingleStudio';
 import { getGuidedJinglePlan, isGuidedJingle } from './jinglePlan';
 import { scheduleGuidedJingle } from './guidedJingle';
+import { connectEcho } from './echo';
+import { createProjectOfflineContext } from './offlineContext';
+import { createPcmCapture } from './pcmCapture';
 
 type RenderContext = AudioContext | OfflineAudioContext;
 
@@ -241,17 +244,13 @@ function connectVoiceEffect(context: RenderContext, source: AudioBufferSourceNod
   }
   if (effect === 'echo') {
     const dry = context.createGain();
-    const delay = context.createDelay(1);
-    const feedback = context.createGain();
     const dreamFilter = context.createBiquadFilter();
     dry.gain.value = 0.84;
-    delay.delayTime.value = 0.22;
-    feedback.gain.value = 0.24;
     dreamFilter.type = 'lowpass';
     dreamFilter.frequency.value = 2800;
     source.connect(dry).connect(output);
-    source.connect(delay).connect(feedback).connect(delay);
-    delay.connect(dreamFilter).connect(output);
+    dreamFilter.connect(output);
+    connectEcho(context, source, dreamFilter, 0.22, 0.24);
     return output;
   }
   if (effect === 'distant') {
@@ -911,11 +910,14 @@ export function audioBufferToWav(buffer: AudioBuffer): Blob {
 
 export async function renderProjectAudio(project: PodcastProject): Promise<AudioBuffer> {
   const duration = Math.max(0.1, getProjectDuration(project));
-  const context = new OfflineAudioContext(2, Math.ceil(duration * SAMPLE_RATE), SAMPLE_RATE);
-  const outputBus = createMasterSafetyLimiter(context, context.destination);
+  const context = createProjectOfflineContext(2, Math.ceil(duration * SAMPLE_RATE), SAMPLE_RATE);
+  const webkit = /AppleWebKit/.test(navigator.userAgent) && !/Chrome|Chromium|Edg\//.test(navigator.userAgent);
+  const capture = webkit ? await createPcmCapture(context) : undefined;
+  const outputBus = createMasterSafetyLimiter(context, capture?.node ?? context.destination);
   const cache = await decodeProjectAssets(context, project);
   await scheduleProject(context, outputBus, project, 0, 0, cache);
-  return context.startRendering();
+  const rendered = await context.startRendering();
+  return capture ? capture.result : rendered;
 }
 
 export async function renderProjectToWav(project: PodcastProject): Promise<Blob> {

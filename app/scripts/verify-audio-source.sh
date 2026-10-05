@@ -29,6 +29,7 @@ python3 app/scripts/verify-jingle-music-mixing.py
 python3 app/scripts/verify-vocal-magic-boost-and-jingle-timing.py
 node app/scripts/verify-project-files.mjs
 node app/scripts/verify-mp3-export.mjs
+node app/scripts/verify-echo-rendering.mjs
 node app/scripts/verify-section-playback-order.mjs
 node app/scripts/verify-library-preview.mjs
 node app/scripts/verify-podcast-transitions.mjs

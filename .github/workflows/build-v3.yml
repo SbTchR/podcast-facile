@@ -57,25 +57,8 @@ jobs:
       - name: Vérifier le résultat compilé
         run: bash app/scripts/verify-audio-build.sh
 
-      - name: Installer le site statique
-        run: |
-          rm -rf site
-          mkdir site
-          cp -R app/dist/. site/
-          touch site/.nojekyll
-          cat > index.html <<'HTML'
-          <!doctype html>
-          <html lang="fr">
-          <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width,initial-scale=1">
-            <meta http-equiv="refresh" content="0;url=./site/?v=20261005-downloads-mp3-1">
-            <title>Podcast Facile V3</title>
-            <script>location.replace('./site/?v=20261005-downloads-mp3-1')</script>
-          </head>
-          <body><a href="./site/?v=20261005-downloads-mp3-1">Ouvrir Podcast Facile V3</a></body>
-          </html>
-          HTML
+      - name: Installer le site à l’adresse canonique
+        run: python3 app/scripts/install-static-site.py
 
       - name: Publier le site généré
         run: |
