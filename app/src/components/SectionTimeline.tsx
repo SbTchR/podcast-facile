@@ -3,7 +3,7 @@ import type { AudioAsset, PodcastBlock, PodcastProject, SectionAudioLayer } from
 import { formatTime, getTimeline } from '../audio/engine';
 import { resolveSectionLayers } from '../audio/sectionLayers';
 import { assetWaveform, clampTime, roundTime } from '../audio/sectionTimeline';
-import { VOICE_SPEAKER_LABELS, voiceSpeakerClass } from '../audio/voiceSpeakers';
+import { voiceSpeakerLabel, voiceSpeakerClass } from '../audio/voiceSpeakers';
 
 const Waveform = memo(function Waveform({ asset, from = 0, to = asset?.duration ?? 0, repeat = false, length }: { asset?: AudioAsset; from?: number; to?: number; repeat?: boolean; length?: number }) {
   const [peaks, setPeaks] = useState<number[]>([]);
@@ -117,7 +117,7 @@ export function SectionTimeline({ project, selectedId, selectedVoiceId, phase, p
       const at = event.key === 'Home' ? 0 : event.key === 'End' ? duration - .1 : (playhead ?? 0) + (event.key === 'ArrowLeft' ? -1 : 1) * (event.shiftKey ? 1 : .1);
       onSeek(clampTime(roundTime(at), 0, Math.max(0, duration - .05)));
     }} onClick={event => onOpenTrack ? onOpenTrack('music') : seek(event)}>{Array.from({ length: duration > 0 ? tickCount + 1 : 1 }, (_, index) => <span key={index} style={{ left: `${index / tickCount * 100}%` }}>{formatTime(index / tickCount * duration)}</span>)}{head}</div></div>
-    <div className="track-row"><strong className={`track-label ${hasVoiceSpeakers ? 'track-voice-speakers' : ''}`}><span>Voix</span>{hasVoiceSpeakers && <span className="track-speaker-key" role="img" aria-label="Voix 1 en bleu, voix 2 en orange"><i className="speaker-one">1</i><i className="speaker-two">2</i></span>}</strong><div className="track-rail" onClick={seek}>{timeline.filter(e => e.duration > 0).map(entry => {
+    <div className="track-row"><strong className={`track-label ${hasVoiceSpeakers ? 'track-voice-speakers' : ''}`}><span>Voix</span>{hasVoiceSpeakers && <span className="track-speaker-key" role="img" aria-label="Voix 1 en bleu, voix 2 en rouge"><i className="speaker-one">1</i><i className="speaker-two">2</i></span>}</strong><div className="track-rail" onClick={seek}>{timeline.filter(e => e.duration > 0).map(entry => {
       const asset = project.assets.find(item => item.id === entry.block.assetId);
       const voice = entry.block.type === 'voice';
       const background = entry.block.background;
@@ -126,7 +126,7 @@ export function SectionTimeline({ project, selectedId, selectedVoiceId, phase, p
       const pick = onSelectBlock ?? (voice ? onSelectVoice : undefined);
       const draggable = Boolean(onMoveBlock && !managedPauses.has(entry.block.id));
       return <div key={entry.block.id} data-block-id={entry.block.id} role={pick ? 'button' : undefined} tabIndex={pick ? 0 : undefined}
-        aria-label={pick ? `Sélectionner ${voice && entry.block.speaker ? `${VOICE_SPEAKER_LABELS[entry.block.speaker]} : ` : ''}${entry.block.title}` : undefined} aria-pressed={pick ? selectedVoiceId === entry.block.id : undefined}
+        aria-label={pick ? `Sélectionner ${voice && entry.block.speaker ? `${voiceSpeakerLabel(entry.block.speaker, project.speakerNames)} : ` : ''}${entry.block.title}` : undefined} aria-pressed={pick ? selectedVoiceId === entry.block.id : undefined}
         className={`track-clip narrative ${voice ? `voice ${voiceSpeakerClass(entry.block.speaker)}` : entry.block.type === 'transition' ? 'transition' : 'pause'} ${selectedVoiceId === entry.block.id ? 'selected' : ''} ${draggable ? 'reorderable' : ''} ${blockDrag?.id === entry.block.id ? 'dragging' : ''}`}
         style={{ ...position(entry.start + pre, entry.end - post), transform: blockDrag?.id === entry.block.id ? `translateX(${blockDrag.dx}px)` : undefined }}
         title={entry.block.title + (draggable ? ' · Glisser pour déplacer' : '')}

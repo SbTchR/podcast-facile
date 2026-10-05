@@ -13,7 +13,7 @@ export function JingleSectionOverview({ block, assets, podcastTitle, onEdit, onT
   const plan = getGuidedJinglePlan(block, assets);
   return <div className="jingle-section-content">
     <JingleTiming plan={plan} compact onTake={onEdit} jingle={jingle} />
-    <div className="jingle-part-list">{RADIO_JINGLE_PARTS.map(part => {
+    <div className="jingle-part-list">{RADIO_JINGLE_PARTS.filter(part => jingle.mode !== 'simple' || isJinglePartEnabled(jingle, part)).map(part => {
       const take = jingle.takes?.[part], asset = assets.find(item => item.id === take?.assetId);
       return <SectionElementCard key={part} className={`jingle-part-card ${jinglePartSpeakerClass(jingle, part)}`} icon="🎙" title={JINGLE_PART_LABELS[part]}
         detail={take && asset ? `${(take.sourceEnd - take.sourceStart).toFixed(1).replace('.', ',')} s · ${jinglePartScript(jingle, podcastTitle, part)}` : 'À enregistrer'}

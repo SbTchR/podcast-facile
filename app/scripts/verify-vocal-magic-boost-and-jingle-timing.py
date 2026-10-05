@@ -16,7 +16,7 @@ checks = {
     'jingle vocal réglable': types.count('voiceEnhancement?: VoiceEnhancement;') == 2,
     'durées de jingle': 'musicLeadSeconds?: 1 | 2 | 3 | 4;' in types and 'musicTailSeconds?: 1 | 2 | 3 | 4;' in types,
     'contrôle Magic Boost sur la trame': 'Clarté' in voice_settings and 'magic-boost' in voice_settings and 'voiceEnhancementLabels' not in app,
-    'parcours vocal guidé': "['Style', 'Titre 1', 'Intro', 'Titre 2', 'Accroche', 'Écouter']" in jingle,
+    'parcours vocal guidé': "['Style', 'Titre', 'Intro', 'Titre 2', 'Accroche', 'Écouter']" in jingle,
     'départ musical adaptatif': 'Les passages musicaux s’adaptent à la durée des prises et aux éléments inclus.' in jingle,
     'prises sans coupure automatique': 'maxSeconds={plan.limits' not in jingle and 'l’enregistrement ne s’arrête pas automatiquement.' in jingle,
     'valeurs par défaut': "production: 'guided-v9'" in app and "getJingleBed('modern-radio', undefined, 'extended').id" in app,

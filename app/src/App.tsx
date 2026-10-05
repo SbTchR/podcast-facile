@@ -13,8 +13,10 @@ import { removeSectionLayer, syncLayerPauses } from './audio/sectionLayers';
 import { applySectionArrangement } from './audio/sectionTimeline';
 import { JingleWizard } from './components/JingleWizard';
 import { VoiceScript } from './components/VoiceScript';
+import { RecordingTakeList } from './components/RecordingTakeList';
+import { keepVoiceTake, selectVoiceTake, voiceTakes } from './audio/recordingTakes';
 import { getGuidedJinglePlan, isGuidedJingle } from './audio/jinglePlan';
-import { VOICE_SPEAKER_LABELS, voiceSpeakerClass } from './audio/voiceSpeakers';
+import { voiceSpeakerLabel, voiceSpeakerClass } from './audio/voiceSpeakers';
 import { JINGLE_CREDIT_BEDS, getJingleBed } from './data/jingleBeds';
 import { JINGLE_CREDIT_ENDINGS } from './data/jingleEndings';
 import { AUDIO_LIBRARY, LIBRARY_CATEGORIES, SOUND_CATEGORIES, availableLibrarySounds, loadLibraryAudio, type LibraryKind, type LibraryPreset, type SoundGroup } from './data/audioLibrary';
@@ -141,7 +143,8 @@ function cloneBlock(block: PodcastBlock): PodcastBlock {
   return {
     ...block,
     background: block.background ? { ...block.background } : undefined,
-    jingle: block.jingle ? { ...block.jingle, takes: block.jingle.takes ? Object.fromEntries(Object.entries(block.jingle.takes).map(([part, take]) => [part, take ? { ...take } : undefined])) : undefined, scripts: block.jingle.scripts ? { ...block.jingle.scripts } : undefined, enabledParts: block.jingle.enabledParts ? { ...block.jingle.enabledParts } : undefined, effects: block.jingle.effects ? Object.fromEntries(Object.entries(block.jingle.effects).map(([part, values]) => [part, values ? { ...values } : undefined])) : undefined } : undefined,
+    jingle: block.jingle ? { ...block.jingle, fullEnabledParts: block.jingle.fullEnabledParts ? { ...block.jingle.fullEnabledParts } : undefined, takeHistory: block.jingle.takeHistory ? Object.fromEntries(Object.entries(block.jingle.takeHistory).map(([part, takes]) => [part, takes?.map(take => ({ ...take }))])) : undefined, takes: block.jingle.takes ? Object.fromEntries(Object.entries(block.jingle.takes).map(([part, take]) => [part, take ? { ...take } : undefined])) : undefined, scripts: block.jingle.scripts ? { ...block.jingle.scripts } : undefined, enabledParts: block.jingle.enabledParts ? { ...block.jingle.enabledParts } : undefined, effects: block.jingle.effects ? Object.fromEntries(Object.entries(block.jingle.effects).map(([part, values]) => [part, values ? { ...values } : undefined])) : undefined } : undefined,
+    voiceTakes: block.voiceTakes?.map(take => ({ ...take })),
     voiceCues: block.voiceCues?.map((cue) => ({ ...cue })),
   };
 }
@@ -298,7 +301,7 @@ function makeBlock(type: BlockType, sectionId: string): PodcastBlock {
     voiceCues: type === 'voice' ? [] : undefined,
     transitionPreset: undefined,
     transitionVolume: type === 'transition' ? 'normal' : undefined,
-    jingle: type === 'jingle' ? { style: 'modern-radio', musicLevel: 'low', musicVolume: 32, production: 'guided-v9', bedId: getJingleBed('modern-radio', undefined, 'extended').id, signatureFx: false } : undefined,
+    jingle: type === 'jingle' ? { style: 'modern-radio', musicLevel: 'low', musicVolume: 32, production: 'guided-v9', mode: 'simple', enabledParts: { title: true, intro: true, 'title-echo': false, 'intro-echo': false, 'title-alt': false, 'title-alt-echo': false, hook: false }, bedId: getJingleBed('modern-radio', undefined, 'extended').id, signatureFx: false } : undefined,
   };
 }
 
@@ -313,7 +316,7 @@ function makeGuidedSection(guideType: SectionGuideType, existingSections: Podcas
   return { section, block };
 }
 
-function createProject(title: string, author: string): PodcastProject {
+function createProject(title: string, author: string, recordingMode: 'solo' | 'group' = 'solo', speakerNames?: PodcastProject['speakerNames']): PodcastProject {
   const now = new Date().toISOString();
   const sections: PodcastSection[] = [];
   const blocks: PodcastBlock[] = [];
@@ -329,6 +332,7 @@ function createProject(title: string, author: string): PodcastProject {
     id: crypto.randomUUID(),
     title: title.trim() || 'Mon podcast',
     author: author.trim(),
+    recordingMode, speakerNames,
     targetDuration: undefined,
     templateId: 'guided',
     sections,
@@ -381,6 +385,9 @@ function App() {
   const [editingJinglePart, setEditingJinglePart] = useState<JingleVoicePart>();
   const [setupTitle, setSetupTitle] = useState('');
   const [setupAuthor, setSetupAuthor] = useState('');
+  const [setupMode, setSetupMode] = useState<'solo' | 'group'>('solo');
+  const [setupSpeakerOne, setSetupSpeakerOne] = useState('');
+  const [setupSpeakerTwo, setSetupSpeakerTwo] = useState('');
   const undoRef = useRef<PodcastProject[]>([]);
   const redoRef = useRef<PodcastProject[]>([]);
 
@@ -447,7 +454,7 @@ function App() {
         setSaveState('saved');
       }
       if (showToast) setToast('Projet sauvegardé sur cet appareil.');
-      await refreshProjects();
+      if (showToast) await refreshProjects();
     } catch (error) {
       setSaveState('dirty');
       setToast(error instanceof Error ? error.message : 'Échec de la sauvegarde.');
@@ -459,6 +466,13 @@ function App() {
     const timeout = window.setTimeout(() => void saveCurrentProject(false), 800);
     return () => window.clearTimeout(timeout);
   }, [dirty, project, saveCurrentProject]);
+
+  useEffect(() => {
+    const flush = () => { const current = latestProjectRef.current; if (current && dirty) void saveProject(current).catch(error => setToast(error instanceof Error ? error.message : 'Échec de l’enregistrement automatique.')); };
+    const hidden = () => { if (document.visibilityState === 'hidden') flush(); };
+    document.addEventListener('visibilitychange', hidden); window.addEventListener('pagehide', flush);
+    return () => { document.removeEventListener('visibilitychange', hidden); window.removeEventListener('pagehide', flush); };
+  }, [dirty]);
 
   const stopPlayback = useCallback(() => {
     playbackRequestRef.current += 1;
@@ -566,7 +580,7 @@ function App() {
 
   const startSetup = () => {
     setSetupTitle('');
-    setSetupAuthor('');
+    setSetupAuthor(''); setSetupMode('solo'); setSetupSpeakerOne(''); setSetupSpeakerTwo('');
     setScreen('setup');
   };
 
@@ -575,7 +589,8 @@ function App() {
       setToast('Indique un titre pour commencer.');
       return;
     }
-    const next = createProject(setupTitle, setupAuthor);
+    const names = { 'voice-1': setupSpeakerOne.trim(), ...(setupMode === 'group' ? { 'voice-2': setupSpeakerTwo.trim() } : {}) };
+    const next = createProject(setupTitle, setupAuthor || Object.values(names).filter(Boolean).join(' et '), setupMode, names);
     setProject(next);
     undoRef.current = [];
     redoRef.current = [];
@@ -601,7 +616,7 @@ function App() {
     return asset;
   };
 
-  const saveBlock = (block: PodcastBlock) => {
+  const keepBlockDraft = useCallback((block: PodcastBlock) => {
     applyChange((draft) => {
       const existingIndex = draft.blocks.findIndex((item) => item.id === block.id);
       if (existingIndex >= 0) draft.blocks[existingIndex] = block;
@@ -611,9 +626,10 @@ function App() {
         draft.blocks.splice(insertAt, 0, block);
       }
     });
-    setEditingBlock(null);
-    setEditingIsNew(false);
-  };
+  }, [applyChange]);
+
+  const saveBlock = (block: PodcastBlock) => { keepBlockDraft(block); setEditingBlock(null); setEditingIsNew(false); };
+  const keepSectionDraft = useCallback((edited: PodcastProject) => { const sectionId = edited.sections[0]?.id; if (sectionId) applyChange(draft => applySectionArrangement(draft, edited, sectionId)); }, [applyChange]);
 
   const addVoice = (sectionId: string) => {
     const block = makeBlock('voice', sectionId);
@@ -640,12 +656,6 @@ function App() {
 
 
   const closeBlockEditor = () => {
-    if (editingIsNew && editingBlock?.type === 'jingle' && project?.sections.find((section) => section.id === editingBlock.sectionId)?.kind === 'jingle') {
-      applyChange((draft) => {
-        draft.blocks = draft.blocks.filter((item) => item.id !== editingBlock.id);
-        draft.sections = draft.sections.filter((item) => item.id !== editingBlock.sectionId);
-      });
-    }
     setEditingBlock(null);
     setEditingIsNew(false);
   };
@@ -735,6 +745,7 @@ function App() {
         author={setupAuthor}
         onTitle={setSetupTitle}
         onAuthor={setSetupAuthor}
+        mode={setupMode} onMode={setSetupMode} speakerOne={setupSpeakerOne} speakerTwo={setupSpeakerTwo} onSpeakerOne={setSetupSpeakerOne} onSpeakerTwo={setSetupSpeakerTwo}
         onBack={() => setScreen('home')}
         onFinish={finishSetup}
       />
@@ -885,21 +896,23 @@ function App() {
           block={editingBlock}
           podcastTitle={project.title}
           assets={project.assets}
+          speakerNames={project.speakerNames}
           isNew={editingIsNew}
           initialJinglePart={editingIsNew ? undefined : editingJinglePart}
           onClose={closeBlockEditor}
           onSave={saveBlock}
+          onDraft={keepBlockDraft}
           onRegisterAsset={registerAsset}
           onPreview={(block) => playProject({ ...project, sections: project.sections.map((item) => ({ ...item, audioLayers: [] })), blocks: [block] }, 0)}
         />
       )}
 
-      {editingLayer && <SectionSoundWizard key={editingLayer.initial?.id ?? editingLayer.initialVoiceId ?? editingLayer.initialBlockId ?? `${editingLayer.sectionId}-${editingLayer.kind}`} project={project} {...editingLayer} onClose={() => setEditingLayer(null)} onRegisterAsset={registerAsset} ui={{ Modal, FilePicker, Library: AudioLibraryModal, Preview: TimedPreviewButton, Recorder, BlockEditor: BlockEditorModal, createBlock: makeBlock }} onSave={(edited) => {
+      {editingLayer && <SectionSoundWizard key={editingLayer.initial?.id ?? editingLayer.initialVoiceId ?? editingLayer.initialBlockId ?? `${editingLayer.sectionId}-${editingLayer.kind}`} project={project} {...editingLayer} onDraft={keepSectionDraft} onClose={() => setEditingLayer(null)} onRegisterAsset={registerAsset} ui={{ Modal, FilePicker, Library: AudioLibraryModal, Preview: TimedPreviewButton, Recorder, BlockEditor: BlockEditorModal, createBlock: makeBlock }} onSave={(edited) => {
         applyChange((draft) => applySectionArrangement(draft, edited, editingLayer.sectionId));
         setEditingLayer(null);
       }} />}
       {readyDownload && <DownloadDialog file={readyDownload} onClose={() => setReadyDownload(null)} />}
-      {projectDetailsOpen && <Modal title="Ton projet" onClose={() => setProjectDetailsOpen(false)}><div className="editor-modal-body"><label className="field"><span>Titre du podcast</span><input value={project.title} onChange={event => applyChange(draft => { draft.title = event.target.value; })} /></label><label className="field"><span>Élève ou groupe</span><input value={project.author} onChange={event => applyChange(draft => { draft.author = event.target.value; })} /></label></div><div className="modal-footer"><small>Enregistré automatiquement dans ce navigateur.</small><span className="footer-spacer" /><button className="primary-button" onClick={() => setProjectDetailsOpen(false)}>Terminé</button></div></Modal>}
+      {projectDetailsOpen && <Modal title="Ton projet" onClose={() => setProjectDetailsOpen(false)}><div className="editor-modal-body"><label className="field"><span>Titre du podcast</span><input value={project.title} onChange={event => applyChange(draft => { draft.title = event.target.value; })} /></label><label className="field"><span>Élève ou groupe</span><input value={project.author} onChange={event => applyChange(draft => { draft.author = event.target.value; })} /></label><div className="recording-mode-switch" role="group" aria-label="Travail en solo ou en groupe">{([['solo', 'Solo'], ['group', 'Groupe']] as const).map(([mode, label]) => <button key={mode} className={project.recordingMode === mode ? 'selected' : ''} aria-pressed={project.recordingMode === mode} onClick={() => applyChange(draft => { draft.recordingMode = mode; })}>{label}</button>)}</div><div className="speaker-name-fields">{(['voice-1', 'voice-2'] as const).filter(voice => voice === 'voice-1' || project.recordingMode !== 'solo').map((voice, index) => <label className="field" key={voice}><span>Voix {index + 1} · prénom</span><input value={project.speakerNames?.[voice] ?? ''} onChange={event => applyChange(draft => { draft.speakerNames = { 'voice-1': '', ...draft.speakerNames, [voice]: event.target.value }; })} /></label>)}</div></div><div className="modal-footer"><small>Enregistré automatiquement dans ce navigateur.</small><span className="footer-spacer" /><button className="primary-button" onClick={() => setProjectDetailsOpen(false)}>Terminé</button></div></Modal>}
       {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
       {sectionHelp && <SectionHelpModal section={sectionHelp} onClose={() => setSectionHelp(null)} />}
       {toast && <div className="toast" role="status">{toast}</div>}
@@ -972,9 +985,9 @@ function HomeScreen({
   );
 }
 
-function SetupScreen({ title, author, onTitle, onAuthor, onBack, onFinish }: {
+function SetupScreen({ title, author, mode, onMode, speakerOne, speakerTwo, onSpeakerOne, onSpeakerTwo, onTitle, onAuthor, onBack, onFinish }: {
   title: string;
-  author: string;
+  author: string; mode: 'solo' | 'group'; onMode: (value: 'solo' | 'group') => void; speakerOne: string; speakerTwo: string; onSpeakerOne: (value: string) => void; onSpeakerTwo: (value: string) => void;
   onTitle: (value: string) => void;
   onAuthor: (value: string) => void;
   onBack: () => void;
@@ -986,10 +999,12 @@ function SetupScreen({ title, author, onTitle, onAuthor, onBack, onFinish }: {
       <main className="setup-content setup-content-simple">
         <h1>Nouveau podcast</h1>
         <p className="lead">Choisis un titre. Un jingle, une introduction, une partie principale et une conclusion seront prêts pour toi. Tu pourras l’adapter.</p>
+        <div className="recording-mode-switch" role="group" aria-label="Qui crée le podcast ?">{([['solo', 'Je travaille seul'], ['group', 'Nous travaillons en groupe']] as const).map(([value, label]) => <button key={value} className={mode === value ? 'selected' : ''} aria-pressed={mode === value} onClick={() => onMode(value)}>{label}</button>)}</div>
         <div className="setup-form-grid setup-form-simple">
           <label className="field"><span>Titre du podcast <b>*</b></span><input autoFocus value={title} onChange={(event) => onTitle(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && title.trim()) onFinish(); }} placeholder="Ex. Magellan : héros ou envahisseur ?" /></label>
-          <label className="field"><span>Nom de l’élève ou du groupe <small>(facultatif)</small></span><input value={author} onChange={(event) => onAuthor(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && title.trim()) onFinish(); }} placeholder="Ex. Groupe 3" /></label>
+          <label className="field"><span>{mode === 'solo' ? 'Nom du projet ou de l’élève' : 'Nom du groupe'} <small>(facultatif)</small></span><input value={author} onChange={(event) => onAuthor(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && title.trim()) onFinish(); }} placeholder="Ex. Groupe 3" /></label>
         </div>
+        <div className="speaker-name-fields"><label className="field"><span>{mode === 'solo' ? 'Ton prénom' : 'Voix 1 · prénom'} <small>(facultatif)</small></span><input value={speakerOne} onChange={event => onSpeakerOne(event.target.value)} placeholder="Ex. Lina" /></label>{mode === 'group' && <label className="field"><span>Voix 2 · prénom <small>(facultatif)</small></span><input value={speakerTwo} onChange={event => onSpeakerTwo(event.target.value)} placeholder="Ex. Sami" /></label>}</div>
         <div className="setup-footer"><button className="secondary-button large" onClick={onBack}>Annuler</button><button className="primary-button large" disabled={!title.trim()} onClick={onFinish}>Créer le podcast →</button></div>
       </main>
     </div>
@@ -1050,21 +1065,21 @@ function SectionPanel({
         if (block.type === 'jingle' && ['guided-v7', 'guided-v8', 'guided-v9'].includes(block.jingle?.production ?? '') && block.jingle?.takes) return <JingleSectionOverview key={block.id} block={block} assets={assets} podcastTitle={project.title} onEdit={part => onEdit(block, part)} onToggle={(part, included) => onToggleJinglePart(block, part, included)} Preview={TimedPreviewButton} />;
         if (block.type === 'jingle') return <p className="draft-note" key={block.id}>{jingleReady ? '✓ Jingle prêt' : 'Jingle à préparer · ouvre l’éditeur'}</p>;
         const layer = section.audioLayers?.find(item => item.pauseBlockId === block.id);
-        return <SectionBlockCard key={block.id} block={block} assets={assets} onEdit={() => layer ? onEditLayer(layer) : onEdit(block)} onDelete={() => layer ? onDeleteLayer(layer) : onDelete(block)} onPreview={() => onPreviewBlock(block)} />;
+        return <SectionBlockCard key={block.id} block={block} assets={assets} speakerNames={project.speakerNames} onEdit={() => layer ? onEditLayer(layer) : onEdit(block)} onDelete={() => layer ? onDeleteLayer(layer) : onDelete(block)} onPreview={() => onPreviewBlock(block)} />;
       })}
     </div>
   </section>;
 }
 
-function SectionBlockCard({ block, assets, onEdit, onDelete, onPreview }: {
-  block: PodcastBlock; assets: AudioAsset[]; onEdit: () => void; onDelete: () => void; onPreview: () => Promise<PreviewSession>;
+function SectionBlockCard({ block, assets, speakerNames, onEdit, onDelete, onPreview }: {
+  block: PodcastBlock; assets: AudioAsset[]; speakerNames?: PodcastProject['speakerNames']; onEdit: () => void; onDelete: () => void; onPreview: () => Promise<PreviewSession>;
 }) {
   const duration = getBlockDuration(block, assets);
   const unprepared = block.type === 'jingle' && duration === 0;
   const title = block.type === 'silence' && block.title === 'Pause' ? 'Pause/Musique seule' : block.title;
   const label = block.type === 'voice' ? 'cette voix' : block.type === 'silence' ? 'cette pause' : block.type === 'transition' ? 'cette transition' : 'cet élément';
   const draft = block.type === 'voice' && !block.assetId;
-  const speaker = block.type === 'voice' && block.speaker ? `${VOICE_SPEAKER_LABELS[block.speaker]} · ` : '';
+  const speaker = block.type === 'voice' && block.speaker ? `${voiceSpeakerLabel(block.speaker, speakerNames)} · ` : '';
   return <SectionElementCard className={`block-${block.type} ${block.type === 'voice' ? voiceSpeakerClass(block.speaker) : ''}`} icon={blockIcons[block.type]} title={title} detail={draft ? 'Texte prêt · voix à enregistrer' : unprepared ? 'À préparer' : `${speaker}${duration.toFixed(1).replace('.', ',')} s${block.voiceEffect !== 'none' ? ' · ' + voiceEffectLabels[block.voiceEffect] : ''}`} onEdit={onEdit} onDelete={onDelete}>
     {draft && block.script && <p className="draft-script-preview">{block.script}</p>}
     <TimedPreviewButton previewId={`element-${block.id}`} label={`Écouter ${label}`} disabled={unprepared || duration <= 0} onStart={onPreview} />
@@ -1134,13 +1149,15 @@ function AddBlockModal({ onClose, onChoose }: { onClose: () => void; onChoose: (
   );
 }
 
-function BlockEditorModal({ block: initialBlock, assets, podcastTitle, isNew, initialJinglePart, onBusyChange, onClose, onSave, onRegisterAsset, onPreview }: {
-  onBusyChange?: (busy: boolean) => void; initialJinglePart?: JingleVoicePart; block: PodcastBlock; assets: AudioAsset[]; podcastTitle: string; isNew: boolean; onClose: () => void; onSave: (block: PodcastBlock) => void;
+function BlockEditorModal({ block: initialBlock, assets, podcastTitle, isNew, initialJinglePart, onBusyChange, onClose, onSave, onDraft, speakerNames, onRegisterAsset, onPreview }: {
+  onDraft?: (block: PodcastBlock) => void; speakerNames?: PodcastProject['speakerNames']; onBusyChange?: (busy: boolean) => void; initialJinglePart?: JingleVoicePart; block: PodcastBlock; assets: AudioAsset[]; podcastTitle: string; isNew: boolean; onClose: () => void; onSave: (block: PodcastBlock) => void;
   onRegisterAsset: (blob: Blob, name: string, mimeType?: string, knownDuration?: number, metadata?: Pick<AudioAsset, 'source' | 'libraryId'>) => Promise<AudioAsset>;
   onPreview: (block: PodcastBlock) => Promise<PreviewSession>;
 }) {
   type LibraryTarget = 'block' | 'background' | 'voiceCue' | 'musicAssetId' | 'openingAssetId' | 'closingAssetId';
   const [block, setBlock] = useState<PodcastBlock>(() => cloneBlock(initialBlock));
+  const lastDraft = useRef(block);
+  useEffect(() => { if (block !== lastDraft.current) { lastDraft.current = block; onDraft?.(block); } }, [block, onDraft]);
   const [error, setError] = useState('');
   const [libraryTarget, setLibraryTarget] = useState<LibraryTarget | null>(null);
   const [cueInsertTime, setCueInsertTime] = useState(0);
@@ -1159,7 +1176,7 @@ function BlockEditorModal({ block: initialBlock, assets, podcastTitle, isNew, in
     setError('');
     try {
       const asset = await onRegisterAsset(file, file.name, file.type, undefined, { source: 'import' });
-      setBlock((current) => ({ ...current, assetId: asset.id, duration: asset.duration, trimStart: 0, trimEnd: asset.duration, title: current.title.startsWith('Nou') ? file.name.replace(/\.[^.]+$/, '') : current.title }));
+      setBlock(current => ({ ...(current.type === 'voice' ? keepVoiceTake(current, asset) : { ...current, assetId: asset.id, duration: asset.duration, trimStart: 0, trimEnd: asset.duration }), title: current.title.startsWith('Nou') ? file.name.replace(/\.[^.]+$/, '') : current.title }));
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Ce fichier audio ne peut pas être utilisé.');
     }
@@ -1290,16 +1307,17 @@ function BlockEditorModal({ block: initialBlock, assets, podcastTitle, isNew, in
 
   return (
     <>
-      <Modal title={`${isNew ? 'Ajouter' : 'Modifier'} : ${blockLabels[block.type]}`} onClose={onClose} wide>
+      <Modal title={`${isNew ? 'Ajouter' : 'Modifier'} : ${blockLabels[block.type]}`} onClose={() => { if (!voiceBusy && !transcriptionBusy && !transitionLoadingId) onClose(); }} wide>
         <div className="editor-modal-body">
           {block.type !== 'jingle' && <label className="field"><span>Nom de l’élément</span><input value={block.title} onChange={(event) => update('title', event.target.value)} /></label>}
-          {block.type === 'voice' && <label className="field voice-speaker-select"><span>Voix dans cet enregistrement</span><select value={block.speaker ?? (isNew ? 'voice-1' : '')} onChange={event => update('speaker', (event.target.value || undefined) as PodcastBlock['speaker'])}><option value="">Non définie</option><option value="voice-1">Voix 1</option><option value="voice-2">Voix 2</option><option value="both">Voix 1 et 2</option></select></label>}
-          {block.type === 'voice' && <VoiceScript value={block.script ?? ''} onChange={text => update('script', text)} asset={selectedAsset} start={block.trimStart} end={block.trimEnd || selectedAsset?.duration} disabled={voiceBusy} onBusyChange={setTranscriptionBusy} />}
+          {block.type === 'voice' && <label className="field voice-speaker-select"><span>Voix dans cet enregistrement</span><select value={block.speaker ?? (isNew ? 'voice-1' : '')} onChange={event => update('speaker', (event.target.value || undefined) as PodcastBlock['speaker'])}><option value="">Non définie</option><option value="voice-1">{speakerNames?.['voice-1'] || 'Voix 1'}</option><option value="voice-2">{speakerNames?.['voice-2'] || 'Voix 2'}</option><option value="both">{speakerNames?.['voice-1'] && speakerNames?.['voice-2'] ? `${speakerNames['voice-1']} et ${speakerNames['voice-2']}` : 'Voix 1 et 2'}</option></select></label>}
+          {block.type === 'voice' && <div className="voice-recording-workspace"><VoiceScript value={block.script ?? ''} onChange={text => update('script', text)} asset={selectedAsset} start={block.trimStart} end={block.trimEnd || selectedAsset?.duration} disabled={voiceBusy} onBusyChange={setTranscriptionBusy} /><fieldset className="voice-recorder" disabled={transcriptionBusy}><Recorder showHint={false} onBusyChange={setVoiceBusy} onReady={async (blob, duration) => { const asset = await onRegisterAsset(blob, 'Prise vocale', blob.type, duration, { source: 'recording' }); setBlock(current => keepVoiceTake(current, asset)); }} /></fieldset></div>}
+          {block.type === 'voice' && <RecordingTakeList takes={voiceTakes(block)} assets={assets} selectedAssetId={block.assetId} disabled={voiceBusy || transcriptionBusy} onSelect={take => { requestExclusivePreview('take-selection'); setBlock(current => selectVoiceTake(current, take)); }} onPreview={take => onPreview(selectVoiceTake(block, take))} Preview={TimedPreviewButton} />}
 
           {requiresAsset && (
             <div className="audio-source-panel">
               <h3>{block.type === 'voice' ? 'Ta voix' : block.type === 'music' ? 'Choisir une musique' : 'Choisir un bruitage'}</h3>
-              {block.type === 'voice' && <fieldset className="voice-recorder" disabled={transcriptionBusy}><Recorder onBusyChange={setVoiceBusy} onReady={async (blob, duration) => { const asset = await onRegisterAsset(blob, `Enregistrement ${new Date().toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' })}`, blob.type, duration, { source: 'recording' }); setBlock((current) => ({ ...current, assetId: asset.id, duration: asset.duration, trimStart: 0, trimEnd: asset.duration })); }} /></fieldset>}
+
               <div className="source-actions">
                 {block.type !== 'voice' && <button className="primary-button file-button" onClick={() => { requestExclusivePreview('window-change'); setLibraryTarget('block'); }}>{block.type === 'music' ? '🎼 Ouvrir la bibliothèque musicale' : '🔊 Ouvrir la bibliothèque de bruitages'}</button>}
                 <FilePicker label={block.type === 'voice' ? 'Importer un enregistrement' : block.type === 'music' ? 'Importer ma propre musique' : 'Importer mon propre bruitage'} onFile={importForBlock} />
@@ -1359,7 +1377,7 @@ function BlockEditorModal({ block: initialBlock, assets, podcastTitle, isNew, in
           )}
 
           {block.type === 'jingle' && (
-            <JingleWizard initialPart={initialJinglePart} block={block} assets={assets} podcastTitle={podcastTitle} onBlock={setBlock} onRegisterAsset={onRegisterAsset} onPreview={onPreview} onSave={onSave} onClose={onClose} isNew={isNew} FilePicker={FilePicker} Preview={TimedPreviewButton} Recorder={Recorder} />
+            <JingleWizard initialPart={initialJinglePart} block={block} assets={assets} podcastTitle={podcastTitle} onBlock={setBlock} onRegisterAsset={onRegisterAsset} onPreview={onPreview} onSave={onSave} onClose={onClose} onBusyChange={setVoiceBusy} speakerNames={speakerNames} isNew={isNew} FilePicker={FilePicker} Preview={TimedPreviewButton} Recorder={Recorder} />
           )}
 
           {(block.type === 'music' || block.type === 'sfx') && (
@@ -1402,10 +1420,10 @@ function BlockEditorModal({ block: initialBlock, assets, podcastTitle, isNew, in
           {error && <div className="error-box">{error}</div>}
         </div>
         {block.type !== 'jingle' && <div className="modal-footer">
-          {block.type !== 'transition' && <TimedPreviewButton previewId={`block-editor-${block.id}`} onStart={() => onPreview(block)} disabled={!canSave} />}
+          {block.type !== 'transition' && <TimedPreviewButton previewId={`block-editor-${block.id}`} label={block.type === 'voice' ? 'Écouter cette voix' : 'Écouter cet élément'} onStart={() => onPreview(block)} disabled={!canSave || (block.type === 'voice' && !block.assetId)} />}
           <span className="footer-spacer" />
-          <button className="ghost-button" disabled={voiceBusy || transcriptionBusy || Boolean(transitionLoadingId)} onClick={onClose}>Annuler</button>
-          <button className="primary-button" disabled={!canSave || !block.title.trim() || voiceBusy || transcriptionBusy || Boolean(transitionLoadingId)} onClick={() => onSave(block)}>✓ {block.type === 'voice' && !block.assetId ? 'Garder le texte' : isNew ? 'Ajouter' : 'Enregistrer'}</button>
+          <button className="ghost-button" disabled={voiceBusy || transcriptionBusy || Boolean(transitionLoadingId)} onClick={onClose}>Fermer</button>
+          <button className="primary-button" disabled={!canSave || !block.title.trim() || voiceBusy || transcriptionBusy || Boolean(transitionLoadingId)} onClick={() => onSave(block)}>✓ Terminé</button>
         </div>}
       </Modal>
       {libraryTarget && <AudioLibraryModal kind={libraryKind} onClose={() => setLibraryTarget(null)} onChoose={chooseLibraryPreset} />}

@@ -3,6 +3,7 @@ import { typescriptModuleUrl } from './audio-test-module.mjs';
 const { serializeProject, deserializeProject } = await import(await typescriptModuleUrl(new URL('../src/storage/projectFile.ts', import.meta.url)));
 const { saveFile } = await import(await typescriptModuleUrl(new URL('../src/storage/saveFile.ts', import.meta.url)));
 const { audioBufferToWav, getBlockDuration } = await import(await typescriptModuleUrl(new URL('../src/audio/engine.ts', import.meta.url)));
+const { keepVoiceTake, selectVoiceTake, voiceTakes, keepJingleTake, selectJingleTake, jingleTakes } = await import(await typescriptModuleUrl(new URL('../src/audio/recordingTakes.ts', import.meta.url)));
 const { recordingMimeType } = await import(await typescriptModuleUrl(new URL('../src/audio/recording.ts', import.meta.url)));
 globalThis.FileReader = class {
   readAsDataURL(blob) {
@@ -15,10 +16,10 @@ const project = {
  id: 'original', title: 'Émission à reprendre', author: 'Classe', templateId: 'guided', createdAt: '2026-10-01', updatedAt: '2026-10-05',
  sections: [{ id: 'part', title: 'Partie 1', collapsed: true, audioLayers: [{ id: 'layer', assetId: 'sound', start: { edge: 'start', blockId: 'voice', seconds: 2 }, volume: 23, sourceStart: .4, sourceEnd: 2.7 }] }],
  blocks: [
-  { id: 'voice', sectionId: 'part', type: 'voice', assetId: 'voice-audio', script: 'Le texte français\nDie deutsche Stimme 🎙', speaker: 'voice-2', trimStart: .7, trimEnd: 3.8, voiceEffect: 'phone', background: { assetId: 'music', volume: 29 }, voiceCues: [{ assetId: 'sound', at: 1.4 }] },
+  { id: 'voice', sectionId: 'part', type: 'voice', assetId: 'voice-audio', voiceTakes: [{ id: 'old', assetId: 'previous-voice', sourceStart: .1, sourceEnd: 2.9 }, { id: 'current', assetId: 'voice-audio', sourceStart: .7, sourceEnd: 3.8 }], script: 'Le texte français\nDie deutsche Stimme 🎙', speaker: 'voice-2', trimStart: .7, trimEnd: 3.8, voiceEffect: 'phone', background: { assetId: 'music', volume: 29 }, voiceCues: [{ assetId: 'sound', at: 1.4 }] },
   { id: 'draft', sectionId: 'part', type: 'voice', script: 'Texte sans enregistrement' },
-  { id: 'jingle', sectionId: 'part', type: 'jingle', jingle: { production: 'guided-v9', musicAssetId: 'music', scripts: { title: 'Titre écrit', 'title-echo': 'Réponse personnalisée', intro: 'Introduction écrite', hook: 'Accroche écrite' }, takes: { title: { assetId: 'voice-audio', sourceStart: .2, sourceEnd: 2 }, hook: { assetId: 'disabled-take', sourceStart: 0, sourceEnd: 1.2 } }, enabledParts: { hook: false }, effects: { title: { reverb: 75, enhancement: 45, phone: 12 } }, ending: { assetId: 'sound', volume: 50, presetId: 'end' } } },
- ], assets: ['voice-audio', 'music', 'sound', 'disabled-take', 'unused-retained'].map(asset),
+  { id: 'jingle', sectionId: 'part', type: 'jingle', jingle: { mode: 'simple', takeHistory: { title: [{ id: 'previous', assetId: 'unused-retained', sourceStart: .3, sourceEnd: 1.6 }] }, production: 'guided-v9', musicAssetId: 'music', scripts: { title: 'Titre écrit', 'title-echo': 'Réponse personnalisée', intro: 'Introduction écrite', hook: 'Accroche écrite' }, takes: { title: { assetId: 'voice-audio', sourceStart: .2, sourceEnd: 2 }, hook: { assetId: 'disabled-take', sourceStart: 0, sourceEnd: 1.2 } }, enabledParts: { hook: false }, effects: { title: { reverb: 75, enhancement: 45, phone: 12 } }, ending: { assetId: 'sound', volume: 50, presetId: 'end' } } },
+ ], assets: ['voice-audio', 'music', 'sound', 'disabled-take', 'unused-retained', 'previous-voice'].map(asset),
 };
 const file = await serializeProject(project);
 const restored = await deserializeProject(new File([file], 'project.podfacile'));
@@ -29,6 +30,8 @@ for (const [i, audio] of restored.assets.entries()) {
  assert.deepEqual([...new Uint8Array(await audio.blob.arrayBuffer())], bytes);
  assert.equal(audio.mimeType, project.assets[i].mimeType);
 }
+await assert.rejects(serializeProject({ ...project, assets: project.assets.filter(a => a.id !== 'previous-voice') }), /introuvable/, 'Previous voice takes must be included in a portable backup.');
+await assert.rejects(serializeProject({ ...project, assets: project.assets.filter(a => a.id !== 'unused-retained') }), /introuvable/, 'Previous jingle takes must be included in a portable backup.');
 assert.equal(JSON.parse(await file.text()).version, 1, 'Existing project format remains compatible.');
 await assert.rejects(serializeProject({ ...project, assets: project.assets.filter(a => a.id !== 'disabled-take') }), /introuvable/);
 await assert.rejects(serializeProject({ ...project, assets: [{ ...asset('voice-audio'), blob: new Blob() }, ...project.assets.slice(1)] }), /vide/);
@@ -69,3 +72,21 @@ assert.equal(view.getInt16(56, true), Math.trunc(.98 * 32767));
 assert.throws(() => audioBufferToWav({ numberOfChannels: 1, sampleRate: 44100, length: 1, copyFromChannel: destination => destination.set([NaN]) }), /invalides/);
 assert.equal(getBlockDuration({ type: 'voice', script: 'Text only', duration: 10 }), 0);
 console.log('WAV: owned PCM buffers, valid stereo headers, linked peak protection, invalid samples and silent text drafts verified.');
+
+const voice = project.blocks[0];
+const oldVoice = JSON.parse(JSON.stringify(voice));
+const recorded = keepVoiceTake(voice, asset('new-voice'));
+assert.equal(recorded.assetId, 'new-voice');
+assert.deepEqual(voiceTakes(recorded).map(take => take.assetId), ['previous-voice', 'voice-audio', 'new-voice']);
+const selected = selectVoiceTake(recorded, voiceTakes(recorded)[0]);
+assert.equal(selected.assetId, 'previous-voice');
+assert.equal(selected.trimStart, .1); assert.equal(selected.trimEnd, 2.9);
+assert.deepEqual(voice, oldVoice, 'Recording and selecting never alter an undo snapshot.');
+const jingle = project.blocks[2].jingle;
+const newJingle = keepJingleTake(jingle, 'title', { assetId: 'new-jingle', sourceStart: .4, sourceEnd: 1.9 });
+assert.deepEqual(jingleTakes(newJingle, 'title').map(take => take.assetId), ['unused-retained', 'voice-audio', 'new-jingle']);
+const selectedJingle = selectJingleTake(newJingle, 'title', jingleTakes(newJingle, 'title')[0]);
+assert.equal(selectedJingle.takes.title.assetId, 'unused-retained');
+assert.equal(selectedJingle.takes.title.sourceStart, .3);
+assert.equal(selectedJingle.enabledParts.hook, false);
+console.log('Multiple takes: previous recordings, exact excerpts, selection, immutable snapshots and portable backups verified.');
