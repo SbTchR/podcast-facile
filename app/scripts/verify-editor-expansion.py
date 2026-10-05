@@ -59,7 +59,7 @@ for style in ['dynamic', 'adventure', 'mysterious', 'serious', 'historical', 'mo
     assert f'{style}:' in engine or f"'{style}':" in engine
 jingle = (ROOT / 'src' / 'components' / 'JingleWizard.tsx').read_text(encoding='utf-8')
 studio = (ROOT / 'src' / 'audio' / 'jingleStudio.ts').read_text(encoding='utf-8')
-assert 'jingle.takes' in jingle and 'Recommencer' in jingle
+assert 'jingle.takes' in jingle and 'keepJingleTake' in jingle and 'RecordingTakeList' in jingle
 assert 'bed.effect' in jingle and 'loadJingleBed' in jingle
 assert "label: 'Historique'" in studio
 

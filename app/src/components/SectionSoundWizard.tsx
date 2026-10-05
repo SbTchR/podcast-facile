@@ -20,16 +20,16 @@ export interface WizardUI {
   createBlock: (type: BlockType, sectionId: string) => PodcastBlock;
   BlockEditor: ComponentType<{
     block: PodcastBlock; assets: AudioAsset[]; podcastTitle: string; isNew: boolean;
-    onClose: () => void; onSave: (block: PodcastBlock) => void; onRegisterAsset: RegisterAsset;
+    onClose: () => void; onSave: (block: PodcastBlock) => void; onDraft?: (block: PodcastBlock) => void; speakerNames?: PodcastProject['speakerNames']; onRegisterAsset: RegisterAsset;
     onPreview: (block: PodcastBlock) => Promise<PreviewSession>; onBusyChange?: (busy: boolean) => void;
   }>;
   Preview: ComponentType<{ previewId: string; onStart: (signal: AbortSignal) => Promise<PreviewSession>; disabled?: boolean; label?: string }>;
 }
 export type RegisterAsset = (blob: Blob, name: string, mimeType?: string, knownDuration?: number, metadata?: Pick<AudioAsset, 'source' | 'libraryId'>) => Promise<AudioAsset>;
 
-export function SectionSoundWizard({ project, sectionId, kind, initial, initialVoiceId, initialBlockId, newBlockType, onClose, onSave, onRegisterAsset, ui }: {
+export function SectionSoundWizard({ project, sectionId, kind, initial, initialVoiceId, initialBlockId, newBlockType, onClose, onSave, onDraft, onRegisterAsset, ui }: {
   project: PodcastProject; sectionId: string; kind: 'voice' | 'music' | 'sfx'; initial?: SectionAudioLayer; initialVoiceId?: string; initialBlockId?: string; newBlockType?: 'voice' | 'silence' | 'transition';
-  onClose: () => void; onSave: (draft: PodcastProject) => void; onRegisterAsset: RegisterAsset; ui: WizardUI;
+  onClose: () => void; onSave: (draft: PodcastProject) => void; onDraft: (draft: PodcastProject) => void; onRegisterAsset: RegisterAsset; ui: WizardUI;
 }) {
   const [phase, setPhase] = useState(kind);
   const [draft, setDraft] = useState<PodcastProject>(() => {
@@ -39,6 +39,8 @@ export function SectionSoundWizard({ project, sectionId, kind, initial, initialV
   const [addedAssets, setAddedAssets] = useState<AudioAsset[]>([]);
   const assets = useMemo(() => [...new Map([...project.assets, ...addedAssets].map(asset => [asset.id, asset])).values()], [project.assets, addedAssets]);
   const scoped = useMemo(() => ({ ...draft, assets }), [draft, assets]);
+  const lastDraft = useRef(draft);
+  useEffect(() => { if (draft !== lastDraft.current) { lastDraft.current = draft; onDraft({ ...draft, assets }); } }, [draft, assets, onDraft]);
   const section = scoped.sections[0];
   const layers = section.audioLayers ?? [];
   const [selectedId, setSelectedId] = useState(initialVoiceId ? undefined : initial?.id ?? layers.find(layer => layer.kind === kind)?.id);
@@ -171,12 +173,13 @@ export function SectionSoundWizard({ project, sectionId, kind, initial, initialV
     player.stop(); setPhase('voice'); setSelectedId(undefined); setSelectedVoiceId(block.id);
     setItemEditor({ block, isNew }); setError('');
   };
-  const keepItem = (block: PodcastBlock) => {
+  const keepItemDraft = (block: PodcastBlock) => {
     const current = draftRef.current;
     const exists = current.blocks.some(item => item.id === block.id);
     const next = { ...current, blocks: exists ? current.blocks.map(item => item.id === block.id ? block : item) : [...current.blocks, block] };
-    syncLayerPauses(next); commit(next); setItemEditor(null); setSelectedVoiceId(block.id);
+    syncLayerPauses(next); commit(next); setSelectedVoiceId(block.id);
   };
+  const keepItem = (block: PodcastBlock) => { keepItemDraft(block); setItemEditor(null); };
   const moveItem = (blockId: string, beforeId?: string) => {
     if (loading || itemEditor) return;
     const next = reorderNarrativeBlock(scoped, blockId, beforeId);
@@ -232,20 +235,21 @@ export function SectionSoundWizard({ project, sectionId, kind, initial, initialV
             <label className="check-row"><input type="checkbox" checked={selected.pauseVolumeEnabled !== false} onChange={event => update({ pauseVolumeEnabled: event.target.checked, ...(event.target.checked ? { pauseVolume: Math.max(75, selected.volume) } : {}) })} /> Remonter la musique pendant les pauses</label>
             {selected.pauseVolumeEnabled !== false && <label className="field music-volume-slider"><span>Volume pendant les pauses · {Math.max(selected.volume, selected.pauseVolume ?? 75)}%</span><input type="range" aria-label="Volume pendant les pauses" min={selected.volume} max="100" value={Math.max(selected.volume, selected.pauseVolume ?? 75)} onChange={event => update({ pauseVolume: Number(event.target.value) })} /></label>}
           </div>}
-          <details className="sound-excerpt" open><summary>Extrait du fichier</summary><AudioExcerpt asset={asset} start={selected.sourceStart} end={selected.sourceEnd} onChange={excerptChange} compact /></details>
+          <details className="sound-excerpt" open><summary>Extrait source · {(selected.sourceEnd - selected.sourceStart).toFixed(1).replace('.', ',')} s</summary><AudioExcerpt asset={asset} start={selected.sourceStart} end={selected.sourceEnd} onChange={excerptChange} compact /></details>
+          {position && <p className="sound-duration-note">Dans la partie : {position.start.toFixed(1).replace('.', ',')}–{position.end.toFixed(1).replace('.', ',')} s · {(position.end - position.start).toFixed(1).replace('.', ',')} s entendues{selected.repeat ? ' · extrait répété' : ''}</p>}
           <div className="sound-options">
             {selected.kind === 'music' || selected.soundGroup === 'ambience' ? <label className="check-row"><input type="checkbox" checked={selected.repeat} onChange={event => update({ repeat: event.target.checked })} /> Répéter l’extrait dans la zone choisie</label> : <label className="check-row"><input type="checkbox" checked={Boolean(selected.pauseBlockId)} onChange={event => event.target.checked ? change(selected, blocks.find(block => block.type === 'voice')?.id ?? blocks[0]?.id ?? null) : change({ ...selected, start: { edge: 'start' }, end: undefined }, null)} /> Créer une pause pour entendre ce bruitage seul</label>}
             <details className="optional-settings"><summary>Fondus <small>facultatif</small></summary><div className="settings-columns">{(['fadeIn','fadeOut'] as const).map(key => <label className="field" key={key}><span>{key === 'fadeIn' ? 'Arrivée du son' : 'Fin du son'}</span><select value={selected[key]} onChange={event => update({ [key]: event.target.value })}><option value="none">Directe</option><option value="short">Fondu court · 0,5 s</option><option value="normal">Fondu doux · 1,5 s</option></select></label>)}</div></details>
           </div>
         </div>}
-        {phase !== 'voice' && !selected && !selectedVoice && <p className="sound-editor-empty">{layers.some(layer => layer.kind === phase) ? 'Choisis une piste à modifier.' : phase === 'music' ? 'Ajoute une musique ou passe aux ambiances et bruitages.' : 'Ajoute une ambiance ou un bruitage, puis enregistre la partie.'}</p>}
+        {phase !== 'voice' && !selected && !selectedVoice && <p className="sound-editor-empty">{layers.some(layer => layer.kind === phase) ? 'Choisis une piste à modifier.' : phase === 'music' ? 'Ajoute une musique ou passe aux ambiances et bruitages.' : 'Ajoute une ambiance ou un bruitage, puis écoute la partie.'}</p>}
         {phase !== 'voice' && <div className="sound-import-actions"><FilePicker label={`Importer ${phase === 'music' ? 'une musique' : 'un son'}`} onFile={file => void importFile(file)} />{phase === 'sfx' && Recorder && <details><summary>Enregistrer mon bruitage</summary><Recorder onBusyChange={busy => { if (busy) player.stop(); setLoading(busy); }} onReady={async (blob, recordedDuration) => addAsset(await onRegisterAsset(blob, 'Mon bruitage enregistré', blob.type, recordedDuration, { source: 'recording' }))} /></details>}</div>}
         {(error || player.error) && <p className="error-box" role="alert">{error || player.error}</p>}
         {invalid.length > 0 && <p className="error-box" role="alert">{invalid.length} son{invalid.length > 1 ? 's' : ''} à replacer : clique sur la piste pour corriger son début ou sa fin.</p>}
       </div>
-      <div className="modal-footer"><button className="ghost-button" disabled={loading} onClick={onClose}>Annuler</button><span className="footer-spacer" />{phase === 'music' && !selectedVoice && <button className="ghost-button" disabled={loading} onClick={() => movePhase('sfx')}>Ambiances et bruitages →</button>}<button className="primary-button" disabled={loading || Boolean(itemEditor) || invalid.length > 0} onClick={() => { player.stop(); onSave(scoped); }}>✓ Enregistrer la partie</button></div>
+      <div className="modal-footer"><button className="ghost-button" disabled={loading} onClick={onClose}>Fermer</button><span className="footer-spacer" />{phase === 'music' && !selectedVoice && <button className="ghost-button" disabled={loading} onClick={() => movePhase('sfx')}>Ambiances et bruitages →</button>}<button className="primary-button" disabled={loading || Boolean(itemEditor) || invalid.length > 0} onClick={() => { player.stop(); onSave(scoped); }}>✓ Terminé</button></div>
     </Modal>
-    {itemEditor && <BlockEditor key={itemEditor.block.id} block={itemEditor.block} assets={assets} podcastTitle={project.title} isNew={itemEditor.isNew} onClose={() => { if (!loading) setItemEditor(null); }} onSave={keepItem} onRegisterAsset={registerVoiceAsset} onBusyChange={setLoading} onPreview={block => playProject({ ...scoped, sections: scoped.sections.map(section => ({ ...section, audioLayers: [] })), blocks: [block] }, 0)} />}
+    {itemEditor && <BlockEditor key={itemEditor.block.id} block={itemEditor.block} assets={assets} podcastTitle={project.title} isNew={itemEditor.isNew} onClose={() => { if (!loading) setItemEditor(null); }} onSave={keepItem} onDraft={keepItemDraft} speakerNames={project.speakerNames} onRegisterAsset={registerVoiceAsset} onBusyChange={setLoading} onPreview={block => playProject({ ...scoped, sections: scoped.sections.map(section => ({ ...section, audioLayers: [] })), blocks: [block] }, 0)} />}
     {libraryOpen && phase !== 'voice' && <Library kind={phase} initialSoundGroup={libraryGroup} onClose={() => setLibraryOpen(false)} onChoose={chooseLibrary} />}
   </>;
 }

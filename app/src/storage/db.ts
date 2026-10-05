@@ -127,7 +127,7 @@ async function restoreProject(raw: StoredPodcastProject): Promise<{
   };
 }
 
-export async function saveProject(project: PodcastProject): Promise<void> {
+async function writeProject(project: PodcastProject): Promise<void> {
   const storedProject = await prepareProjectForStorage(project);
   const db = await openDb();
   await new Promise<void>((resolve, reject) => {
@@ -137,6 +137,15 @@ export async function saveProject(project: PodcastProject): Promise<void> {
     tx.onerror = () => reject(tx.error ?? new Error('Échec de la sauvegarde.'));
   });
   db.close();
+}
+
+const saveQueues = new Map<string, Promise<void>>();
+export function saveProject(project: PodcastProject): Promise<void> {
+  const previous = saveQueues.get(project.id) ?? Promise.resolve();
+  const pending = previous.catch(() => undefined).then(() => writeProject(project));
+  saveQueues.set(project.id, pending);
+  void pending.finally(() => { if (saveQueues.get(project.id) === pending) saveQueues.delete(project.id); }).catch(() => undefined);
+  return pending;
 }
 
 export async function loadProject(id: string): Promise<PodcastProject | undefined> {

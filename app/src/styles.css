@@ -1218,3 +1218,45 @@ details.cue-source-range { display: block; grid-column: 1 / -1; }
   .library-card-actions .favorite-sound-button { flex: 0 0 34px; }
   .actionable-warning { align-items: flex-start; }
 }
+
+.voice-recording-workspace { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(220px, 1fr); gap: 18px; align-items: start; }
+.voice-recording-workspace > .voice-recorder { position: sticky; top: 70px; padding: 14px; background: #fff7f7; border: 1px solid #f0d5d5; border-radius: 12px; }
+.voice-recording-workspace .voice-script textarea { min-height: 180px; max-height: 40vh; }
+.voice-recording-workspace .recorder { margin-top: 0; }
+.voice-recording-workspace .voice-script-note { font-size: .75rem; margin-bottom: 8px; }
+.recording-takes { margin: 14px 0; border: 1px solid #dae3ef; border-radius: 10px; padding: 12px; }
+.recording-takes h4 { margin: 0 0 8px; display: flex; gap: 8px; align-items: baseline; }
+.recording-takes h4 small { color: #6e7d94; font-size: .7rem; font-weight: 400; }
+.recording-take-list { max-height: 195px; overflow-y: auto; display: grid; gap: 6px; }
+.recording-take-row { display: flex; align-items: center; gap: 10px; border: 1px solid transparent; border-radius: 8px; padding: 7px; background: #f5f7fb; }
+.recording-take-row.chosen { border-color: #a5bce8; background: #edf3ff; }
+.recording-take-row > span { display: grid; gap: 3px; margin-right: auto; font-size: .8rem; }
+.recording-take-row > span small { color: #6c7a92; font-size: .72rem; }
+.recording-take-row .preview-control { padding: 8px 12px; min-height: 34px; font-size: .8rem; }
+.recording-take-row > button { min-width: 78px; }
+.jingle-mode-switch { display: flex; gap: 6px; padding: 0 0 14px; }
+.jingle-mode-switch button, .recording-mode-switch button { border: 1px solid #d5dfee; border-radius: 9px; background: #fff; color: #64748b; padding: 9px 14px; }
+.jingle-mode-switch button.selected, .recording-mode-switch button.selected { background: #eaf1ff; border-color: #90afe6; color: #2155b1; }
+.jingle-take-fields > .jingle-script { position: sticky; top: 0; z-index: 3; background: #fff; padding-top: 8px; margin-top: 0; }
+.jingle-take-fields > .jingle-script textarea { max-height: 25vh; }
+.sound-duration-note { margin: 8px 0; color: #64748b; font-size: .78rem; }
+.recording-mode-switch { display: flex; gap: 8px; margin: 16px 0; }
+.speaker-name-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 650px) {
+  .voice-recording-workspace { display: flex; flex-direction: column; gap: 8px; }
+  .voice-recording-workspace > * { width: 100%; }
+  .voice-recording-workspace > .voice-recorder { position: sticky; top: 0; z-index: 4; padding: 10px; }
+  .voice-recording-workspace .voice-script textarea { min-height: 120px; max-height: 28vh; }
+  .voice-recording-workspace .recorder-display { display: none; }
+  .voice-recording-workspace .recorder:not(.recorder-idle) .recorder-display { display: flex; }
+  .recording-take-row { gap: 5px; padding: 6px; }
+  .recording-take-row > button { min-width: 68px; padding: 7px; }
+  .recording-take-row .preview-control { padding: 7px; font-size: .75rem; }
+}
+.transcript-options { margin-top: 10px; color: #66758d; font-size: .8rem; }
+.transcript-options summary { cursor: pointer; }
+.transcript-options summary small { margin-left: 6px; }
+@media (max-width: 650px) {
+  .voice-recording-workspace > .voice-recorder { order: -1; }
+  .voice-recording-workspace .voice-script { padding: 12px; }
+}

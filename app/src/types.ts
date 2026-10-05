@@ -41,6 +41,8 @@ export interface JingleTake {
   sourceEnd: number;
 }
 
+export interface RecordingTake extends JingleTake { id: string }
+
 // Jingle fades and music sliders: 20260807-jingle-music-mixing-1
 export interface BackgroundAudio {
   assetId: string;
@@ -78,6 +80,7 @@ export interface PodcastBlock {
   speaker?: VoiceSpeaker;
   background?: BackgroundAudio;
   voiceCues?: VoiceSoundCue[];
+  voiceTakes?: RecordingTake[];
   transitionPreset?: TransitionPreset;
   transitionVolume?: VolumeLevel;
   jingle?: {
@@ -95,7 +98,10 @@ export interface PodcastBlock {
     production?: 'studio-v2' | 'guided-v3' | 'guided-v4' | 'guided-v5' | 'guided-v6' | 'guided-v7' | 'guided-v8' | 'guided-v9';
     signatureFx?: boolean;
     bedId?: string;
+    mode?: 'simple' | 'full';
+    fullEnabledParts?: Partial<Record<JingleVoicePart, boolean>>;
     takes?: Partial<Record<JingleVoicePart, JingleTake>>;
+    takeHistory?: Partial<Record<JingleVoicePart, RecordingTake[]>>;
     scripts?: Partial<Record<JingleVoicePart, string>>;
     effects?: Partial<Record<JingleVoicePart, JingleVoiceEffects>>;
     /** Missing flags include the element; disabling retains its recording. */
@@ -150,6 +156,8 @@ export interface PodcastProject {
   id: string;
   title: string;
   author: string;
+  recordingMode?: 'solo' | 'group';
+  speakerNames?: { 'voice-1': string; 'voice-2'?: string };
   targetDuration?: number;
   templateId: string;
   sections: PodcastSection[];

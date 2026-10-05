@@ -37,8 +37,9 @@ function dataUrlToBlob(dataUrl: string): Blob {
 function validateProjectAudio(project: PodcastProject): void {
   const assetIds = new Set(project.assets.map(asset => asset.id));
   const references = project.blocks.flatMap(block => [
-    block.assetId, block.background?.assetId, ...(block.voiceCues ?? []).map(cue => cue.assetId),
+    block.assetId, ...(block.voiceTakes ?? []).map(take => take.assetId), block.background?.assetId, ...(block.voiceCues ?? []).map(cue => cue.assetId),
     block.jingle?.musicAssetId, block.jingle?.voiceAssetId, block.jingle?.openingAssetId, block.jingle?.closingAssetId,
+    ...Object.values(block.jingle?.takeHistory ?? {}).flatMap(takes => (takes ?? []).map(take => take.assetId)),
     block.jingle?.ending?.assetId, ...Object.values(block.jingle?.takes ?? {}).map(take => take?.assetId),
   ]).concat(project.sections.flatMap(section => (section.audioLayers ?? []).map(layer => layer.assetId)));
   if (references.some(id => id && !assetIds.has(id))) {
