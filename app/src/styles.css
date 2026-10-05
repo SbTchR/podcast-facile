@@ -1162,3 +1162,20 @@ details.cue-source-range { display: block; grid-column: 1 / -1; }
   .narrative-inspector .setting-title-row { align-items: flex-start; flex-direction: column; gap: 12px; }
   .jingle-element-options > div { grid-template-columns: 1fr; }
 }
+
+/* Portable backups and explicit browser downloads. */
+.download-file-link { display: inline-flex; align-items: center; text-decoration: none; margin-bottom: 16px; }
+.download-filename { overflow-wrap: anywhere; font-weight: 750; color: var(--ink); }
+.download-location-help { font-size: .86rem; margin-top: 16px; }
+@media (max-width: 700px) { .toolbar-button.backup-button span { display: inline; } }
+.download-dialog .modal-body { padding: 20px; }
+.backup-button { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+@media (max-width: 700px) {
+  .topbar-actions { flex-wrap: wrap; overflow-x: visible; }
+  .topbar-actions > button { flex-shrink: 0; }
+}
+
+.export-format-label { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-weight: 700; margin: 12px 0; }
+.export-format-label select { max-width: 100%; min-height: 42px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 10px; background: white; color: inherit; font: inherit; }
+.download-audio-preview { margin: 16px 0; }
+.download-audio-preview audio { width: 100%; }

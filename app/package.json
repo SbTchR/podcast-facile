@@ -10,6 +10,7 @@
     "check": "tsc -b"
   },
   "dependencies": {
+    "@breezystack/lamejs": "1.2.7",
     "@huggingface/transformers": "3.8.1",
     "@vitejs/plugin-react": "6.0.3",
     "react": "19.2.7",

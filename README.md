@@ -18,8 +18,22 @@ Le parcours propose quatre repères : enregistrer les voix, placer les musiques 
 - déplacement et découpe des sons sur la trame, choix d’un extrait sur une forme d’onde et aperçu du mixage avec les voix ;
 - jingles en six étapes : style, titre 1 et sa réponse, présentation et sa réponse, titre 2 et sa réponse, accroche, écoute ;
 - sauvegarde locale et export des projets `.podfacile` ;
-- export du mixage final en WAV ;
+- export du mixage final en MP3 (par défaut) ou WAV ;
 - interface responsive pour ordinateur, tablette et téléphone.
+
+## Sauvegarde et téléchargements
+
+Le montage validé est enregistré automatiquement dans ce navigateur après cinq secondes sans modification. Le bouton « Sauvegarder » de la barre principale crée une copie `.podfacile` transportable : textes des voix et jingles, brouillons conservés, tous les fichiers audio (y compris les prises désactivées), découpes, ordre, pistes et réglages. « Garder le texte » permet de conserver une voix avant son enregistrement ; « Garder le brouillon » conserve un jingle incomplet. Les changements des fenêtres de montage doivent être validés avant de télécharger la sauvegarde. Une réimportation crée un nouveau projet et conserve les anciens.
+
+Quand son sélecteur natif est disponible, Chrome ouvre « Enregistrer sous » dès le clic, en proposant Téléchargements. Safari et les navigateurs sans cette fonction affichent un fichier prêt avec un lien de téléchargement explicite. Dans Safari, le choix systématique du dossier se règle dans Réglages → Général → Emplacement de téléchargement des fichiers → Demander pour chaque téléchargement. Le site ne peut pas imposer ce réglage.
+
+Si Chrome renvoie un `AbortError` parce que son sélecteur est intercepté, la préparation du fichier continue et le lien de téléchargement apparaît. Une annulation volontaire affiche un message explicite. Attention : un navigateur piloté par Playwright peut rediriger et renommer les téléchargements ; le site ne contrôle pas ce dossier de test.
+
+Safari privilégie désormais l’enregistrement AAC/MP4 à 192 kbit/s ; Chrome conserve WebM/Opus. La durée retenue est celle de l’audio décodé. Le WAV reste PCM stéréo 16 bits à 44,1 kHz, avec contrôle des données et atténuation commune aux deux canaux si des crêtes dépassent la plage valide. Cette correction ne restaure pas une prise déjà dégradée à l’enregistrement. Le MP3 utilise le même mixage, encodé dans un worker avec `@breezystack/lamejs` 1.2.7 ([source](https://github.com/shijinyu/lamejs), [licence LGPL-3.0](app/public/licenses/lamejs-LGPL-3.0.txt)).
+
+`node app/scripts/verify-project-files.mjs` vérifie la restitution des textes et des octets audio, les sons manquants, le choix du format d’enregistrement, la fenêtre de sauvegarde avant préparation du fichier, l’annulation volontaire, les sélecteurs interceptés par Chrome, le secours, les erreurs d’écriture et l’encodage WAV.
+
+`node app/scripts/verify-mp3-export.mjs` exécute le worker de production puis décode son MP3 avec FFmpeg pour vérifier le débit, la durée, la hauteur des sons, les deux canaux, les crêtes et les erreurs de données.
 
 ## Organisation et jingles
 
@@ -93,7 +107,7 @@ La régression des aperçus couvre la lecture progressive, les limites d’extra
 - une connexion internet est nécessaire lors de la première utilisation d’un son de la bibliothèque ou de la transcription ;
 - la transcription peut faire des erreurs, notamment sur les noms propres ; le temps de calcul dépend de l’appareil ;
 - la qualité et le niveau sonore varient selon les enregistrements d’origine ;
-- l’export MP3 n’est pas inclus ;
+- le MP3 est encodé localement à 192 kbit/s, dans un worker ; aucune prise n’est envoyée à un serveur ;
 - la compatibilité des fichiers personnels importés dépend du navigateur ;
 - les projets très longs peuvent dépasser la mémoire disponible sur smartphone.
 

@@ -39,12 +39,12 @@ jobs:
       - name: Installer FFmpeg pour analyser les transitions
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
-      - name: Vérifier les sources corrigées
-        run: bash app/scripts/verify-audio-source.sh
-
       - name: Installer les dépendances
         working-directory: app
         run: npm install --no-audit --no-fund
+
+      - name: Vérifier les sources corrigées
+        run: bash app/scripts/verify-audio-source.sh
 
       - name: Vérifier TypeScript
         working-directory: app
@@ -69,11 +69,11 @@ jobs:
           <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width,initial-scale=1">
-            <meta http-equiv="refresh" content="0;url=./site/?v=20260722-real-transitions-preview-1">
+            <meta http-equiv="refresh" content="0;url=./site/?v=20261005-downloads-mp3-1">
             <title>Podcast Facile V3</title>
-            <script>location.replace('./site/?v=20260722-real-transitions-preview-1')</script>
+            <script>location.replace('./site/?v=20261005-downloads-mp3-1')</script>
           </head>
-          <body><a href="./site/?v=20260722-real-transitions-preview-1">Ouvrir Podcast Facile V3</a></body>
+          <body><a href="./site/?v=20261005-downloads-mp3-1">Ouvrir Podcast Facile V3</a></body>
           </html>
           HTML
 
