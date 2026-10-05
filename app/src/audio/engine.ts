@@ -7,7 +7,7 @@ import { getGuidedJinglePlan, isGuidedJingle } from './jinglePlan';
 import { scheduleGuidedJingle } from './guidedJingle';
 import { connectEcho } from './echo';
 import { createProjectOfflineContext } from './offlineContext';
-import { createPcmCapture } from './pcmCapture';
+import { createPcmCapture, pcmCaptureRenderLength } from './pcmCapture';
 
 type RenderContext = AudioContext | OfflineAudioContext;
 
@@ -910,14 +910,19 @@ export function audioBufferToWav(buffer: AudioBuffer): Blob {
 
 export async function renderProjectAudio(project: PodcastProject): Promise<AudioBuffer> {
   const duration = Math.max(0.1, getProjectDuration(project));
-  const context = createProjectOfflineContext(2, Math.ceil(duration * SAMPLE_RATE), SAMPLE_RATE);
   const webkit = /AppleWebKit/.test(navigator.userAgent) && !/Chrome|Chromium|Edg\//.test(navigator.userAgent);
-  const capture = webkit ? await createPcmCapture(context) : undefined;
-  const outputBus = createMasterSafetyLimiter(context, capture?.node ?? context.destination);
-  const cache = await decodeProjectAssets(context, project);
-  await scheduleProject(context, outputBus, project, 0, 0, cache);
-  const rendered = await context.startRendering();
-  return capture ? capture.result : rendered;
+  const frames = Math.ceil(duration * SAMPLE_RATE);
+  const context = createProjectOfflineContext(2, webkit ? pcmCaptureRenderLength(frames) : frames, SAMPLE_RATE);
+  const capture = webkit ? createPcmCapture(context, frames) : undefined;
+  try {
+    const outputBus = createMasterSafetyLimiter(context, capture?.node ?? context.destination);
+    const cache = await decodeProjectAssets(context, project);
+    await scheduleProject(context, outputBus, project, 0, 0, cache);
+    const rendered = await context.startRendering();
+    return capture ? capture.finish() : rendered;
+  } finally {
+    capture?.dispose();
+  }
 }
 
 export async function renderProjectToWav(project: PodcastProject): Promise<Blob> {
