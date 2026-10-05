@@ -29,12 +29,12 @@ jobs:
       - name: Installer FFmpeg pour analyser les transitions
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
-      - name: Vérifier les sources corrigées
-        run: bash app/scripts/verify-audio-source.sh
-
       - name: Installer les dépendances
         working-directory: app
         run: npm install --no-audit --no-fund
+
+      - name: Vérifier les sources corrigées
+        run: bash app/scripts/verify-audio-source.sh
 
       - name: Vérifier TypeScript
         working-directory: app

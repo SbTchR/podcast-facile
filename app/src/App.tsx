@@ -32,6 +32,10 @@ import {
 } from './audio/engine';
 import { deleteProject, listProjects, loadProject, saveProject } from './storage/db';
 import { deserializeProject, serializeProject } from './storage/projectFile';
+import { saveFile, type ReadyDownload } from './storage/saveFile';
+import { DownloadDialog } from './components/DownloadDialog';
+import { recordingMimeType } from './audio/recording';
+import { renderProjectToMp3 } from './audio/mp3';
 import type {
   AudioAsset,
   BackgroundAudio,
@@ -158,7 +162,7 @@ function downloadBlob(blob: Blob, filename: string): void {
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
 function safeFilename(value: string): string {
@@ -336,6 +340,8 @@ function createProject(title: string, author: string): PodcastProject {
 function App() {
   const [screen, setScreen] = useState<Screen>('home');
   const [project, setProject] = useState<PodcastProject | null>(null);
+  const latestProjectRef = useRef(project);
+  latestProjectRef.current = project;
   const [projects, setProjects] = useState<PodcastProject[]>([]);
   const [dirty, setDirty] = useState(false);
   const [saveState, setSaveState] = useState<'saved' | 'dirty' | 'saving'>('saved');
@@ -384,6 +390,7 @@ function App() {
   const [elapsed, setElapsed] = useState(0);
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [rendering, setRendering] = useState(false);
+  const [readyDownload, setReadyDownload] = useState<ReadyDownload | null>(null);
 
   const refreshProjects = useCallback(async () => {
     try {
@@ -430,11 +437,12 @@ function App() {
     if (!project) return;
     setSaveState('saving');
     try {
-      const next = { ...project, updatedAt: new Date().toISOString() };
-      await saveProject(next);
-      setProject(next);
-      setDirty(false);
-      setSaveState('saved');
+      await saveProject(project);
+      // A completed save must never replace edits made while it was running.
+      if (latestProjectRef.current === project) {
+        setDirty(false);
+        setSaveState('saved');
+      }
       if (showToast) setToast('Projet sauvegardé sur cet appareil.');
       await refreshProjects();
     } catch (error) {
@@ -643,8 +651,12 @@ function App() {
     if (!project) return;
     setRendering(true);
     try {
-      const blob = await serializeProject(project);
-      downloadBlob(blob, `${safeFilename(project.title)}.podfacile`);
+      const result = await saveFile({
+        filename: `${safeFilename(project.title)}.podfacile`,
+        description: 'Sauvegarde complète Podcast Facile', mimeType: 'application/json', extension: '.podfacile',
+        createBlob: () => serializeProject(project), onReady: setReadyDownload,
+      });
+      setToast(result === 'saved' ? 'Sauvegarde enregistrée dans le fichier choisi.' : result === 'cancelled' ? 'Enregistrement annulé. Tu peux relancer la sauvegarde.' : '');
     } catch (error) {
       setToast(error instanceof Error ? error.message : 'Impossible d’exporter la sauvegarde.');
     } finally {
@@ -664,16 +676,20 @@ function App() {
     }
   };
 
-  const exportWav = async () => {
+  const exportAudio = async (format: 'mp3' | 'wav') => {
     if (!project) return;
+    requestExclusivePreview('file-export');
     setRendering(true);
-    setToast('Création du fichier WAV en cours…');
+    setToast(`Création du fichier ${format.toUpperCase()} en cours…`);
     try {
-      const wav = await renderProjectToWav(project);
-      downloadBlob(wav, `${safeFilename(project.title)}.wav`);
-      setToast('Le podcast WAV a été créé.');
+      const result = await saveFile({
+        filename: `${safeFilename(project.title)}.${format}`,
+        description: `Podcast ${format.toUpperCase()}`, mimeType: format === 'mp3' ? 'audio/mpeg' : 'audio/wav', extension: `.${format}`,
+        createBlob: () => format === 'mp3' ? renderProjectToMp3(project) : renderProjectToWav(project), onReady: setReadyDownload,
+      });
+      setToast(result === 'saved' ? 'Podcast enregistré dans le fichier choisi.' : result === 'cancelled' ? 'Enregistrement annulé. Tu peux relancer le téléchargement.' : '');
     } catch (error) {
-      setToast(error instanceof Error ? error.message : 'L’export WAV a échoué.');
+      setToast(error instanceof Error ? error.message : 'L’export audio a échoué.');
     } finally {
       setRendering(false);
     }
@@ -726,15 +742,19 @@ function App() {
 
   if (screen === 'export') {
     return (
+      <>
       <ExportScreen
         project={project}
         duration={projectDuration}
         rendering={rendering}
         onBack={() => setScreen('editor')}
         onListen={() => playProject(project, 0)}
-        onExportWav={() => void exportWav()}
+        onExportAudio={(format) => void exportAudio(format)}
         onExportProject={() => void exportProjectFile()}
       />
+      {readyDownload && <DownloadDialog file={readyDownload} onClose={() => setReadyDownload(null)} />}
+      {toast && <div className="toast" role="status">{toast}</div>}
+      </>
     );
   }
 
@@ -744,10 +764,11 @@ function App() {
         project={project}
         duration={projectDuration}
         saveState={saveState}
+        savingFile={rendering}
         canUndo={undoRef.current.length > 0}
         canRedo={redoRef.current.length > 0}
         onHome={() => void goHome()}
-        onSave={() => void saveCurrentProject()}
+        onSave={() => void exportProjectFile()}
         onUndo={undo}
         onRedo={redo}
         onHelp={() => setHelpOpen(true)}
@@ -869,6 +890,7 @@ function App() {
         applyChange((draft) => applySectionArrangement(draft, edited, editingLayer.sectionId));
         setEditingLayer(null);
       }} />}
+      {readyDownload && <DownloadDialog file={readyDownload} onClose={() => setReadyDownload(null)} />}
       {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
       {sectionHelp && <SectionHelpModal section={sectionHelp} onClose={() => setSectionHelp(null)} />}
       {toast && <div className="toast" role="status">{toast}</div>}
@@ -965,16 +987,16 @@ function SetupScreen({ title, author, onTitle, onAuthor, onBack, onFinish }: {
   );
 }
 
-function EditorTopbar({ project, duration, saveState, canUndo, canRedo, onHome, onSave, onUndo, onRedo, onHelp, onExport }: {
-  project: PodcastProject; duration: number; saveState: 'saved' | 'dirty' | 'saving'; canUndo: boolean; canRedo: boolean;
+function EditorTopbar({ project, duration, saveState, savingFile, canUndo, canRedo, onHome, onSave, onUndo, onRedo, onHelp, onExport }: {
+  project: PodcastProject; duration: number; saveState: 'saved' | 'dirty' | 'saving'; savingFile: boolean; canUndo: boolean; canRedo: boolean;
   onHome: () => void; onSave: () => void; onUndo: () => void; onRedo: () => void; onHelp: () => void; onExport: () => void;
 }) {
   return (
     <header className="editor-topbar">
       <button className="brand-button" onClick={onHome}><span className="brand-mark">PF</span><span className="brand-name">{APP_NAME}</span></button>
-      <div className="topbar-project"><strong>{project.title}</strong><span className={`save-indicator ${saveState}`}>{saveState === 'saved' ? '✓ Sauvegardé' : saveState === 'saving' ? 'Sauvegarde…' : '● Modifications non sauvegardées'}</span></div>
+      <div className="topbar-project"><strong>{project.title}</strong><span className={`save-indicator ${saveState}`}>{saveState === 'saved' ? '✓ Enregistré automatiquement ici' : saveState === 'saving' ? 'Enregistrement automatique…' : '● Enregistrement automatique en attente'}</span></div>
       <div className="topbar-actions">
-        <button className="toolbar-button" aria-label="Enregistrer le projet" onClick={onSave}>💾 <span>Enregistrer</span></button>
+        <button className="toolbar-button backup-button" aria-label="Sauvegarder le projet dans un fichier" title="Télécharger une sauvegarde complète pour reprendre le projet sur un autre appareil" disabled={savingFile} onClick={onSave}>💾 <span>{savingFile ? 'Préparation…' : 'Sauvegarder'}</span></button>
         <button className="toolbar-button" disabled={!canUndo} onClick={onUndo} title="Annuler">↶</button>
         <button className="toolbar-button" disabled={!canRedo} onClick={onRedo} title="Rétablir">↷</button>
         <button className="toolbar-button" aria-label="Aide" onClick={onHelp}>? <span>Aide</span></button>
@@ -1118,7 +1140,7 @@ function BlockEditorModal({ block: initialBlock, assets, podcastTitle, isNew, in
   useEffect(() => { onBusyChange?.(voiceBusy || transcriptionBusy || Boolean(transitionLoadingId)); }, [voiceBusy, transcriptionBusy, transitionLoadingId, onBusyChange]);
   const selectedAsset = assets.find((asset) => asset.id === block.assetId);
   const requiresAsset = block.type === 'voice' || block.type === 'music' || block.type === 'sfx';
-  const canSave = block.type === 'transition' ? Boolean(block.assetId && block.transitionPreset) : !requiresAsset || Boolean(block.assetId);
+  const canSave = block.type === 'transition' ? Boolean(block.assetId && block.transitionPreset) : !requiresAsset || Boolean(block.assetId) || (block.type === 'voice' && Boolean(block.script?.trim()));
 
   const update = <K extends keyof PodcastBlock>(key: K, value: PodcastBlock[K]) => setBlock((current) => ({ ...current, [key]: value }));
 
@@ -1372,7 +1394,7 @@ function BlockEditorModal({ block: initialBlock, assets, podcastTitle, isNew, in
           {block.type !== 'transition' && <TimedPreviewButton previewId={`block-editor-${block.id}`} onStart={() => onPreview(block)} disabled={!canSave} />}
           <span className="footer-spacer" />
           <button className="ghost-button" disabled={voiceBusy || transcriptionBusy || Boolean(transitionLoadingId)} onClick={onClose}>Annuler</button>
-          <button className="primary-button" disabled={!canSave || !block.title.trim() || voiceBusy || transcriptionBusy || Boolean(transitionLoadingId)} onClick={() => onSave(block)}>✓ {isNew ? 'Ajouter' : 'Enregistrer'}</button>
+          <button className="primary-button" disabled={!canSave || !block.title.trim() || voiceBusy || transcriptionBusy || Boolean(transitionLoadingId)} onClick={() => onSave(block)}>✓ {block.type === 'voice' && !block.assetId ? 'Garder le texte' : isNew ? 'Ajouter' : 'Enregistrer'}</button>
         </div>}
       </Modal>
       {libraryTarget && <AudioLibraryModal kind={libraryKind} onClose={() => setLibraryTarget(null)} onChoose={chooseLibraryPreset} />}
@@ -1569,9 +1591,8 @@ function Recorder({ onReady, onBusyChange, maxSeconds, showHint = true }: { onRe
       const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
       if (!mountedRef.current) { stream.getTracks().forEach((track) => track.stop()); restoreBrowserAudioSession(); return; }
       streamRef.current = stream;
-      const candidates = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/webm'];
-      const mimeType = candidates.find((candidate) => MediaRecorder.isTypeSupported(candidate));
-      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      const mimeType = recordingMimeType(navigator.userAgent, candidate => MediaRecorder.isTypeSupported(candidate));
+      const recorder = new MediaRecorder(stream, { ...(mimeType ? { mimeType } : {}), audioBitsPerSecond: 192_000 });
       recorderRef.current = recorder;
       chunksRef.current = [];
       elapsedRef.current = 0;
@@ -1579,9 +1600,16 @@ function Recorder({ onReady, onBusyChange, maxSeconds, showHint = true }: { onRe
       recorder.onstop = async () => {
         setState('processing');
         const blob = new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' });
-        const duration = Math.max(0.2, elapsedRef.current);
         cleanup();
-        try { await onReady(blob, duration); if (mountedRef.current) { setState('idle'); setSeconds(0); elapsedRef.current = 0; } } catch (reason) { if (mountedRef.current) { setError(reason instanceof Error ? reason.message : 'Impossible de conserver l’enregistrement.'); setState('idle'); } }
+        try {
+          // Container padding and pauses make the wall-clock timer approximate.
+          const duration = await getAudioDuration(blob);
+          if (!mountedRef.current) return;
+          await onReady(blob, duration);
+          if (mountedRef.current) { setState('idle'); setSeconds(0); elapsedRef.current = 0; }
+        } catch (reason) {
+          if (mountedRef.current) { setError(reason instanceof Error ? reason.message : 'Impossible de conserver l’enregistrement.'); setState('idle'); }
+        }
       };
       recorder.start(250);
       setSeconds(0);
@@ -1751,9 +1779,10 @@ function GlobalPlayer({ status, elapsed, duration, seekable, activeTitle, onPlay
   );
 }
 
-function ExportScreen({ project, duration, rendering, onBack, onListen, onExportWav, onExportProject }: {
-  project: PodcastProject; duration: number; rendering: boolean; onBack: () => void; onListen: () => Promise<PreviewSession>; onExportWav: () => void; onExportProject: () => void;
+function ExportScreen({ project, duration, rendering, onBack, onListen, onExportAudio, onExportProject }: {
+  project: PodcastProject; duration: number; rendering: boolean; onBack: () => void; onListen: () => Promise<PreviewSession>; onExportAudio: (format: 'mp3' | 'wav') => void; onExportProject: () => void;
 }) {
+  const [format, setFormat] = useState<'mp3' | 'wav'>('mp3');
   const warnings: string[] = [];
   if (!project.blocks.some((block) => (block.type === 'voice' && block.assetId) || block.jingle?.voiceAssetId || Object.values(block.jingle?.takes ?? {}).some((take) => take?.assetId))) warnings.push('Le podcast ne contient encore aucun enregistrement vocal.');
   const usedJingleBeds = JINGLE_CREDIT_BEDS.filter((bed) => project.blocks.some((block) => isGuidedJingle(block) && block.jingle.bedId === bed.id && getBlockDuration(block, project.assets) > 0));
@@ -1779,15 +1808,15 @@ function ExportScreen({ project, duration, rendering, onBack, onListen, onExport
         <div className="export-summary"><div><span>Durée totale</span><strong>{formatTime(duration)}</strong></div><div><span>Éléments</span><strong>{project.blocks.length}</strong></div><div><span>Sections</span><strong>{project.sections.length}</strong></div></div>
         <TimedPreviewButton previewId="export-full-podcast" onStart={onListen} disabled={duration <= 0} label="Écouter le podcast complet" />
         <section className="checks-panel"><h3>Vérifications</h3>{warnings.length === 0 ? <div className="check-success">✓ Aucun problème évident détecté.</div> : warnings.map((warning) => <div className="warning-row" key={warning}>⚠ {warning}</div>)}<p>Ces avertissements ne bloquent jamais l’export.</p></section>
-        <section className="export-actions-panel"><div><h3>Exporter le fichier audio</h3><p>Format WAV, compatible avec la plupart des appareils et logiciels.</p></div><button className="primary-button large" disabled={rendering || duration <= 0} onClick={onExportWav}>{rendering ? 'Création…' : 'Télécharger le podcast (.wav)'}</button></section>
-        <section className="export-actions-panel secondary"><div><h3>Garder ton projet pour le modifier</h3><p>Pour continuer sur un autre appareil ou reprendre ton travail plus tard. Ouvre ce fichier avec « Ouvrir une sauvegarde » sur l’accueil.</p></div><button className="secondary-button" disabled={rendering} onClick={onExportProject}>Télécharger la sauvegarde</button></section>
+        <section className="export-actions-panel"><div><h3>Exporter le fichier audio</h3><label className="export-format-label">Format <select aria-label="Format audio" value={format} disabled={rendering} onChange={event => setFormat(event.target.value as 'mp3' | 'wav')}><option value="mp3">MP3 · fichier léger</option><option value="wav">WAV · sans compression</option></select></label><p>{format === 'mp3' ? 'MP3 stéréo à 192 kbit/s, facile à écouter et à partager.' : 'WAV stéréo sans compression, pour retravailler le son.'}</p></div><button className="primary-button large" disabled={rendering || duration <= 0} onClick={() => onExportAudio(format)}>{rendering ? 'Création…' : `Télécharger le podcast (.${format})`}</button></section>
+        <section className="export-actions-panel secondary"><div><h3>Garder ton projet pour le modifier</h3><p>La sauvegarde contient tous les textes des voix et jingles, les enregistrements, les musiques, les bruitages et les réglages du montage. Pour continuer sur un autre appareil, ouvre ce fichier avec « Ouvrir une sauvegarde » sur l’accueil.</p></div><button className="secondary-button" disabled={rendering} onClick={onExportProject}>Télécharger la sauvegarde</button></section>
       </main>
     </div>
   );
 }
 
 function HelpModal({ onClose }: { onClose: () => void }) {
-  return <Modal title="Aide rapide" onClose={onClose}><div className="help-steps"><div><span>1</span><p><strong>Enregistre les voix.</strong><br />Dans chaque partie, ajoute tes voix puis les transitions ou pauses utiles.</p></div><div><span>2</span><p><strong>Place les musiques de fond.</strong><br />Ouvre les pistes de la partie. Ajoute la musique, choisis l’extrait puis déplace et découpe le son en écoutant le mixage avec les voix.</p></div><div><span>3</span><p><strong>Ajoute les ambiances et bruitages.</strong><br />Choisis une ambiance pour le décor, ou un bruitage court pour une action ou une transition. Place-les sur la trame en écoutant avec les voix.</p></div><div><span>4</span><p><strong>Écoute et télécharge.</strong><br />Vérifie la partie ou le podcast complet, puis télécharge le WAV et une sauvegarde .podfacile.</p></div></div><div className="important-note"><strong>Important</strong><p>Les projets enregistrés uniquement dans le navigateur peuvent disparaître si ses données sont effacées. Télécharge régulièrement une sauvegarde .podfacile.</p></div></Modal>;
+  return <Modal title="Aide rapide" onClose={onClose}><div className="help-steps"><div><span>1</span><p><strong>Enregistre les voix.</strong><br />Dans chaque partie, ajoute tes voix puis les transitions ou pauses utiles.</p></div><div><span>2</span><p><strong>Place les musiques de fond.</strong><br />Ouvre les pistes de la partie. Ajoute la musique, choisis l’extrait puis déplace et découpe le son en écoutant le mixage avec les voix.</p></div><div><span>3</span><p><strong>Ajoute les ambiances et bruitages.</strong><br />Choisis une ambiance pour le décor, ou un bruitage court pour une action ou une transition. Place-les sur la trame en écoutant avec les voix.</p></div><div><span>4</span><p><strong>Écoute et télécharge.</strong><br />Vérifie la partie ou le podcast complet, puis télécharge le MP3 (ou le WAV) et une sauvegarde .podfacile.</p></div></div><div className="important-note"><strong>Important</strong><p>Les projets enregistrés uniquement dans le navigateur peuvent disparaître si ses données sont effacées. Télécharge régulièrement une sauvegarde .podfacile.</p></div></Modal>;
 }
 
 function Modal({ title, onClose, wide = false, children }: { title: string; onClose: () => void; wide?: boolean; children: React.ReactNode }) {

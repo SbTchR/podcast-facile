@@ -67,6 +67,7 @@ function jingleTail(block: PodcastBlock): number {
 }
 
 export function getBlockDuration(block: PodcastBlock, assets: AudioAsset[] = []): number {
+  if (block.type === 'voice' && !block.assetId && block.script?.trim()) return 0;
   if (block.type === 'silence') return Math.max(0.1, block.duration);
   if (block.type === 'transition') return Math.min(transitionDurationLimit(assets.find(asset => asset.id === block.assetId)?.libraryId), Math.max(0.05, block.duration));
   if (block.type === 'jingle') {
@@ -760,7 +761,6 @@ async function scheduleProject(
 }
 
 export async function playProject(project: PodcastProject, offset = 0): Promise<PlaybackController> {
-  const context = new AudioContext();
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
     || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
@@ -770,6 +770,9 @@ export async function playProject(project: PodcastProject, offset = 0): Promise<
   } catch {
     // L’API Audio Session n’existe pas sur toutes les versions de Safari.
   }
+
+  // Select the playback route before Safari chooses the context's sample rate.
+  const context = new AudioContext();
 
   let mediaElement: HTMLAudioElement | null = null;
   let mediaStream: MediaStream | null = null;
@@ -859,7 +862,7 @@ export async function playProject(project: PodcastProject, offset = 0): Promise<
   }
 }
 
-function audioBufferToWav(buffer: AudioBuffer): Blob {
+export function audioBufferToWav(buffer: AudioBuffer): Blob {
   const channels = buffer.numberOfChannels;
   const length = buffer.length * channels * 2 + 44;
   const arrayBuffer = new ArrayBuffer(length);
@@ -883,10 +886,22 @@ function audioBufferToWav(buffer: AudioBuffer): Blob {
   writeString('data');
   view.setUint32(offset, length - offset - 4, true); offset += 4;
 
-  const channelData = Array.from({ length: channels }, (_, channel) => buffer.getChannelData(channel));
+  // Read owned PCM arrays: do not retain views of Safari's rendered buffer.
+  const channelData = Array.from({ length: channels }, (_, channel) => {
+    const samples = new Float32Array(buffer.length);
+    buffer.copyFromChannel(samples, channel);
+    return samples;
+  });
+  let peak = 0;
+  for (const samples of channelData) for (const sample of samples) {
+    if (!Number.isFinite(sample)) throw new Error('Le rendu audio contient des données invalides. Réessaie l’export.');
+    peak = Math.max(peak, Math.abs(sample));
+  }
+  // Linked stereo attenuation preserves the mix if fast peaks escape the limiter.
+  const scale = peak > 1 ? 0.98 / peak : 1;
   for (let index = 0; index < buffer.length; index += 1) {
     for (let channel = 0; channel < channels; channel += 1) {
-      const sample = Math.max(-1, Math.min(1, channelData[channel][index]));
+      const sample = Math.max(-1, Math.min(1, channelData[channel][index] * scale));
       view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
       offset += 2;
     }
@@ -894,14 +909,17 @@ function audioBufferToWav(buffer: AudioBuffer): Blob {
   return new Blob([arrayBuffer], { type: 'audio/wav' });
 }
 
-export async function renderProjectToWav(project: PodcastProject): Promise<Blob> {
+export async function renderProjectAudio(project: PodcastProject): Promise<AudioBuffer> {
   const duration = Math.max(0.1, getProjectDuration(project));
   const context = new OfflineAudioContext(2, Math.ceil(duration * SAMPLE_RATE), SAMPLE_RATE);
   const outputBus = createMasterSafetyLimiter(context, context.destination);
   const cache = await decodeProjectAssets(context, project);
   await scheduleProject(context, outputBus, project, 0, 0, cache);
-  const rendered = await context.startRendering();
-  return audioBufferToWav(rendered);
+  return context.startRendering();
+}
+
+export async function renderProjectToWav(project: PodcastProject): Promise<Blob> {
+  return audioBufferToWav(await renderProjectAudio(project));
 }
 
 // Traitement vocal et minutage de jingle : 20260808-vocal-magic-boost-jingle-timing-1
