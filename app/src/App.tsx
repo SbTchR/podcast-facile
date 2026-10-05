@@ -34,6 +34,7 @@ import { deleteProject, listProjects, loadProject, saveProject } from './storage
 import { deserializeProject, serializeProject } from './storage/projectFile';
 import { saveFile, type ReadyDownload } from './storage/saveFile';
 import { DownloadDialog } from './components/DownloadDialog';
+import { readSoundPreferences, rememberSound, toggleFavoriteSound } from './storage/soundPreferences';
 import { recordingMimeType } from './audio/recording';
 import { renderProjectToMp3 } from './audio/mp3';
 import type {
@@ -316,10 +317,11 @@ function createProject(title: string, author: string): PodcastProject {
   const now = new Date().toISOString();
   const sections: PodcastSection[] = [];
   const blocks: PodcastBlock[] = [];
-  const preset: SectionGuideType[] = ['intro-jingle', 'introduction', 'part', 'part', 'intermediate-jingle', 'part', 'conclusion', 'final-jingle'];
+  const preset: SectionGuideType[] = ['intro-jingle', 'introduction', 'part', 'conclusion'];
   for (const guideType of preset) {
     const created = makeGuidedSection(guideType, sections);
     if (created.section.kind === 'jingle' || guideType === 'conclusion' || (guideType === 'part' && sections.some((section) => section.guideType === 'part'))) created.section.collapsed = true;
+    if (guideType === 'part') created.section.title = 'Partie principale';
     sections.push(created.section);
     if (created.block) blocks.push(created.block);
   }
@@ -347,6 +349,7 @@ function App() {
   const [saveState, setSaveState] = useState<'saved' | 'dirty' | 'saving'>('saved');
   const [toast, setToast] = useState<string>('');
   const [helpOpen, setHelpOpen] = useState(false);
+  const [projectDetailsOpen, setProjectDetailsOpen] = useState(false);
   const [sectionHelp, setSectionHelp] = useState<PodcastSection | null>(null);
   const [addSectionOpen, setAddSectionOpen] = useState(false);
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
@@ -453,7 +456,7 @@ function App() {
 
   useEffect(() => {
     if (!project || !dirty) return;
-    const timeout = window.setTimeout(() => void saveCurrentProject(false), 5000);
+    const timeout = window.setTimeout(() => void saveCurrentProject(false), 800);
     return () => window.clearTimeout(timeout);
   }, [dirty, project, saveCurrentProject]);
 
@@ -751,6 +754,7 @@ function App() {
         onListen={() => playProject(project, 0)}
         onExportAudio={(format) => void exportAudio(format)}
         onExportProject={() => void exportProjectFile()}
+        onFix={sectionId => { setScreen('editor'); setSelectedSectionId(sectionId); const section = project.sections.find(item => item.id === sectionId); const jingle = project.blocks.find(block => block.sectionId === sectionId && block.type === 'jingle'); if (section?.kind === 'jingle' && jingle) { setEditingBlock(cloneBlock(jingle)); setEditingIsNew(false); setEditingJinglePart(undefined); } else setEditingLayer({ sectionId, kind: 'voice' }); }}
       />
       {readyDownload && <DownloadDialog file={readyDownload} onClose={() => setReadyDownload(null)} />}
       {toast && <div className="toast" role="status">{toast}</div>}
@@ -768,6 +772,7 @@ function App() {
         canUndo={undoRef.current.length > 0}
         canRedo={redoRef.current.length > 0}
         onHome={() => void goHome()}
+        onDetails={() => setProjectDetailsOpen(true)}
         onSave={() => void exportProjectFile()}
         onUndo={undo}
         onRedo={redo}
@@ -776,13 +781,19 @@ function App() {
       />
 
       <main className="editor-main" aria-label={`Montage de ${project.title}`}>
+        <nav className="podcast-plan" aria-label="Plan du podcast">{project.sections.map((section, index) => <button key={section.id} aria-current={selectedSection?.id === section.id ? 'step' : undefined} onClick={() => setSelectedSectionId(section.id)}><span>{index + 1}</span>{section.title}</button>)}</nav>
 
         <div className="section-carousel-toolbar">
-          <div className="section-carousel-nav"><button className="secondary-button compact" aria-label="Section précédente" disabled={selectedSectionIndex <= 0} onClick={() => setSelectedSectionId(project.sections[selectedSectionIndex - 1].id)}>←</button><button className="secondary-button compact" aria-label="Section suivante" disabled={selectedSectionIndex >= project.sections.length - 1} onClick={() => setSelectedSectionId(project.sections[selectedSectionIndex + 1].id)}>→</button></div>
-          <span className="section-selection-label">{selectedSection ? `Après « ${selectedSection.title} »` : 'Ton podcast'}</span>
-          <button className="add-section-button" onClick={() => setAddSectionOpen(true)}>＋ Ajouter une section</button>
+          <div className="section-carousel-nav"><button className="secondary-button compact" aria-label="Partie précédente" disabled={selectedSectionIndex <= 0} onClick={() => setSelectedSectionId(project.sections[selectedSectionIndex - 1].id)}>←</button><button className="secondary-button compact" aria-label="Partie suivante" disabled={selectedSectionIndex >= project.sections.length - 1} onClick={() => setSelectedSectionId(project.sections[selectedSectionIndex + 1].id)}>→</button></div>
+          <span className="section-selection-label">{selectedSection?.title ?? 'Ton podcast'}</span>
+          <button className="add-section-button" onClick={() => setAddSectionOpen(true)}>＋ Ajouter une partie</button>
           <div className="section-carousel-position" aria-hidden="true"><div className="carousel-position-track"><span className="carousel-position-thumb" style={{ width: `${carouselThumbSize}%`, left: `${carouselPosition * (100 - carouselThumbSize) / 100}%` }} /></div></div>
         </div>
+        {(() => {
+          const next = project.sections.find(section => { const blocks = project.blocks.filter(block => block.sectionId === section.id); return !blocks.some(block => getBlockDuration(block, project.assets) > 0); });
+          if (!next) return null;
+          return <button className="next-action" onClick={() => { setSelectedSectionId(next.id); const jingle = project.blocks.find(block => block.sectionId === next.id && block.type === 'jingle'); if (jingle) { setEditingBlock(cloneBlock(jingle)); setEditingIsNew(false); setEditingJinglePart(undefined); } else setEditingLayer({ sectionId: next.id, kind: 'voice' }); }}>À suivre : {next.kind === 'jingle' ? 'créer' : 'enregistrer'} {next.title.toLocaleLowerCase('fr')} →</button>;
+        })()}
         <div className="section-carousel" ref={carouselRef} tabIndex={0} role="region" aria-label="Trame du podcast">
         {project.sections.map((section, sectionIndex) => {
           const blocks = project.blocks.filter((block) => block.sectionId === section.id);
@@ -796,7 +807,6 @@ function App() {
               blocks={blocks}
               assets={project.assets}
               project={project}
-              onAddLayer={(kind) => setEditingLayer({ sectionId: section.id, kind })}
               onEditLayer={(initial) => setEditingLayer({ sectionId: section.id, kind: initial.kind, initial })}
               onEditVoiceInTimeline={(voice) => setEditingLayer({ sectionId: section.id, kind: 'voice', initialVoiceId: voice.id })}
               onEditPart={() => setEditingLayer({ sectionId: section.id, kind: 'voice' })}
@@ -818,8 +828,6 @@ function App() {
               selected={selectedSection?.id === section.id}
               onSelect={() => setSelectedSectionId(section.id)}
               onHelp={() => setSectionHelp(section)}
-              onAdd={() => setEditingLayer({ sectionId: section.id, kind: 'voice' })}
-              onAddVoice={() => setEditingLayer({ sectionId: section.id, kind: 'voice', newBlockType: 'voice' })}
               onMoveSection={(direction) => applyChange((draft) => {
                 const index = draft.sections.findIndex((item) => item.id === section.id);
                 const target = index + direction;
@@ -828,7 +836,7 @@ function App() {
               })}
               onDeleteSection={() => {
                 const contentWarning = blocks.length > 0 ? ' et tout son contenu' : '';
-                if (!window.confirm(`Supprimer la section « ${section.title} »${contentWarning} ?`)) return;
+                if (!window.confirm(`Supprimer la partie « ${section.title} »${contentWarning} ?`)) return;
                 applyChange((draft) => {
                   draft.blocks = draft.blocks.filter((item) => item.sectionId !== section.id);
                   draft.sections = draft.sections.filter((item) => item.id !== section.id);
@@ -891,6 +899,7 @@ function App() {
         setEditingLayer(null);
       }} />}
       {readyDownload && <DownloadDialog file={readyDownload} onClose={() => setReadyDownload(null)} />}
+      {projectDetailsOpen && <Modal title="Ton projet" onClose={() => setProjectDetailsOpen(false)}><div className="editor-modal-body"><label className="field"><span>Titre du podcast</span><input value={project.title} onChange={event => applyChange(draft => { draft.title = event.target.value; })} /></label><label className="field"><span>Élève ou groupe</span><input value={project.author} onChange={event => applyChange(draft => { draft.author = event.target.value; })} /></label></div><div className="modal-footer"><small>Enregistré automatiquement dans ce navigateur.</small><span className="footer-spacer" /><button className="primary-button" onClick={() => setProjectDetailsOpen(false)}>Terminé</button></div></Modal>}
       {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
       {sectionHelp && <SectionHelpModal section={sectionHelp} onClose={() => setSectionHelp(null)} />}
       {toast && <div className="toast" role="status">{toast}</div>}
@@ -925,11 +934,11 @@ function HomeScreen({
       <main className="home-content">
         <section className="home-hero">
           <div className="hero-symbol" aria-hidden="true"><span>🎙️</span><span>＋</span><span>🎵</span></div>
-          <h1>Ton premier podcast commence ici.</h1>
+          <h1>{projects.length ? 'Prêt à continuer ton podcast ?' : 'Ton premier podcast commence ici.'}</h1>
           <p>{WELCOME_TEXT}</p>
           <div className="hero-actions">
             <button className="primary-button large" onClick={onCreate}>Créer un nouveau podcast</button>
-            <button className="secondary-button large" disabled={projects.length === 0} onClick={() => document.getElementById('saved-projects')?.scrollIntoView({ behavior: 'smooth' })}>Reprendre un projet</button>
+            {projects[0] && <button className="secondary-button large" onClick={() => onOpen(projects[0].id)}>Reprendre « {projects[0].title} »</button>}
           </div>
           <p className="privacy-line">🔒 Tes fichiers restent sur cet appareil. Rien n’est envoyé sur internet.</p>
         </section>
@@ -945,9 +954,9 @@ function HomeScreen({
           ) : (
             <div className="project-list">
               {projects.map((project) => (
-                <article className="project-row" key={project.id}>
+                <article className={`project-row ${projects[0]?.id === project.id ? 'latest-project' : ''}`} key={project.id}>
                   <div className="project-icon">🎧</div>
-                  <div className="project-details"><h3>{project.title}</h3><p>{project.author || 'Auteur non indiqué'} · modifié le {new Date(project.updatedAt).toLocaleDateString('fr-CH')}</p></div>
+                  <div className="project-details"><h3>{project.title}</h3><p>{project.author || 'Auteur non indiqué'}{projects[0]?.id === project.id ? ' · Dernier projet' : ''}</p></div>
                   <div className="project-actions">
                     <button className="primary-button compact" onClick={() => onOpen(project.id)}>Ouvrir</button>
                     <button className="icon-text-button" onClick={() => onDuplicate(project)}>⧉ Dupliquer</button>
@@ -976,7 +985,7 @@ function SetupScreen({ title, author, onTitle, onAuthor, onBack, onFinish }: {
       <header className="simple-header"><button className="ghost-button" onClick={onBack}>← Retour</button><div className="brand"><span className="brand-mark">PF</span><span>{APP_NAME}</span></div><span /></header>
       <main className="setup-content setup-content-simple">
         <h1>Nouveau podcast</h1>
-        <p className="lead">Choisis un titre. Un plan avec une introduction, des parties et une conclusion sera prêt pour toi. Tu pourras l’adapter.</p>
+        <p className="lead">Choisis un titre. Un jingle, une introduction, une partie principale et une conclusion seront prêts pour toi. Tu pourras l’adapter.</p>
         <div className="setup-form-grid setup-form-simple">
           <label className="field"><span>Titre du podcast <b>*</b></span><input autoFocus value={title} onChange={(event) => onTitle(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && title.trim()) onFinish(); }} placeholder="Ex. Magellan : héros ou envahisseur ?" /></label>
           <label className="field"><span>Nom de l’élève ou du groupe <small>(facultatif)</small></span><input value={author} onChange={(event) => onAuthor(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && title.trim()) onFinish(); }} placeholder="Ex. Groupe 3" /></label>
@@ -987,14 +996,14 @@ function SetupScreen({ title, author, onTitle, onAuthor, onBack, onFinish }: {
   );
 }
 
-function EditorTopbar({ project, duration, saveState, savingFile, canUndo, canRedo, onHome, onSave, onUndo, onRedo, onHelp, onExport }: {
+function EditorTopbar({ project, duration, saveState, savingFile, canUndo, canRedo, onHome, onDetails, onSave, onUndo, onRedo, onHelp, onExport }: {
   project: PodcastProject; duration: number; saveState: 'saved' | 'dirty' | 'saving'; savingFile: boolean; canUndo: boolean; canRedo: boolean;
-  onHome: () => void; onSave: () => void; onUndo: () => void; onRedo: () => void; onHelp: () => void; onExport: () => void;
+  onHome: () => void; onDetails: () => void; onSave: () => void; onUndo: () => void; onRedo: () => void; onHelp: () => void; onExport: () => void;
 }) {
   return (
     <header className="editor-topbar">
       <button className="brand-button" onClick={onHome}><span className="brand-mark">PF</span><span className="brand-name">{APP_NAME}</span></button>
-      <div className="topbar-project"><strong>{project.title}</strong><span className={`save-indicator ${saveState}`}>{saveState === 'saved' ? '✓ Enregistré automatiquement ici' : saveState === 'saving' ? 'Enregistrement automatique…' : '● Enregistrement automatique en attente'}</span></div>
+      <div className="topbar-project"><button className="project-title-button" onClick={onDetails} title="Modifier le titre et le groupe">{project.title} <small>✎</small></button><span className={`save-indicator ${saveState}`}>{saveState === 'saved' ? '✓ Enregistré dans ce navigateur' : saveState === 'saving' ? 'Enregistrement automatique…' : 'Enregistrement automatique…'}</span></div>
       <div className="topbar-actions">
         <button className="toolbar-button backup-button" aria-label="Sauvegarder le projet dans un fichier" title="Télécharger une sauvegarde complète pour reprendre le projet sur un autre appareil" disabled={savingFile} onClick={onSave}>💾 <span>{savingFile ? 'Préparation…' : 'Sauvegarder le projet'}</span><small>Pour le modifier plus tard</small></button>
         <button className="toolbar-button" disabled={!canUndo} onClick={onUndo} title="Annuler">↶</button>
@@ -1008,14 +1017,14 @@ function EditorTopbar({ project, duration, saveState, savingFile, canUndo, canRe
 }
 
 function SectionPanel({
-  section, sectionIndex, sectionCount, blocks, assets, duration, project, onAddLayer, onEditLayer, onDeleteLayer, onEditVoiceInTimeline, onPreviewSection, onPreviewBlock, onEditPart, onToggleJinglePart,
-  onRename, selected, onSelect, onHelp, onAdd, onAddVoice, onMoveSection, onDeleteSection, onEdit, onDelete,
+  section, sectionIndex, sectionCount, blocks, assets, duration, project, onEditLayer, onDeleteLayer, onEditVoiceInTimeline, onPreviewSection, onPreviewBlock, onEditPart, onToggleJinglePart,
+  onRename, selected, onSelect, onHelp, onMoveSection, onDeleteSection, onEdit, onDelete,
 }: {
   section: PodcastSection; sectionIndex: number; sectionCount: number; blocks: PodcastBlock[]; assets: AudioAsset[]; duration: number; project: PodcastProject;
-  onEditPart: () => void; onAddLayer: (kind: 'music' | 'sfx') => void; onEditLayer: (layer: SectionAudioLayer) => void; onDeleteLayer: (layer: SectionAudioLayer) => void;
+  onEditPart: () => void; onEditLayer: (layer: SectionAudioLayer) => void; onDeleteLayer: (layer: SectionAudioLayer) => void;
   onEditVoiceInTimeline: (block: PodcastBlock) => void; onPreviewSection: () => Promise<PreviewSession>; onPreviewBlock: (block: PodcastBlock) => Promise<PreviewSession>;
   onToggleJinglePart: (block: PodcastBlock, part: JingleVoicePart, included: boolean) => void;
-  onRename: (title: string) => void; selected: boolean; onSelect: () => void; onHelp: () => void; onAdd: () => void; onAddVoice: () => void;
+  onRename: (title: string) => void; selected: boolean; onSelect: () => void; onHelp: () => void;
   onMoveSection: (direction: -1 | 1) => void; onDeleteSection: () => void; onEdit: (block: PodcastBlock, part?: JingleVoicePart) => void; onDelete: (block: PodcastBlock) => void;
 }) {
   const mainJingle = blocks.find(block => block.type === 'jingle');
@@ -1023,26 +1032,26 @@ function SectionPanel({
   return <section className={`podcast-section ${section.kind === 'jingle' ? 'jingle-section' : ''} ${selected ? 'selected-section' : ''}`} data-section-id={section.id} onPointerDown={onSelect} onFocusCapture={onSelect}>
     <div className="podcast-section-header">
       <button className="section-select-button" aria-label={`Sélectionner ${section.title}`} aria-pressed={selected} onClick={onSelect}>{sectionIndex + 1}</button>
-      <input className="section-title-input" value={section.title} onChange={event => onRename(event.target.value)} aria-label="Nom de la section" />
-      <button className="section-help-button" onClick={onHelp} title="Conseils et exemples pour cette section" aria-label={`Aide pour ${section.title}`}>?</button>
+      <input className="section-title-input" value={section.title} onChange={event => onRename(event.target.value)} aria-label="Nom de la partie" />
+      <button className="section-help-button" onClick={onHelp} title="Conseils et exemples pour cette partie" aria-label={`Aide pour ${section.title}`}>?</button>
       {section.kind === 'jingle' && <span className="section-kind-badge">Jingle</span>}
       <span className="section-duration">{formatTime(duration)}</span>
-      <button className="mini-button" disabled={sectionIndex === 0} onClick={() => onMoveSection(-1)} title="Déplacer la section vers la gauche">←</button>
-      <button className="mini-button" disabled={sectionIndex === sectionCount - 1} onClick={() => onMoveSection(1)} title="Déplacer la section vers la droite">→</button>
-      <button className="mini-button danger" onClick={onDeleteSection} title="Supprimer la section">×</button>
+      <button className="mini-button" disabled={sectionIndex === 0} onClick={() => onMoveSection(-1)} title="Déplacer la partie vers la gauche">←</button>
+      <button className="mini-button" disabled={sectionIndex === sectionCount - 1} onClick={() => onMoveSection(1)} title="Déplacer la partie vers la droite">→</button>
+      <button className="mini-button danger" onClick={onDeleteSection} title="Supprimer la partie">×</button>
     </div>
     <div className="block-stack">
       <div className="section-edit-action"><div className="section-primary-actions">
-        {section.kind === 'jingle' ? mainJingle && <><button className="secondary-button compact" onClick={() => onEdit(mainJingle)}>✎ Editer le jingle</button><TimedPreviewButton previewId={`jingle-section-${mainJingle.id}`} label="Écouter le jingle" disabled={!jingleReady} onStart={onPreviewSection} /></> : <><button className="secondary-button compact" onClick={onEditPart}>✎ Editer la partie</button>{duration > 0 && <TimedPreviewButton previewId={`section-${section.id}`} label="Écouter cette partie" onStart={onPreviewSection} />}</>}
+        {section.kind === 'jingle' ? mainJingle && <><button className="secondary-button compact" onClick={() => onEdit(mainJingle)}>✎ Modifier le jingle</button><TimedPreviewButton previewId={`jingle-section-${mainJingle.id}`} label="Écouter le jingle" disabled={!jingleReady} onStart={onPreviewSection} /></> : <><button className="secondary-button compact" onClick={onEditPart}>✎ Modifier la partie</button>{duration > 0 && <TimedPreviewButton previewId={`section-${section.id}`} label="Écouter cette partie" onStart={onPreviewSection} />}</>}
       </div></div>
-      {section.kind !== 'jingle' && <SectionAudioOverview project={project} sectionId={section.id} onAdd={onAddLayer} onEdit={onEditLayer} onVoice={onEditVoiceInTimeline} onOpenVoice={onEditPart} />}
+      {section.kind !== 'jingle' && <SectionAudioOverview project={project} sectionId={section.id} onEdit={onEditLayer} onVoice={onEditVoiceInTimeline} />}
       {!blocks.length && <div className="empty-section"><strong>{section.kind === 'jingle' ? 'Prépare une courte signature sonore.' : 'À toi de parler !'}</strong><p>{sectionGuideContent[section.guideType ?? 'part'].prompts[0]}</p></div>}
       {blocks.map(block => {
         if (block.type === 'jingle' && ['guided-v7', 'guided-v8', 'guided-v9'].includes(block.jingle?.production ?? '') && block.jingle?.takes) return <JingleSectionOverview key={block.id} block={block} assets={assets} podcastTitle={project.title} onEdit={part => onEdit(block, part)} onToggle={(part, included) => onToggleJinglePart(block, part, included)} Preview={TimedPreviewButton} />;
+        if (block.type === 'jingle') return <p className="draft-note" key={block.id}>{jingleReady ? '✓ Jingle prêt' : 'Jingle à préparer · ouvre l’éditeur'}</p>;
         const layer = section.audioLayers?.find(item => item.pauseBlockId === block.id);
         return <SectionBlockCard key={block.id} block={block} assets={assets} onEdit={() => layer ? onEditLayer(layer) : onEdit(block)} onDelete={() => layer ? onDeleteLayer(layer) : onDelete(block)} onPreview={() => onPreviewBlock(block)} />;
       })}
-      {section.kind !== 'jingle' && <div className="narrative-actions"><button className="secondary-button voice-record-action compact" onClick={onAddVoice}>🎙 Enregistrer une voix</button><button className="ghost-button compact" onClick={onAdd}>＋ Transition ou pause</button></div>}
     </div>
   </section>;
 }
@@ -1054,8 +1063,10 @@ function SectionBlockCard({ block, assets, onEdit, onDelete, onPreview }: {
   const unprepared = block.type === 'jingle' && duration === 0;
   const title = block.type === 'silence' && block.title === 'Pause' ? 'Pause/Musique seule' : block.title;
   const label = block.type === 'voice' ? 'cette voix' : block.type === 'silence' ? 'cette pause' : block.type === 'transition' ? 'cette transition' : 'cet élément';
+  const draft = block.type === 'voice' && !block.assetId;
   const speaker = block.type === 'voice' && block.speaker ? `${VOICE_SPEAKER_LABELS[block.speaker]} · ` : '';
-  return <SectionElementCard className={`block-${block.type} ${block.type === 'voice' ? voiceSpeakerClass(block.speaker) : ''}`} icon={blockIcons[block.type]} title={title} detail={unprepared ? 'Facultatif · à préparer' : `${speaker}${duration.toFixed(1).replace('.', ',')} s${block.voiceEffect !== 'none' ? ' · ' + voiceEffectLabels[block.voiceEffect] : ''}`} onEdit={onEdit} onDelete={onDelete}>
+  return <SectionElementCard className={`block-${block.type} ${block.type === 'voice' ? voiceSpeakerClass(block.speaker) : ''}`} icon={blockIcons[block.type]} title={title} detail={draft ? 'Texte prêt · voix à enregistrer' : unprepared ? 'À préparer' : `${speaker}${duration.toFixed(1).replace('.', ',')} s${block.voiceEffect !== 'none' ? ' · ' + voiceEffectLabels[block.voiceEffect] : ''}`} onEdit={onEdit} onDelete={onDelete}>
+    {draft && block.script && <p className="draft-script-preview">{block.script}</p>}
     <TimedPreviewButton previewId={`element-${block.id}`} label={`Écouter ${label}`} disabled={unprepared || duration <= 0} onStart={onPreview} />
   </SectionElementCard>;
 }
@@ -1063,8 +1074,8 @@ function SectionBlockCard({ block, assets, onEdit, onDelete, onPreview }: {
 function AddSectionModal({ onClose, onChoose }: { onClose: () => void; onChoose: (type: SectionGuideType) => void }) {
   const choices: SectionGuideType[] = ['intro-jingle', 'intermediate-jingle', 'final-jingle', 'introduction', 'part', 'conclusion'];
   return (
-    <Modal title="Ajouter une section" onClose={onClose} wide>
-      <p className="modal-lead">Choisis le rôle de cette nouvelle section. Tu pourras ensuite la renommer, la déplacer ou la supprimer.</p>
+    <Modal title="Ajouter une partie" onClose={onClose} wide>
+      <p className="modal-lead">Choisis le rôle de cette nouvelle partie. Tu pourras ensuite la renommer, la déplacer ou la supprimer.</p>
       <div className="section-type-grid">
         {choices.map((type) => {
           const content = sectionGuideContent[type];
@@ -1685,6 +1696,8 @@ function AudioLibraryModal({ kind, initialSoundGroup = 'effect', onClose, onChoo
   const [addingId, setAddingId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [soundGroup, setSoundGroup] = useState(initialSoundGroup);
+  const [preferences, setPreferences] = useState(readSoundPreferences);
+  const [collection, setCollection] = useState<'all' | 'favorites' | 'recent'>('all');
 
   useEffect(() => { requestExclusivePreview('audio-library-window'); }, []);
 
@@ -1693,6 +1706,8 @@ function AudioLibraryModal({ kind, initialSoundGroup = 'effect', onClose, onChoo
   const available = availableLibrarySounds(kind, soundGroup);
   const categories = kind === 'music' ? LIBRARY_CATEGORIES.music : SOUND_CATEGORIES[soundGroup];
   const results = available.filter((preset) => {
+    if (collection === 'favorites' && !preferences.favorites.includes(preset.id)) return false;
+    if (collection === 'recent' && !preferences.recent.includes(preset.id)) return false;
     if (category !== 'Toutes' && preset.category !== category && !preset.secondaryCategories?.includes(category)) return false;
     const text = normalize([preset.title, preset.description, preset.category, ...(preset.secondaryCategories ?? []), ...preset.tags].join(' '));
     return searchWords.every((word) => text.includes(word));
@@ -1704,6 +1719,7 @@ function AudioLibraryModal({ kind, initialSoundGroup = 'effect', onClose, onChoo
     setError('');
     try {
       await onChoose(preset);
+      rememberSound(preset.id);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Impossible d’ajouter ce son.');
       setAddingId(null);
@@ -1716,7 +1732,8 @@ function AudioLibraryModal({ kind, initialSoundGroup = 'effect', onClose, onChoo
         <div className="modal-header"><div><h2>{kind === 'music' ? 'Bibliothèque musicale' : 'Bibliothèque de sons'}</h2><small>{available.length} {kind === 'music' ? 'musiques' : soundGroup === 'ambience' ? 'ambiances' : 'bruitages'} disponibles</small></div><button onClick={onClose} aria-label="Fermer">×</button></div>
         <div className="library-toolbar">
           {kind === 'sfx' && <div className="library-sound-tabs" role="tablist" aria-label="Type de son">{(['effect', 'ambience'] as const).map(group => <button key={group} role="tab" id={`sound-tab-${group}`} aria-selected={soundGroup === group} aria-controls="sound-library-results" tabIndex={soundGroup === group ? 0 : -1} disabled={Boolean(addingId)} onClick={() => { requestExclusivePreview('library-group'); setSoundGroup(group); setCategory('Toutes'); setError(''); }} onKeyDown={event => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); const next = group === 'effect' ? 'ambience' : 'effect'; requestExclusivePreview('library-group'); setSoundGroup(next); setCategory('Toutes'); document.getElementById(`sound-tab-${next}`)?.focus(); } }}><span>{group === 'effect' ? '🔔 Bruitages' : '🌿 Ambiances'}</span><small>{availableLibrarySounds('sfx', group).length}</small></button>)}</div>}
-          <p className="library-instructions">{kind === 'music' ? 'Du jazz discret aux rythmes funk, électro, rock et du monde. Écoute un extrait, puis choisis le style qui accompagne ton récit.' : soundGroup === 'effect' ? 'Des sons courts pour une action, une réaction ou une transition.' : 'Un décor sonore à placer derrière les voix, sur la durée de ton choix.'}</p>
+          <p className="library-instructions">{kind === 'music' ? 'Une musique accompagne le récit, sous les voix.' : soundGroup === 'effect' ? 'Un bruitage souligne une action. Ajout au repère d’écoute.' : 'Une ambiance crée un décor sonore, sous les voix.'}</p>
+          <div className="library-collections" role="group" aria-label="Sons enregistrés">{([['all', 'Tous'], ['favorites', '★ Favoris'], ['recent', 'Récents']] as const).map(([value, label]) => <button key={value} className={collection === value ? 'selected' : ''} aria-pressed={collection === value} onClick={() => setCollection(value)}>{label}</button>)}</div>
           <label className="library-search"><span aria-hidden="true">⌕</span><input autoFocus aria-label="Rechercher un son" placeholder={kind === 'music' ? 'Rechercher : funk, électro, sport, voyage, piano…' : soundGroup === 'ambience' ? 'Rechercher : médiéval, front, forêt…' : 'Rechercher : canon, cheval, cloche…'} value={search} onChange={(event) => setSearch(event.target.value)} />{search && <button aria-label="Effacer la recherche" onClick={() => setSearch('')}>×</button>}</label>
           <label className="library-category-select"><span>Catégorie</span><select value={category} onChange={(event) => setCategory(event.target.value)}><option value="Toutes">Toutes les catégories</option>{categories.map((item) => <option key={item}>{item}</option>)}</select></label>
         </div>
@@ -1726,10 +1743,10 @@ function AudioLibraryModal({ kind, initialSoundGroup = 'effect', onClose, onChoo
             <article className="library-card" key={preset.id}>
               <div className="library-card-icon">{preset.icon}</div>
               <div className="library-card-copy"><span>{preset.category}</span><h3>{preset.title}</h3><p>{preset.description}</p><small>{kind === 'sfx' ? `${(preset.clipDuration ?? preset.duration).toLocaleString('fr', { maximumFractionDigits: 1 })} s` : formatTime(preset.clipDuration ?? preset.duration)}{preset.clipDuration && preset.clipDuration < preset.duration ? ' · extrait conseillé' : ''} · {preset.tags.slice(0, 3).join(' · ')}</small><a className="library-source-link" href={preset.sourcePage} target="_blank" rel="noreferrer" title={`${preset.author} · ${preset.license}`}>ⓘ Source</a></div>
-              <div className="library-card-actions"><TimedPreviewButton previewId={`library-${preset.id}`} label={`Écouter · ${Math.ceil(getLibraryPreviewDuration(preset))} s`} onStart={(signal) => createLibraryPreviewSession(preset, signal)} disabled={Boolean(addingId)} compact /><button className="primary-button compact" disabled={Boolean(addingId)} aria-label={`Ajouter ${preset.title}`} onClick={() => void add(preset)}>{addingId === preset.id ? 'Ajout…' : '＋ Ajouter'}</button></div>
+              <div className="library-card-actions"><button className="favorite-sound-button" title="Garder dans les favoris" aria-label={`Favori : ${preset.title}`} aria-pressed={preferences.favorites.includes(preset.id)} onClick={() => setPreferences(toggleFavoriteSound(preset.id))}>{preferences.favorites.includes(preset.id) ? '★' : '☆'}</button><TimedPreviewButton previewId={`library-${preset.id}`} label={`Écouter · ${Math.ceil(getLibraryPreviewDuration(preset))} s`} onStart={(signal) => createLibraryPreviewSession(preset, signal)} disabled={Boolean(addingId)} compact /><button className="primary-button compact" disabled={Boolean(addingId)} aria-label={`Ajouter ${preset.title}`} onClick={() => void add(preset)}>{addingId === preset.id ? 'Ajout…' : '＋ Ajouter'}</button></div>
             </article>
           ))}
-          {results.length === 0 && <div className="library-no-result"><span>🔎</span><strong>Aucun son trouvé</strong><p>Essaie un mot plus simple ou choisis une autre catégorie.</p><button className="secondary-button compact" onClick={() => { setSearch(''); setCategory('Toutes'); }}>Afficher tous les sons</button></div>}
+          {results.length === 0 && <div className="library-no-result"><span>🔎</span><strong>Aucun son trouvé</strong><p>Essaie un mot plus simple ou choisis une autre catégorie.</p><button className="secondary-button compact" onClick={() => { setSearch(''); setCategory('Toutes'); setCollection('all'); }}>Afficher tous les sons</button></div>}
         </div>
         <div className="library-footer-note"><a href="./audio-credits.html" target="_blank" rel="noreferrer">Sources et licences de tous les sons</a><span>Aperçus courts. Le son choisi est conservé dans ton projet après l’ajout.</span></div>
         {error && <div className="error-box library-error">{error}</div>}
@@ -1779,36 +1796,38 @@ function GlobalPlayer({ status, elapsed, duration, seekable, activeTitle, onPlay
   );
 }
 
-function ExportScreen({ project, duration, rendering, onBack, onListen, onExportAudio, onExportProject }: {
-  project: PodcastProject; duration: number; rendering: boolean; onBack: () => void; onListen: () => Promise<PreviewSession>; onExportAudio: (format: 'mp3' | 'wav') => void; onExportProject: () => void;
+function ExportScreen({ project, duration, rendering, onBack, onListen, onExportAudio, onExportProject, onFix }: {
+  project: PodcastProject; duration: number; rendering: boolean; onBack: () => void; onListen: () => Promise<PreviewSession>; onExportAudio: (format: 'mp3' | 'wav') => void; onExportProject: () => void; onFix: (sectionId: string) => void;
 }) {
   const [format, setFormat] = useState<'mp3' | 'wav'>('mp3');
-  const warnings: string[] = [];
-  if (!project.blocks.some((block) => (block.type === 'voice' && block.assetId) || block.jingle?.voiceAssetId || Object.values(block.jingle?.takes ?? {}).some((take) => take?.assetId))) warnings.push('Le podcast ne contient encore aucun enregistrement vocal.');
+  const [checklist, setChecklist] = useState<boolean[]>([false, false, false]);
   const usedJingleBeds = JINGLE_CREDIT_BEDS.filter((bed) => project.blocks.some((block) => isGuidedJingle(block) && block.jingle.bedId === bed.id && getBlockDuration(block, project.assets) > 0));
   const usedEndings = JINGLE_CREDIT_ENDINGS.filter(ending => project.blocks.some(block => isGuidedJingle(block) && block.jingle.ending?.presetId === ending.id && getBlockDuration(block, project.assets) > 0));
   const usedJingleSounds = [...usedJingleBeds, ...usedEndings];
   const jingleCredits = usedJingleSounds.filter((bed, index) => usedJingleSounds.findIndex((other) => other.sourcePage === bed.sourcePage && other.licenseUrl === bed.licenseUrl && other.changes === bed.changes) === index);
   const libraryCredits = usedLibraryCredits(project);
   const creditsText = [...jingleCredits.map((bed) => `${bed.title} — ${bed.author}\nSource : ${bed.sourcePage}\nLicence ${bed.licenseName} : ${bed.licenseUrl}\n${bed.changes}\n`), ...libraryCredits.map(preset => `${preset.title}\n${preset.attribution}\n`)].join('\n');
-  const unprepared = project.blocks.filter((block) => block.type === 'jingle' && getBlockDuration(block, project.assets) === 0);
-  if (unprepared.length) warnings.push(`${unprepared.length} jingle${unprepared.length > 1 ? 's' : ''} non préparé${unprepared.length > 1 ? 's' : ''} : ils ne seront pas inclus dans le fichier audio.`);
-  const empty = project.blocks.filter((block) => ['voice', 'music', 'sfx'].includes(block.type) && !block.assetId);
-  if (empty.length) warnings.push(`${empty.length} élément${empty.length > 1 ? 's sont vides' : ' est vide'}.`);
-  if (project.targetDuration && duration > project.targetDuration * 1.1) warnings.push(`Le podcast dépasse la durée cible de ${formatTime(project.targetDuration)}.`);
-  if (project.targetDuration && duration < project.targetDuration * 0.7) warnings.push(`Le podcast est nettement plus court que la durée cible de ${formatTime(project.targetDuration)}.`);
-  if (project.blocks.some((block) => block.type === 'music' && musicVolumePercent(block.musicVolume, standaloneMusicFallback(block.volume)) > 70)) warnings.push('Une musique réglée au-dessus de 70 % peut fatiguer l’écoute.');
-  if (project.blocks.some((block) => block.type === 'voice' && block.background && musicVolumePercent(block.background.volume, backgroundMusicFallback(block.background.level)) > 60)) warnings.push('Une musique de fond réglée au-dessus de 60 % peut masquer certains mots. Écoute le résultat avant l’export.');
+  const warnings = project.sections.flatMap(section => {
+    const blocks = project.blocks.filter(block => block.sectionId === section.id);
+    const drafts = blocks.filter(block => block.type === 'voice' && !block.assetId);
+    const warnings: { sectionId: string; text: string }[] = [];
+    if (drafts.length) warnings.push({ sectionId: section.id, text: `${section.title} : ${drafts.length} voix à enregistrer. Le texte seul ne s’entend pas.` });
+    if (section.kind !== 'jingle' && !blocks.some(block => block.type === 'voice' && block.assetId) && !drafts.length) warnings.push({ sectionId: section.id, text: `${section.title} : aucune voix. Enregistre-la ou retire cette partie.` });
+    if (section.audioLayers?.some(layer => layer.kind === 'music' && layer.volume > 60) || blocks.some(block => block.background && musicVolumePercent(block.background.volume, backgroundMusicFallback(block.background.level)) > 60)) warnings.push({ sectionId: section.id, text: `${section.title} : musique forte. Vérifie que les paroles restent claires.` });
+    return warnings;
+  });
+  const omitted = project.sections.filter(section => section.kind === 'jingle' && !project.blocks.some(block => block.sectionId === section.id && getBlockDuration(block, project.assets) > 0));
   return (
     <div className="export-screen">
       <header className="simple-header"><button className="ghost-button" onClick={onBack}>← Retour au montage</button><div className="brand"><span className="brand-mark">PF</span><span>{APP_NAME}</span></div><span /></header>
       <main className="export-content">
-        <div className="export-icon">🎧</div><h1>Ton podcast est prêt à être vérifié</h1><h2>{project.title}</h2>
-        <div className="export-summary"><div><span>Durée totale</span><strong>{formatTime(duration)}</strong></div><div><span>Éléments</span><strong>{project.blocks.length}</strong></div><div><span>Sections</span><strong>{project.sections.length}</strong></div></div>
+        <div className="export-icon">🎧</div><h1>Écoute, puis télécharge</h1><h2>{project.title}</h2>
+        <div className="export-summary"><div><span>Durée totale</span><strong>{formatTime(duration)}</strong></div><div><span>Parties</span><strong>{project.sections.length}</strong></div></div>
         <TimedPreviewButton previewId="export-full-podcast" onStart={onListen} disabled={duration <= 0} label="Écouter le podcast complet" />
-        <section className="checks-panel"><h3>Vérifications</h3>{warnings.length === 0 ? <div className="check-success">✓ Aucun problème évident détecté.</div> : warnings.map((warning) => <div className="warning-row" key={warning}>⚠ {warning}</div>)}<p>Ces avertissements ne bloquent jamais l’export.</p></section>
-        <section className="export-actions-panel"><div><h3>Exporter le fichier audio</h3><label className="export-format-label">Format <select aria-label="Format audio" value={format} disabled={rendering} onChange={event => setFormat(event.target.value as 'mp3' | 'wav')}><option value="mp3">MP3 · fichier léger</option><option value="wav">WAV · sans compression</option></select></label><p>{format === 'mp3' ? 'MP3 stéréo à 192 kbit/s, facile à écouter et à partager.' : 'WAV stéréo sans compression, pour retravailler le son.'}</p></div><button className="primary-button large" disabled={rendering || duration <= 0} onClick={() => onExportAudio(format)}>{rendering ? 'Création…' : `Télécharger le podcast (.${format})`}</button></section>
-        <section className="export-actions-panel secondary"><div><h3>Garder ton projet pour le modifier</h3><p>La sauvegarde contient tous les textes des voix et jingles, les enregistrements, les musiques, les bruitages et les réglages du montage. Pour continuer sur un autre appareil, ouvre ce fichier avec « Ouvrir une sauvegarde » sur l’accueil.</p></div><button className="secondary-button" disabled={rendering} onClick={onExportProject}>Sauvegarder le projet</button></section>
+        <section className="checks-panel"><h3>À vérifier</h3>{warnings.length === 0 ? <div className="check-success">✓ Les voix sont prêtes.</div> : warnings.map(warning => <div className="warning-row actionable-warning" key={warning.text}><span>⚠ {warning.text}</span><button className="secondary-button compact" onClick={() => onFix(warning.sectionId)}>Ouvrir</button></div>)}{omitted.map(section => <div className="optional-omission" key={section.id}><span>{section.title} n’est pas inclus · facultatif</span><button className="ghost-button compact" onClick={() => onFix(section.id)}>Préparer</button></div>)}</section>
+        <section className="export-actions-panel"><div><h3>Le podcast à écouter</h3><p>Un fichier audio à partager.</p><details className="export-format-details"><summary>Autre format</summary><label className="export-format-label">Format <select aria-label="Format audio" value={format} disabled={rendering} onChange={event => setFormat(event.target.value as 'mp3' | 'wav')}><option value="mp3">MP3 · fichier léger</option><option value="wav">WAV · sans compression</option></select></label></details></div><button className="primary-button large" disabled={rendering || duration <= 0} onClick={() => onExportAudio(format)}>{rendering ? 'Création…' : `Télécharger le podcast (.${format})`}</button></section>
+        <section className="export-actions-panel secondary"><div><h3>Le projet à reprendre</h3><p>Le fichier .podfacile garde les textes, toutes les prises et le montage. Ouvre cette sauvegarde sur l’accueil pour continuer, même sur un autre ordinateur.</p></div><button className="secondary-button" disabled={rendering} onClick={onExportProject}>Sauvegarder le projet</button></section>
+        <section className="session-checklist"><h3>Avant de partir</h3>{['J’ai écouté le podcast.', 'J’ai téléchargé le fichier audio.', 'J’ai sauvegardé le projet pour la prochaine fois.'].map((label, index) => <label className="check-row" key={label}><input type="checkbox" checked={checklist[index]} onChange={event => setChecklist(current => current.map((value, i) => i === index ? event.target.checked : value))} />{label}</label>)}</section>
         {(jingleCredits.length > 0 || libraryCredits.length > 0) && <section className="export-panel"><h3>Crédits des musiques et des sons</h3><p>À joindre à la description si tu publies ton podcast.</p>{jingleCredits.map((bed) => <p key={bed.id}>{bed.title} — {bed.author} · <a href={bed.licenseUrl} target="_blank" rel="noreferrer">{bed.licenseName}</a></p>)}{libraryCredits.map(preset => <p key={preset.id}>{preset.title} — {preset.author} · <a href={preset.licenseUrl} target="_blank" rel="noreferrer">{preset.license}</a></p>)}<button className="secondary-button" onClick={() => downloadBlob(new Blob([creditsText], { type: 'text/plain;charset=utf-8' }), `${safeFilename(project.title)}-credits.txt`)}>Télécharger les crédits</button></section>}
       </main>
     </div>
