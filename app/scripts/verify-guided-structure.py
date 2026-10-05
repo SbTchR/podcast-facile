@@ -42,15 +42,15 @@ expected_titles = [
 for title in expected_titles:
     assert title in app
 assert 'Partie ${partNumber}' in app
-assert "['intro-jingle', 'introduction', 'part', 'part', 'intermediate-jingle', 'part', 'conclusion', 'final-jingle']" in app
+assert "['intro-jingle', 'introduction', 'part', 'conclusion']" in app
 
 assert "templateId: 'guided'" in app
 assert 'SectionGuideType' in types
 assert 'sectionGuideContent' in app
 assert 'SectionHelpModal' in app
-assert 'Conseils et exemples pour cette section' in app
+assert 'Conseils et exemples pour cette partie' in app
 assert 'AddSectionModal' in app
-assert '＋ Ajouter une section' in app
+assert '＋ Ajouter une partie' in app
 assert '📻 Ajouter un jingle' not in app
 assert "const contentWarning = blocks.length > 0 ? ' et tout son contenu' : '';" in app
 assert 'Une section contenant des éléments ne peut pas être supprimée.' not in app
