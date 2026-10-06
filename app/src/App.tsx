@@ -888,7 +888,7 @@ function App() {
         />
       )}
 
-      {addSectionOpen && <AddSectionModal onClose={() => setAddSectionOpen(false)} onChoose={addGuidedSection} />}
+      {addSectionOpen && <AddSectionModal afterTitle={selectedSection?.title} onClose={() => setAddSectionOpen(false)} onChoose={addGuidedSection} />}
 
       {editingBlock && (
         <BlockEditorModal
@@ -1086,11 +1086,11 @@ function SectionBlockCard({ block, assets, speakerNames, onEdit, onDelete, onPre
   </SectionElementCard>;
 }
 
-function AddSectionModal({ onClose, onChoose }: { onClose: () => void; onChoose: (type: SectionGuideType) => void }) {
+function AddSectionModal({ afterTitle, onClose, onChoose }: { afterTitle?: string; onClose: () => void; onChoose: (type: SectionGuideType) => void }) {
   const choices: SectionGuideType[] = ['intro-jingle', 'intermediate-jingle', 'final-jingle', 'introduction', 'part', 'conclusion'];
   return (
     <Modal title="Ajouter une partie" onClose={onClose} wide>
-      <p className="modal-lead">Choisis le rôle de cette nouvelle partie. Tu pourras ensuite la renommer, la déplacer ou la supprimer.</p>
+      <p className="modal-lead">{afterTitle ? `Ajout après « ${afterTitle} ».` : 'Ajout à la fin du podcast.'}</p>
       <div className="section-type-grid">
         {choices.map((type) => {
           const content = sectionGuideContent[type];
@@ -1729,7 +1729,7 @@ function AudioLibraryModal({ kind, initialSoundGroup = 'effect', onClose, onChoo
     if (category !== 'Toutes' && preset.category !== category && !preset.secondaryCategories?.includes(category)) return false;
     const text = normalize([preset.title, preset.description, preset.category, ...(preset.secondaryCategories ?? []), ...preset.tags].join(' '));
     return searchWords.every((word) => text.includes(word));
-  });
+  }).sort((left, right) => collection === 'recent' ? preferences.recent.indexOf(left.id) - preferences.recent.indexOf(right.id) : 0);
 
   const add = async (preset: LibraryPreset) => {
     requestExclusivePreview('library-add');
@@ -1807,9 +1807,9 @@ function GlobalPlayer({ status, elapsed, duration, seekable, activeTitle, onPlay
 }) {
   return (
     <div className="global-player">
-      <button className="player-main-button" aria-label={status === 'playing' ? 'Mettre le podcast en pause' : 'Écouter le podcast'} disabled={duration <= 0 || status === 'loading'} onClick={onPlayPause} aria-busy={status === 'loading'}>{status === 'loading' ? <i className="preview-spinner" /> : status === 'playing' ? 'Ⅱ' : '▶'}</button>
+      <button className="player-main-button" aria-label={status === 'playing' ? 'Mettre le podcast en pause' : 'Écouter le podcast complet'} title={status === 'playing' ? 'Mettre le podcast en pause' : 'Écouter le podcast complet'} disabled={duration <= 0 || status === 'loading'} onClick={onPlayPause} aria-busy={status === 'loading'}>{status === 'loading' ? <i className="preview-spinner" /> : status === 'playing' ? 'Ⅱ' : '▶'}</button>
       <button className="player-stop-button" aria-label="Arrêter la lecture" disabled={status === 'stopped'} onClick={onStop}>■</button>
-      <div className="player-track"><div className="player-title"><strong>{activeTitle || (duration > 0 ? 'Podcast complet' : 'Ajoute un premier élément')}</strong><span>{formatTime(elapsed)} / {formatTime(duration)}</span></div><input aria-label="Position de lecture" type="range" min="0" max={Math.max(0.01, duration)} step="0.05" value={Math.min(elapsed, duration)} disabled={duration <= 0 || !seekable} onChange={(event) => onSeek(Number(event.target.value))} /></div>
+      <div className="player-track"><div className="player-title"><strong>{duration > 0 ? `Podcast complet${activeTitle ? ' · ' + activeTitle : ''}` : 'Enregistre une première voix'}</strong><span>{formatTime(elapsed)} / {formatTime(duration)}</span></div><input aria-label="Position de lecture" type="range" min="0" max={Math.max(0.01, duration)} step="0.05" value={Math.min(elapsed, duration)} disabled={duration <= 0 || !seekable} onChange={(event) => onSeek(Number(event.target.value))} /></div>
     </div>
   );
 }

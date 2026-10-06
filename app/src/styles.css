@@ -1260,3 +1260,24 @@ details.cue-source-range { display: block; grid-column: 1 / -1; }
   .voice-recording-workspace > .voice-recorder { order: -1; }
   .voice-recording-workspace .voice-script { padding: 12px; }
 }
+
+.timeline-viewport { overflow-x: auto; max-width: 100%; padding: 2px 0 7px; overscroll-behavior-x: contain; scrollbar-width: thin; }
+.timeline-viewport > .section-timeline { min-width: 100%; overflow: visible; }
+.timeline-viewport .track-label { position: sticky; left: 0; z-index: 4; }
+.timeline-view-controls { display: flex; align-items: center; gap: 5px; justify-content: flex-end; color: #6b7b94; font-size: .75rem; margin: 2px 0 5px; }
+.timeline-view-controls .ghost-button { min-width: 32px; min-height: 32px; padding: 4px 7px; }
+.timeline-view-controls output { width: 25px; text-align: center; }
+.part-sound-editor .track-handle { width: 16px; background: #1f5ecb; opacity: .95; }
+.part-sound-editor .track-handle.start { left: -7px; }
+.part-sound-editor .track-handle.end { right: -7px; }
+.track-snap-guide { position: absolute; top: 0; bottom: 0; width: 2px; background: #c26b21; z-index: 6; pointer-events: none; }
+.track-clip.range-selectable { cursor: text; touch-action: none; }
+.voice-range-selection { position: absolute; inset-block: 0; background: #285bda40; outline: 2px solid #285bda; pointer-events: none; z-index: 2; }
+.voice-range-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 8px 0; font-size: .8rem; color: #62738d; }
+.voice-range-toolbar output { margin-left: auto; }
+@media (max-width: 650px) {
+  .part-sound-editor .track-handle { width: 22px; }
+  .part-sound-editor .track-handle.start { left: -10px; }
+  .part-sound-editor .track-handle.end { right: -10px; }
+  .voice-range-toolbar { gap: 8px; }
+}

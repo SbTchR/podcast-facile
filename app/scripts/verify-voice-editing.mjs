@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { typescriptModuleUrl, loadAudioEngine } from './audio-test-module.mjs';
 import { resolveSectionLayers } from '../src/audio/sectionLayers.ts';
-const { voiceSplitPoint, splitVoice, removeVoicePiece } = await import(await typescriptModuleUrl(new URL('../src/audio/voiceEditing.ts', import.meta.url)));
+const { voiceSplitPoint, splitVoice, removeVoicePiece, removeVoiceRange } = await import(await typescriptModuleUrl(new URL('../src/audio/voiceEditing.ts', import.meta.url)));
 const { getTimeline, getProjectDuration } = await loadAudioEngine();
 const close = (a, b, why) => assert.ok(Math.abs(a - b) < 1e-6, why ?? `${a} ≠ ${b}`);
 const block = { id: 'voice', sectionId: 'part', title: 'Mon texte', type: 'voice', assetId: 'original', trimStart: 2, trimEnd: 12, duration: 10, volume: 'normal', fadeIn: 'normal', fadeOut: 'short', voiceEffect: 'none', script: 'Le texte original.' };
@@ -69,3 +69,19 @@ const insideDeleted = removeVoicePiece(insideSplit, 'right');
 assert.deepEqual(insideDeleted.sections[0].audioLayers.map(layer => layer.id), ['music'], 'Collapsed tracks do not prevent saving the shortened part.');
 assert.equal(insideDeleted.assets, project.assets, 'All source sounds remain available for undo.');
 console.log('Voice editing: exact source intervals, speed, music/sound anchors, legacy cues, direct inner joins, pause links and isolated non-destructive changes verified.');
+
+for (const [from, to, expected] of [[3, 6, [[2, 5], [8, 12]]], [0, 3, [[5, 12]]], [6, 10, [[2, 8]]], [0, 10, []]]) {
+  const ranged = removeVoiceRange(project, 'voice', from, to, 'middle', 'right');
+  assert.deepEqual(ranged.blocks.filter(b => b.sectionId === 'part').map(b => [b.trimStart, b.trimEnd]), expected, 'Only the selected source interval is removed.');
+  assert.equal(ranged.assets, project.assets);
+  assert.equal(ranged.blocks.at(-1), other);
+  close(getProjectDuration(ranged), getProjectDuration(project) - (to - from));
+}
+const rangeEdited = removeVoiceRange(project, 'voice', 3, 6, 'middle', 'right');
+const followingSound = resolveSectionLayers(rangeEdited, getTimeline(rangeEdited)).find(item => item.layer.id === 'sfx');
+close(followingSound.start, 4); close(followingSound.end, 5);
+assert.equal(JSON.stringify(project), before);
+assert.equal(removeVoiceRange(project, 'voice', 3, 3.01, 'middle', 'right'), project);
+assert.equal(removeVoiceRange(project, 'voice', 11, 12, 'middle', 'right'), project);
+assert.equal(removeVoiceRange(project, 'voice', NaN, 4, 'middle', 'right'), project);
+console.log('Range deletion: middle/start/end/full selection, exact source excerpts, duration, sounds, other parts and undo data preserved.');
