@@ -91,3 +91,26 @@ export function removeNarrativeBlock(project: PodcastProject, blockId: string): 
 export function removeVoicePiece(project: PodcastProject, blockId: string): PodcastProject {
   return project.blocks.some(block => block.id === blockId && block.type === 'voice') ? removeNarrativeBlock(project, blockId) : project;
 }
+
+/** Remove one selection from a voice, retaining the original audio and anchored sounds. */
+export function removeVoiceRange(project: PodcastProject, blockId: string, from: number, to: number, middleId: string, rightId: string): PodcastProject {
+  const bounds = voiceBounds(project, blockId);
+  if (!bounds || !Number.isFinite(from) || !Number.isFinite(to) || to - from < .1) return project;
+  const start = bounds.entry.start + bounds.pre, end = bounds.entry.end - bounds.post;
+  const low = Math.max(start, Math.min(end, from)), high = Math.max(start, Math.min(end, to));
+  if (high - low < .1 || project.blocks.some(block => block.id === middleId || block.id === rightId)) return project;
+  const keepStart = voiceSplitPoint(project, blockId, low) !== undefined;
+  const keepEnd = voiceSplitPoint(project, blockId, high) !== undefined;
+  if (!keepStart && !keepEnd) return removeNarrativeBlock(project, blockId);
+  let next = project;
+  if (keepEnd) {
+    next = splitVoice(next, blockId, high, rightId);
+    if (next === project) return project;
+  }
+  if (keepStart) {
+    const split = splitVoice(next, blockId, low, middleId);
+    if (split === next) return project;
+    return removeNarrativeBlock(split, middleId);
+  }
+  return removeNarrativeBlock(next, blockId);
+}

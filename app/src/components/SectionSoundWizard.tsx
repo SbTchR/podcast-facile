@@ -10,7 +10,7 @@ import { SectionTimeline } from './SectionTimeline';
 import { useSectionPlayback } from './useSectionPlayback';
 import { VoiceSettings } from './VoiceSettings';
 import { duplicateNarrativeBlock, reorderNarrativeBlock } from '../audio/narrativeEditing';
-import { removeNarrativeBlock, splitVoice, voiceSplitPoint } from '../audio/voiceEditing';
+import { removeNarrativeBlock, splitVoice, voiceSplitPoint, removeVoiceRange } from '../audio/voiceEditing';
 
 export interface WizardUI {
   Modal: ComponentType<{ title: string; onClose: () => void; wide?: boolean; children: ReactNode }>;
@@ -32,6 +32,8 @@ export function SectionSoundWizard({ project, sectionId, kind, initial, initialV
   onClose: () => void; onSave: (draft: PodcastProject) => void; onDraft: (draft: PodcastProject) => void; onRegisterAsset: RegisterAsset; ui: WizardUI;
 }) {
   const [phase, setPhase] = useState(kind);
+  const [rangeMode, setRangeMode] = useState(false);
+  const [selection, setSelection] = useState<{ from: number; to: number }>();
   const [draft, setDraft] = useState<PodcastProject>(() => {
     const scoped = scopeSection(project, sectionId);
     return { ...scoped, sections: scoped.sections.map(section => ({ ...section, audioLayers: section.audioLayers?.map(layer => ({ ...layer, start: { ...layer.start }, end: layer.end ? { ...layer.end } : undefined })) })), blocks: scoped.blocks.map(block => ({ ...block })) };
@@ -101,6 +103,13 @@ export function SectionSoundWizard({ project, sectionId, kind, initial, initialV
     player.seek(previous.position); draftRef.current = previous.draft; setDraft(previous.draft);
     setSelectedVoiceId(previous.voiceId); setSelectedId(previous.layerId); setPhase(previous.phase); setHistory(current => current.slice(0, -1)); setError('');
   };
+  const deleteSelection = () => {
+    if (!selectedVoice || !selection) return;
+    const next = removeVoiceRange(scoped, selectedVoice.id, selection.from, selection.to, crypto.randomUUID(), crypto.randomUUID());
+    if (next === scoped) return;
+    player.stop(); syncLayerPauses(next); commit(next); setSelection(undefined); setRangeMode(false);
+    setSelectedVoiceId(next.blocks.find(block => block.id === selectedVoice.id)?.id); player.seek(selection.from);
+  };
   const cutVoice = () => {
     if (!selectedVoice || !canSplit) return;
     const id = crypto.randomUUID();
@@ -117,13 +126,13 @@ export function SectionSoundWizard({ project, sectionId, kind, initial, initialV
   const update = (values: Partial<SectionAudioLayer>) => { if (selected) change({ ...selected, ...values }); };
   const edit = (layer: SectionAudioLayer, action: 'move' | 'start' | 'end', at: number) => { if (!loading) change(editLayerOnTimeline(scoped, layer, action, at), null); };
   const select = (layer: SectionAudioLayer) => { if (loading) return; player.stop(); setSelectedVoiceId(undefined); setPhase(layer.kind); setSelectedId(layer.id); };
-  const selectVoice = (block: PodcastBlock) => { if (loading || itemEditor) return; const linked = layers.find(layer => layer.pauseBlockId === block.id); if (linked) { select(linked); return; } player.stop(); setSelectedId(undefined); setPhase('voice'); setSelectedVoiceId(block.id); };
+  const selectVoice = (block: PodcastBlock) => { setSelection(undefined); if (loading || itemEditor) return; const linked = layers.find(layer => layer.pauseBlockId === block.id); if (linked) { select(linked); return; } player.stop(); setSelectedId(undefined); setPhase('voice'); setSelectedVoiceId(block.id); };
   const updateVoice = (values: Partial<PodcastBlock>) => {
     player.stop();
     const current = draftRef.current;
     commit({ ...current, blocks: current.blocks.map(block => block.id === selectedVoiceId ? { ...block, ...values } : block) });
   };
-  const movePhase = (next: 'voice' | 'music' | 'sfx') => { player.stop(); setSelectedVoiceId(undefined); setPhase(next); setSelectedId(layers.find(layer => layer.kind === next)?.id); setError(''); };
+  const movePhase = (next: 'voice' | 'music' | 'sfx') => { setRangeMode(false); setSelection(undefined); player.stop(); setSelectedVoiceId(undefined); setPhase(next); setSelectedId(layers.find(layer => layer.kind === next)?.id); setError(''); };
   const addAsset = (chosen: AudioAsset, preset?: LibraryPreset) => {
     if (!mounted.current || phase === 'voice') return;
     setAddedAssets(current => [...current.filter(a => a.id !== chosen.id), chosen]);
@@ -207,11 +216,11 @@ export function SectionSoundWizard({ project, sectionId, kind, initial, initialV
           <button ref={transportRef} className="primary-button compact" disabled={!canPlay} aria-label={player.status === 'loading' ? 'Annuler le chargement de la partie' : player.status === 'playing' ? 'Mettre la partie en pause' : 'Écouter la partie avec les voix'} onClick={() => void player.toggle()}>{player.status === 'loading' ? 'Chargement…' : player.status === 'playing' ? 'Ⅱ Pause' : '▶ Écouter la partie'}</button>
           <output aria-label="Position de lecture">{player.position.toFixed(1).replace('.', ',')} s / {formatTime(duration)}</output><kbd>Espace</kbd>
           <span className="transport-spacer" />
-          {selectedVoice && <><button className="secondary-button compact" disabled={!canSplit || loading || Boolean(itemEditor)} onClick={cutVoice} title={canSplit ? 'Créer deux morceaux à la position du repère' : 'Place le repère à l’intérieur de la voix sélectionnée'}>✂ Scinder au repère</button></>}
+          {selectedVoice && <><button className="secondary-button compact" aria-pressed={rangeMode} disabled={loading || Boolean(itemEditor)} onClick={() => { player.stop(); setRangeMode(value => !value); setSelection(undefined); }}>Sélectionner</button><button className="secondary-button compact" disabled={!canSplit || loading || Boolean(itemEditor)} onClick={cutVoice} title={canSplit ? 'Créer deux morceaux à la position du repère' : 'Place le repère à l’intérieur de la voix sélectionnée'}>✂ Scinder au repère</button></>}
           <button className="ghost-button compact" disabled={!history.length || loading || Boolean(itemEditor)} onClick={undo} aria-label="Annuler la dernière modification">↶ Annuler</button>
         </div>
-        <SectionTimeline project={scoped} selectedId={selectedId} selectedVoiceId={selectedVoiceId} phase={phase === 'voice' ? undefined : phase} playhead={player.position} onSeek={at => { if (!loading) player.seek(at); }} onSelect={select} onSelectBlock={selectVoice} onMoveBlock={phase === 'voice' && !loading && !itemEditor ? moveItem : undefined} onEdit={edit} />
-        {phase === 'voice' && selectedVoice && !itemEditor && <p className="voice-cut-help">Clique sur la règle pour placer une coupe. Deux coupes permettent de supprimer un passage au milieu.</p>}
+        <SectionTimeline project={scoped} selectedId={selectedId} selectedVoiceId={selectedVoiceId} phase={phase === 'voice' ? undefined : phase} playhead={player.position} onSeek={at => { if (!loading) player.seek(at); }} onSelect={select} onSelectBlock={selectVoice} onMoveBlock={phase === 'voice' && !loading && !itemEditor ? moveItem : undefined} onEdit={edit} rangeMode={phase === 'voice' && rangeMode} selection={selection} onRange={setSelection} />
+        {phase === 'voice' && selectedVoice && !itemEditor && (rangeMode ? <div className="voice-range-toolbar"><span>Glisse sur la voix pour sélectionner.</span>{selection && selection.to - selection.from >= .1 && <><output>{selection.from.toFixed(1).replace('.', ',')}–{selection.to.toFixed(1).replace('.', ',')} s</output><button className="secondary-button compact" onClick={deleteSelection}>✂ Supprimer le passage</button></>}</div> : <p className="voice-cut-help">Clique sur la règle pour placer une coupe, ou sélectionne un passage dans la voix.</p>)}
         {phase === 'voice' && !blocks.length && <p className="sound-editor-empty">Ajoute une première voix avec le bouton « Enregistrer une voix ».</p>}
         {phase === 'voice' && selectedBlock && !itemEditor && <div className="narrative-inspector">
           <div className="setting-title-row"><div><h4>{selectedBlock.title}</h4><small>{getBlockDuration(selectedBlock, assets).toFixed(1).replace('.', ',')} s</small></div><div className="narrative-element-actions">

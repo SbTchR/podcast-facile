@@ -25,13 +25,18 @@ const Waveform = memo(function Waveform({ asset, from = 0, to = asset?.duration 
   return <svg className="track-waveform" viewBox="0 0 360 30" preserveAspectRatio="none" aria-hidden="true"><path d={path} stroke="currentColor" strokeWidth="1.5" /></svg>;
 });
 
-export function SectionTimeline({ project, selectedId, selectedVoiceId, phase, playhead, onSeek, onSelect, onSelectVoice, onSelectBlock, onMoveBlock, onOpenVoice, onOpenTrack, onEdit, compact = false }: {
+export function SectionTimeline({ project, selectedId, selectedVoiceId, phase, playhead, onSeek, onSelect, onSelectVoice, onSelectBlock, onMoveBlock, onOpenVoice, onOpenTrack, onEdit, rangeMode, selection, onRange, compact = false }: {
+  rangeMode?: boolean; selection?: { from: number; to: number }; onRange?: (range: { from: number; to: number }) => void;
   project: PodcastProject; selectedId?: string; phase?: 'music' | 'sfx'; playhead?: number;
   selectedVoiceId?: string; onSelectVoice?: (block: PodcastBlock) => void; onSelectBlock?: (block: PodcastBlock) => void;
   onMoveBlock?: (blockId: string, beforeId?: string) => void; onOpenVoice?: () => void; onOpenTrack?: (kind: 'music' | 'sfx') => void;
   onSeek?: (time: number) => void; onSelect?: (layer: SectionAudioLayer) => void;
   onEdit?: (layer: SectionAudioLayer, action: 'move' | 'start' | 'end', time: number) => void; compact?: boolean;
 }) {
+  const [zoom, setZoom] = useState(1);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const rangeGesture = useRef<{ pointer: number; at: number; min: number; max: number; left: number; width: number; blockId: string } | null>(null);
+  const [snapGuide, setSnapGuide] = useState<number>();
   const timeline = getTimeline(project);
   const duration = timeline.at(-1)?.end ?? 0;
   const layers = project.sections[0]?.audioLayers ?? [];
@@ -44,7 +49,19 @@ export function SectionTimeline({ project, selectedId, selectedVoiceId, phase, p
   const hasVoiceSpeakers = timeline.some(entry => entry.block.type === 'voice' && entry.block.speaker);
   const reorderable = timeline.filter(entry => !managedPauses.has(entry.block.id));
   const beginBlock = (event: React.PointerEvent<HTMLElement>, block: PodcastBlock) => {
-    if (!onMoveBlock || managedPauses.has(block.id) || event.button !== 0) return;
+    if (rangeMode && onRange && block.type === 'voice' && event.button === 0) {
+      event.stopPropagation(); event.preventDefault();
+      const entry = timeline.find(item => item.block.id === block.id)!;
+      const rail = event.currentTarget.closest('.track-rail')!.getBoundingClientRect();
+      const pre = block.background?.startBefore ? Math.min(3, Math.max(1, block.background.startBeforeSeconds ?? 2)) : 0;
+      const post = block.background?.continueAfter ? Math.min(3, Math.max(1, block.background.continueAfterSeconds ?? 2)) : 0;
+      const min = entry.start + pre, max = entry.end - post;
+      const at = clampTime((event.clientX - rail.left) / rail.width * duration, min, max);
+      event.currentTarget.setPointerCapture(event.pointerId); onSelectBlock?.(block);
+      rangeGesture.current = { pointer: event.pointerId, at, min, max, left: rail.left, width: rail.width, blockId: block.id };
+      onRange({ from: at, to: at }); return;
+    }
+    if (rangeMode || !onMoveBlock || managedPauses.has(block.id) || event.button !== 0) return;
     event.stopPropagation();
     const rail = event.currentTarget.closest('.track-rail')!.getBoundingClientRect();
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -52,6 +69,8 @@ export function SectionTimeline({ project, selectedId, selectedVoiceId, phase, p
     onSelectBlock?.(block);
   };
   const moveBlock = (event: React.PointerEvent<HTMLElement>) => {
+    const range = rangeGesture.current;
+    if (range && range.pointer === event.pointerId) { event.preventDefault(); const at = clampTime((event.clientX - range.left) / range.width * duration, range.min, range.max); onRange?.({ from: Math.min(at, range.at), to: Math.max(at, range.at) }); return; }
     const current = blockGesture.current;
     if (!current || current.pointer !== event.pointerId) return;
     const dx = event.clientX - current.x;
@@ -63,6 +82,8 @@ export function SectionTimeline({ project, selectedId, selectedVoiceId, phase, p
     setBlockDrag({ id: current.id, dx, boundary: current.boundary });
   };
   const finishBlock = (event: React.PointerEvent<HTMLElement>, cancelled = false) => {
+    const range = rangeGesture.current;
+    if (range) { rangeGesture.current = null; skipClick.current = range.blockId; if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); if (cancelled) onRange?.({ from: range.at, to: range.at }); return; }
     const current = blockGesture.current;
     blockGesture.current = null; setBlockDrag(null);
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
@@ -70,7 +91,7 @@ export function SectionTimeline({ project, selectedId, selectedVoiceId, phase, p
     skipClick.current = current.id;
     onMoveBlock?.(current.id, current.beforeId);
   };
-  const tickCount = compact ? 4 : 7;
+  const tickCount = compact ? 4 : Math.min(56, 7 * zoom);
   const position = (start: number, end: number) => ({ left: `${start / Math.max(0.05, duration) * 100}%`, width: `${Math.max(0.15, (end - start) / Math.max(0.05, duration) * 100)}%` });
   const seek = (event: React.MouseEvent<HTMLElement>) => {
     if (!onSeek) return;
@@ -88,10 +109,19 @@ export function SectionTimeline({ project, selectedId, selectedVoiceId, phase, p
   const move = (event: React.PointerEvent<HTMLElement>) => {
     const current = gesture.current;
     if (!current || !event.currentTarget.hasPointerCapture(event.pointerId)) return;
-    onEdit?.(current.layer, current.action, current.at + (event.clientX - current.x) / current.width * duration);
+    const at = current.at + (event.clientX - current.x) / current.width * duration;
+    const item = resolved.find(value => value.layer.id === current.layer.id);
+    const length = item ? item.end - item.start : 0;
+    const boundaries = [0, duration, ...timeline.flatMap(entry => [entry.start, entry.end]), ...resolved.filter(value => value.layer.id !== current.layer.id).flatMap(value => [value.start, value.end])];
+    const tolerance = Math.min(.5, duration / current.width * 10);
+    const candidates = boundaries.flatMap(boundary => [{ boundary, target: boundary }, ...(current.action === 'move' ? [{ boundary, target: boundary - length }] : [])]);
+    const closest = candidates.reduce((best, value) => Math.abs(value.target - at) < Math.abs(best.target - at) ? value : best, candidates[0]);
+    const snap = !event.shiftKey && Math.abs(closest.target - at) <= tolerance;
+    setSnapGuide(snap ? closest.boundary : undefined);
+    onEdit?.(current.layer, current.action, snap ? closest.target : at);
   };
-  const finish = () => { gesture.current = null; };
-  const head = playhead === undefined ? null : <i className="track-playhead" style={{ left: `${Math.min(100, playhead / Math.max(.05, duration) * 100)}%` }} />;
+  const finish = () => { gesture.current = null; setSnapGuide(undefined); };
+  const head = <>{playhead !== undefined && <i className="track-playhead" style={{ left: `${Math.min(100, playhead / Math.max(.05, duration) * 100)}%` }} />}{snapGuide !== undefined && <i className="track-snap-guide" style={{ left: `${snapGuide / Math.max(.05, duration) * 100}%` }} />}</>;
   const legacy = timeline.flatMap(entry => {
     const block = entry.block;
     const pre = block.background?.startBefore ? Math.min(3, Math.max(1, block.background.startBeforeSeconds ?? 2)) : 0;
@@ -110,7 +140,7 @@ export function SectionTimeline({ project, selectedId, selectedVoiceId, phase, p
     }
     return items;
   });
-  return <div className={`section-timeline ${compact ? 'compact' : ''}`} aria-label={`Trame de ${project.sections[0]?.title ?? 'la partie'}`}>
+  return <>{!compact && <div className="timeline-view-controls" aria-label="Zoom de la trame"><span>Zoom</span><button className="ghost-button compact" aria-label="Dézoomer" disabled={zoom === 1} onClick={() => setZoom(value => Math.max(1, value / 2))}>−</button><output>{zoom}×</output><button className="ghost-button compact" aria-label="Zoomer" disabled={zoom === 8} onClick={() => setZoom(value => Math.min(8, value * 2))}>＋</button><button className="ghost-button compact" disabled={zoom === 1} onClick={() => { setZoom(1); viewportRef.current?.scrollTo({ left: 0 }); }}>Tout voir</button></div>}<div className="timeline-viewport" ref={viewportRef}><div style={compact || zoom === 1 ? undefined : { width: `${zoom * 100}%` }} className={`section-timeline ${compact ? 'compact' : ''}`} aria-label={`Trame de ${project.sections[0]?.title ?? 'la partie'}`}>
     <div className="track-row track-ruler"><span className="track-label">Temps</span><div className="track-rail" role={onSeek ? 'slider' : undefined} tabIndex={onSeek ? 0 : undefined} aria-label={onSeek ? 'Repère d’écoute' : undefined} aria-valuemin={onSeek ? 0 : undefined} aria-valuemax={onSeek ? duration : undefined} aria-valuenow={onSeek ? playhead ?? 0 : undefined} aria-valuetext={onSeek ? `${(playhead ?? 0).toFixed(1)} secondes` : undefined} onKeyDown={event => {
       if (!onSeek || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
       event.preventDefault(); event.stopPropagation();
@@ -127,7 +157,7 @@ export function SectionTimeline({ project, selectedId, selectedVoiceId, phase, p
       const draggable = Boolean(onMoveBlock && !managedPauses.has(entry.block.id));
       return <div key={entry.block.id} data-block-id={entry.block.id} role={pick ? 'button' : undefined} tabIndex={pick ? 0 : undefined}
         aria-label={pick ? `Sélectionner ${voice && entry.block.speaker ? `${voiceSpeakerLabel(entry.block.speaker, project.speakerNames)} : ` : ''}${entry.block.title}` : undefined} aria-pressed={pick ? selectedVoiceId === entry.block.id : undefined}
-        className={`track-clip narrative ${voice ? `voice ${voiceSpeakerClass(entry.block.speaker)}` : entry.block.type === 'transition' ? 'transition' : 'pause'} ${selectedVoiceId === entry.block.id ? 'selected' : ''} ${draggable ? 'reorderable' : ''} ${blockDrag?.id === entry.block.id ? 'dragging' : ''}`}
+        className={`track-clip narrative ${voice ? `voice ${voiceSpeakerClass(entry.block.speaker)}` : entry.block.type === 'transition' ? 'transition' : 'pause'} ${selectedVoiceId === entry.block.id ? 'selected' : ''} ${rangeMode && voice ? 'range-selectable' : draggable ? 'reorderable' : ''} ${blockDrag?.id === entry.block.id ? 'dragging' : ''}`}
         style={{ ...position(entry.start + pre, entry.end - post), transform: blockDrag?.id === entry.block.id ? `translateX(${blockDrag.dx}px)` : undefined }}
         title={entry.block.title + (draggable ? ' · Glisser pour déplacer' : '')}
         onPointerDown={event => beginBlock(event, entry.block)} onPointerMove={moveBlock} onPointerUp={event => finishBlock(event)} onPointerCancel={event => finishBlock(event, true)}
@@ -140,7 +170,7 @@ export function SectionTimeline({ project, selectedId, selectedVoiceId, phase, p
               event.preventDefault(); event.stopPropagation(); onMoveBlock?.(entry.block.id, reorderable[event.key === 'ArrowLeft' ? index - 1 : index + 2]?.block.id);
             }
           }
-        }}><strong>{entry.block.type === 'silence' ? 'Pause/Musique seule' : entry.block.title}</strong>{voice && <Waveform asset={asset} from={entry.block.trimStart} to={entry.block.trimEnd || asset?.duration} />}</div>;
+        }}>{selection && selectedVoiceId === entry.block.id && selection.to > selection.from && <span className="voice-range-selection" style={{ left: `${(selection.from - entry.start - pre) / Math.max(.05, entry.end - entry.start - pre - post) * 100}%`, width: `${(selection.to - selection.from) / Math.max(.05, entry.end - entry.start - pre - post) * 100}%` }} />}<strong>{entry.block.type === 'silence' ? 'Pause/Musique seule' : entry.block.title}</strong>{voice && <Waveform asset={asset} from={entry.block.trimStart} to={entry.block.trimEnd || asset?.duration} />}</div>;
     })}{!timeline.some(entry => entry.duration > 0) && (onOpenVoice ? <button className="track-add" onClick={event => { event.stopPropagation(); onOpenVoice(); }}>＋ Voix</button> : <span className="track-empty-label">Aucun enregistrement</span>)}{blockDrag && <i className="track-insertion-marker" style={{ left: `${blockDrag.boundary / Math.max(.05, duration) * 100}%` }} aria-hidden="true" />}{head}</div></div>
     {(['music', 'sfx'] as const).flatMap(kind => {
       const matching = layers.filter(layer => layer.kind === kind);
@@ -160,5 +190,5 @@ export function SectionTimeline({ project, selectedId, selectedVoiceId, phase, p
       });
     })}
     {legacy.map(layer => <div className="track-row legacy" key={layer.id}><strong className="track-label">{layer.kind === 'music' ? 'Fond lié' : 'Son lié'}</strong><div className="track-rail" onClick={() => { const voice = timeline.find(entry => entry.block.background?.assetId === layer.assetId || entry.block.voiceCues?.some(cue => cue.id === layer.id)); if (voice) (onSelectBlock ?? onSelectVoice)?.(voice.block); }}><div className={`track-clip ${layer.kind}`} style={position(layer.start, layer.end)} title={layer.title}><strong>{layer.title}</strong><Waveform asset={project.assets.find(a => a.id === layer.assetId)} from={layer.sourceStart} to={layer.sourceEnd} repeat={layer.repeat} length={layer.end - layer.start} /></div>{head}</div></div>)}
-  </div>;
+  </div></div></>;
 }
