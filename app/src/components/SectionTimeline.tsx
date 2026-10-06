@@ -146,7 +146,7 @@ export function SectionTimeline({ project, selectedId, selectedVoiceId, phase, p
       event.preventDefault(); event.stopPropagation();
       const at = event.key === 'Home' ? 0 : event.key === 'End' ? duration - .1 : (playhead ?? 0) + (event.key === 'ArrowLeft' ? -1 : 1) * (event.shiftKey ? 1 : .1);
       onSeek(clampTime(roundTime(at), 0, Math.max(0, duration - .05)));
-    }} onClick={event => onOpenTrack ? onOpenTrack('music') : seek(event)}>{Array.from({ length: duration > 0 ? tickCount + 1 : 1 }, (_, index) => <span key={index} style={{ left: `${index / tickCount * 100}%` }}>{formatTime(index / tickCount * duration)}</span>)}{head}</div></div>
+    }} onClick={event => onOpenTrack ? onOpenTrack('music') : seek(event)}>{Array.from({ length: duration > 0 ? tickCount + 1 : 1 }, (_, index) => <span key={index} style={{ left: `${index / tickCount * 100}%` }}>{duration / tickCount < 1 && !compact ? `${(index / tickCount * duration).toFixed(1).replace('.', ',')} s` : formatTime(index / tickCount * duration)}</span>)}{head}</div></div>
     <div className="track-row"><strong className={`track-label ${hasVoiceSpeakers ? 'track-voice-speakers' : ''}`}><span>Voix</span>{hasVoiceSpeakers && <span className="track-speaker-key" role="img" aria-label="Voix 1 en bleu, voix 2 en rouge"><i className="speaker-one">1</i><i className="speaker-two">2</i></span>}</strong><div className="track-rail" onClick={seek}>{timeline.filter(e => e.duration > 0).map(entry => {
       const asset = project.assets.find(item => item.id === entry.block.assetId);
       const voice = entry.block.type === 'voice';
